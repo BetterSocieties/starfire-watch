@@ -1,0 +1,41 @@
+# Restores all Starfire n8n workflows to the cloud pod. Pulls the private repo's
+# workflow exports + pod address into the ephemeral runner via CORE_READ_TOKEN;
+# nothing private is stored in this public repo. No-op until both secrets exist.
+name: n8n-restore
+on:
+  schedule:
+    - cron: "41 */2 * * *"
+  workflow_dispatch: {}
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: gate on secrets
+        id: gate
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          PAT: ${{ secrets.CORE_READ_TOKEN }}
+        run: |
+          if [ -z "$N8N_API_KEY" ] || [ -z "$PAT" ]; then
+            echo "ready=no" >> "$GITHUB_OUTPUT"; echo "secrets not set yet; nothing to do"; else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: checkout private exports (runtime only)
+        if: steps.gate.outputs.ready == 'yes'
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: |
+            n8n-workflows
+            scripts/n8n-restore.sh
+            config/n8n-cloud-url
+      - name: restore
+        if: steps.gate.outputs.ready == 'yes'
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          cd core
+          export N8N_URL="$(cat config/n8n-cloud-url)"
+          bash scripts/n8n-restore.sh
