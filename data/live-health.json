@@ -1,0 +1,34 @@
+{
+ "ts": "2026-07-13T19:53:18.463Z",
+ "all_ok": true,
+ "checks": [
+  {
+   "name": "os-dashboard",
+   "url": "https://starfireos.pages.dev/",
+   "ok": true,
+   "status": 200,
+   "note": ""
+  },
+  {
+   "name": "os-crm",
+   "url": "https://starfireos.pages.dev/starfire-crm/index.html",
+   "ok": true,
+   "status": 200,
+   "note": ""
+  },
+  {
+   "name": "opsjuice-assessment",
+   "url": "https://opsjuice.com/ai-assessment",
+   "ok": true,
+   "status": 200,
+   "note": ""
+  },
+  {
+   "name": "bs-comply",
+   "url": "https://comply.bettersocieties.world/",
+   "ok": true,
+   "status": 200,
+   "note": ""
+  }
+ ]
+}
