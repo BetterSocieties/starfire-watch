@@ -25,3 +25,5 @@ done < "$ids"
 echo "ACTIVATE RESULT: newly_activated=$ok already_active=$already failed=$fail total=$total"
 [ "$fail" -gt 0 ] && echo "first failures:$(echo $failed_ids | tr ' ' '\n' | head -5 | tr '\n' ' ')"
 echo "(failures usually mean a workflow needs a service key inside an HTTP node, or a duplicate webhook path; reported for follow-up)"
+
+# fire 2026-07-13T21:48:17Z
