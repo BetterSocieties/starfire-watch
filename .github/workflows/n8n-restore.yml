@@ -6,6 +6,8 @@ on:
   schedule:
     - cron: "41 */2 * * *"
   workflow_dispatch: {}
+  push:
+    branches: [main]
 jobs:
   restore:
     runs-on: ubuntu-latest
