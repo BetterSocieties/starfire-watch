@@ -1,0 +1,35 @@
+# One-shot pod repair: dedupe to one workflow per name, then activate survivors.
+# Runs on push to its own path (so it fires when committed) + manual dispatch.
+name: n8n-fix-pod
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: [".github/workflows/n8n-fix-pod.yml", "scripts/n8n-fix-pod.sh"]
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: gate on key
+        id: gate
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          if [ -z "$N8N_API_KEY" ]; then echo "ready=no" >> "$GITHUB_OUTPUT"; echo "no key"; else echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: read pod url
+        if: steps.gate.outputs.ready == 'yes'
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: config/n8n-cloud-url
+      - name: dedupe + activate
+        if: steps.gate.outputs.ready == 'yes'
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          export N8N_URL="$(cat core/config/n8n-cloud-url)"
+          bash scripts/n8n-fix-pod.sh
