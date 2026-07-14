@@ -6,6 +6,10 @@ on:
     paths: [".github/workflows/n8n-activate.yml", "scripts/n8n-activate.sh"]
   schedule:
     - cron: "51 */2 * * *"
+concurrency:
+  group: n8n-pod-mutations
+  cancel-in-progress: false
+
 jobs:
   activate:
     runs-on: ubuntu-latest

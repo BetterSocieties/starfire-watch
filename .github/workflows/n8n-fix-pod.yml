@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
     paths: [".github/workflows/n8n-fix-pod.yml", "scripts/n8n-fix-pod.sh"]
+concurrency:
+  group: n8n-pod-mutations
+  cancel-in-progress: false
+
 jobs:
   fix:
     runs-on: ubuntu-latest
