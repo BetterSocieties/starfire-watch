@@ -1,0 +1,35 @@
+# Import 79 brain workflow bodies (packed in N8N_WFS_CHUNK_00..06) into the
+# cloud pod. Manual dispatch only. After this lands, run n8n-fix-pod to dedupe
+# any name collisions with the pod's existing template workflows and activate.
+name: n8n-import-workflows
+on:
+  workflow_dispatch: {}
+concurrency:
+  group: n8n-pod-mutations
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: read pod url
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: config/n8n-cloud-url
+      - name: unpack + import
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          WFS_CHUNK_00: ${{ secrets.N8N_WFS_CHUNK_00 }}
+          WFS_CHUNK_01: ${{ secrets.N8N_WFS_CHUNK_01 }}
+          WFS_CHUNK_02: ${{ secrets.N8N_WFS_CHUNK_02 }}
+          WFS_CHUNK_03: ${{ secrets.N8N_WFS_CHUNK_03 }}
+          WFS_CHUNK_04: ${{ secrets.N8N_WFS_CHUNK_04 }}
+          WFS_CHUNK_05: ${{ secrets.N8N_WFS_CHUNK_05 }}
+          WFS_CHUNK_06: ${{ secrets.N8N_WFS_CHUNK_06 }}
+        run: |
+          export N8N_URL="$(cat core/config/n8n-cloud-url)"
+          python3 scripts/n8n-import-workflows.py
