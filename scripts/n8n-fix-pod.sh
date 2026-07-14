@@ -55,3 +55,5 @@ done < /tmp/keep.txt
 remaining=$(curl -sf --max-time 30 "${H[@]}" "$API/workflows?limit=1" | python3 -c "import json,sys; print('ok')" 2>/dev/null || echo "?")
 echo "FIX-POD RESULT: activated=$aok already_active=$aalready activate_failed=$afail (survivors=$(wc -l < /tmp/keep.txt))"
 echo "(remaining activate failures are workflows whose HTTP nodes need a live service key, or webhook-path conflicts; expected for a subset)"
+
+# run 2026-07-14T06:16:59Z
