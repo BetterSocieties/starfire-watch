@@ -47,14 +47,41 @@ echo "deleted=$dok delete_failed=$dfail"
 
 echo "== activating survivors"
 aok=0; aalready=0; afail=0
+: > /tmp/fail-detail.txt
 while read -r id; do
   [ -z "$id" ] && continue
   code=$(curl -s --max-time 30 -o /tmp/a.out -w '%{http_code}' "${H[@]}" -X POST "$API/workflows/$id/activate")
-  if [ "$code" = "200" ]; then aok=$((aok+1)); elif grep -qi "already" /tmp/a.out 2>/dev/null; then aalready=$((aalready+1)); else afail=$((afail+1)); fi
+  if [ "$code" = "200" ]; then aok=$((aok+1)); elif grep -qi "already" /tmp/a.out 2>/dev/null; then aalready=$((aalready+1)); else
+    afail=$((afail+1))
+    name=$(grep "^$id	" "$tmp" | cut -f3- | head -1)
+    printf '%s\t%s\t%s\t%s\n' "$id" "$code" "$name" "$(head -c 300 /tmp/a.out | tr '\n\t' '  ')" >> /tmp/fail-detail.txt
+  fi
 done < /tmp/keep.txt
 remaining=$(curl -sf --max-time 30 "${H[@]}" "$API/workflows?limit=1" | python3 -c "import json,sys; print('ok')" 2>/dev/null || echo "?")
 echo "FIX-POD RESULT: activated=$aok already_active=$aalready activate_failed=$afail (survivors=$(wc -l < /tmp/keep.txt))"
-echo "(remaining activate failures are workflows whose HTTP nodes need a live service key, or webhook-path conflicts; expected for a subset)"
+echo "== activation failure detail (id / http / name / error body)"
+cat /tmp/fail-detail.txt
+python3 - /tmp/fail-detail.txt <<'PY'
+import sys, collections
+buckets = collections.Counter()
+for line in open(sys.argv[1]):
+    err = line.lower()
+    if 'credential' in err: buckets['missing/stale credential'] += 1
+    elif 'webhook' in err and ('exists' in err or 'conflict' in err or 'in use' in err or 'registered' in err): buckets['webhook path collision'] += 1
+    elif 'trigger' in err or 'cannot be started' in err or 'no node' in err: buckets['no startable trigger'] += 1
+    else: buckets['other'] += 1
+print('FAIL BUCKETS:', dict(buckets))
+PY
+echo "== active revenue-critical workflows check"
+python3 - "$tmp" <<'PY' > /tmp/names.txt
+import sys
+for l in open(sys.argv[1]):
+    p=l.rstrip('\n').split('\t')
+    if len(p)>=3: print(p[2])
+PY
+for key in "Stripe" "Cold Outreach" "Followup" "Reply" "Assessment"; do
+  echo "-- workflows matching '$key':"; grep -i "$key" /tmp/names.txt | head -5
+done
 
 # run 2026-07-14T06:16:59Z
 # verify 2026-07-14T07:57:52Z
