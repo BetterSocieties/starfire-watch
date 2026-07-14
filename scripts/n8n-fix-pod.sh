@@ -57,3 +57,4 @@ echo "FIX-POD RESULT: activated=$aok already_active=$aalready activate_failed=$a
 echo "(remaining activate failures are workflows whose HTTP nodes need a live service key, or webhook-path conflicts; expected for a subset)"
 
 # run 2026-07-14T06:16:59Z
+# verify 2026-07-14T07:57:52Z
