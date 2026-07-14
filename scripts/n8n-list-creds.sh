@@ -6,3 +6,4 @@ echo "== GET /credentials"
 code=$(curl -s --max-time 20 -o /tmp/creds.out -w '%{http_code}' "${H[@]}" "$API/credentials")
 echo "http_code=$code"
 cat /tmp/creds.out
+# run
