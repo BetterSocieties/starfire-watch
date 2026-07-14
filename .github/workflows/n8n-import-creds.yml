@@ -1,0 +1,29 @@
+# Import the brain's credentials into the cloud pod and rebind workflow
+# references. Manual dispatch only; reads the decrypted export from the
+# N8N_CREDS_IMPORT secret (never committed).
+name: n8n-import-creds
+on:
+  workflow_dispatch: {}
+concurrency:
+  group: n8n-pod-mutations
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: read pod url
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: config/n8n-cloud-url
+      - name: import + rebind
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_CREDS_IMPORT: ${{ secrets.N8N_CREDS_IMPORT }}
+        run: |
+          export N8N_URL="$(cat core/config/n8n-cloud-url)"
+          python3 scripts/n8n-import-creds.py
