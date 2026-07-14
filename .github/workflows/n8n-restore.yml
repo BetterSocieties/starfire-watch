@@ -1,13 +1,12 @@
 # Restores all Starfire n8n workflows to the cloud pod. Pulls the private repo's
 # workflow exports + pod address into the ephemeral runner via CORE_READ_TOKEN;
-# nothing private is stored in this public repo. No-op until both secrets exist.
+# nothing private is stored in this public repo.
+# MANUAL ONLY (workflow_dispatch): the old schedule + push triggers re-ran this on
+# every commit and every 2h, which duplicated the pod to 5,323 workflows. Never
+# auto-run restore. Run n8n-fix-pod first if the pod is duplicated.
 name: n8n-restore
 on:
-  schedule:
-    - cron: "41 */2 * * *"
   workflow_dispatch: {}
-  push:
-    branches: [main]
 jobs:
   restore:
     runs-on: ubuntu-latest
