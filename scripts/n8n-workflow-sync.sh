@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 N8N_URL="${N8N_URL:?}"; N8N_API_KEY="${N8N_API_KEY:?}"
-MODE="${MODE:?}"; WF_ID="${WF_ID:?}"
+MODE="${MODE:?}"; WF_ID="${WF_ID:-}"
 API="$N8N_URL/api/v1"
 H=(-H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json")
 
@@ -12,8 +12,23 @@ get() {
   cat /tmp/wf.out
 }
 
+list() {
+  echo "== GET /workflows (id + name only)"
+  cursor=""
+  while :; do
+    url="$API/workflows?limit=250"
+    [ -n "$cursor" ] && url="$url&cursor=$cursor"
+    resp=$(curl -s --max-time 20 "${H[@]}" "$url")
+    echo "$resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(w["id"], "|", w["name"]) for w in d.get("data",[])]'
+    cursor=$(echo "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("nextCursor") or "")')
+    [ -z "$cursor" ] && break
+  done
+}
+
 if [ "$MODE" = "get" ]; then
   get
+elif [ "$MODE" = "list" ]; then
+  list
 elif [ "$MODE" = "put" ]; then
   STAGE="data/n8n-staged/$WF_ID.json"
   if [ ! -f "$STAGE" ]; then echo "missing staged file $STAGE"; exit 1; fi
