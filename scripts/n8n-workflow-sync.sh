@@ -25,10 +25,34 @@ list() {
   done
 }
 
+find_term() {
+  echo "== scanning all workflows for '$SEARCH'"
+  cursor=""
+  while :; do
+    url="$API/workflows?limit=250"
+    [ -n "$cursor" ] && url="$url&cursor=$cursor"
+    resp=$(curl -s --max-time 20 "${H[@]}" "$url")
+    echo "$resp" | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(w["id"]) for w in d.get("data",[])]' > /tmp/ids.txt
+    while read -r id; do
+      [ -z "$id" ] && continue
+      body=$(curl -s --max-time 20 "${H[@]}" "$API/workflows/$id")
+      if echo "$body" | grep -q "$SEARCH"; then
+        name=$(echo "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("name"), "| active=", d.get("active"))')
+        echo "MATCH $id | $name"
+      fi
+    done < /tmp/ids.txt
+    cursor=$(echo "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("nextCursor") or "")')
+    [ -z "$cursor" ] && break
+  done
+}
+
 if [ "$MODE" = "get" ]; then
   get
 elif [ "$MODE" = "list" ]; then
   list
+elif [ "$MODE" = "find" ]; then
+  SEARCH="${SEARCH:?}"
+  find_term
 elif [ "$MODE" = "put" ]; then
   STAGE="data/n8n-staged/$WF_ID.json"
   if [ ! -f "$STAGE" ]; then echo "missing staged file $STAGE"; exit 1; fi
