@@ -1,0 +1,35 @@
+# Cloud-tick heartbeat freshness alarm. Runs on GitHub infra (no Mac). If the
+# hourly cloud tick stops pushing heartbeats to starfire-core, Slack Adrien via
+# the same n8n webhook shipped-digest uses. A missing heartbeat IS the alarm.
+name: heartbeat-alarm
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "25 */2 * * *"
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: fetch heartbeat log from starfire-core
+        env:
+          CORE_READ_TOKEN: ${{ secrets.CORE_READ_TOKEN }}
+        run: |
+          curl -sf -H "Authorization: Bearer $CORE_READ_TOKEN" \
+            "https://api.github.com/repos/BetterSocieties/starfire-core/contents/agent/cloud-tick-heartbeat.log" \
+            -H "Accept: application/vnd.github.raw" -o hb.log
+          tail -3 hb.log
+      - name: alarm if stale
+        run: |
+          last=$(tail -1 hb.log | cut -d' ' -f1)
+          last_epoch=$(date -d "$last" +%s 2>/dev/null || echo 0)
+          age=$(( $(date +%s) - last_epoch ))
+          echo "last heartbeat: $last (age ${age}s)"
+          if [ "$age" -gt 9000 ]; then
+            curl -s -X POST "https://n8n.opsjuice.com/webhook/starfire-shipped-digest" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\":\"ALARM: starfire-cloud-tick heartbeat stale (last $last, age ${age}s > 150min). The hourly cloud routine has stopped pushing. Check https://claude.ai/code/routines\"}"
+            echo "ALARM SENT"
+          else
+            echo "fresh, no alarm"
+          fi
