@@ -1,5 +1,5 @@
 {
- "ts": "2026-07-15T17:39:54.790Z",
+ "ts": "2026-07-15T18:14:10.129Z",
  "all_ok": true,
  "checks": [
   {
@@ -26,6 +26,13 @@
   {
    "name": "bs-comply",
    "url": "https://comply.bettersocieties.world/",
+   "ok": true,
+   "status": 200,
+   "note": ""
+  },
+  {
+   "name": "br-storefront",
+   "url": "https://bloodlustreverie.com/",
    "ok": true,
    "status": 200,
    "note": ""
