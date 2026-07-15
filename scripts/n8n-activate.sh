@@ -8,7 +8,7 @@ set -uo pipefail
 N8N_URL="${N8N_URL:?}"; N8N_API_KEY="${N8N_API_KEY:?}"
 API="$N8N_URL/api/v1"; H=(-H "X-N8N-API-KEY: $N8N_API_KEY" -H "Content-Type: application/json")
 ok=0; already=0; fail=0
-cred_fail=0; webhook_fail=0; other_fail=0
+cred_fail=0; webhook_fail=0; other_fail=0; notrigger_fail=0
 cursor=""
 ids=$(mktemp)
 # page through all workflows (id, active, name)
@@ -42,7 +42,9 @@ while IFS=$'\t' read -r id active name; do
     lc=$(echo "$respbody" | tr '[:upper:]' '[:lower:]')
     if echo "$lc" | grep -qE 'credential'; then
       bucket="missing-cred"; cred_fail=$((cred_fail+1))
-    elif echo "$lc" | grep -qE 'webhook|already registered|duplicate|path.*(exist|use)'; then
+    elif echo "$lc" | grep -qE 'no trigger node|cannot be activated because it has no trigger'; then
+      bucket="no-trigger"; notrigger_fail=$((notrigger_fail+1))
+    elif echo "$lc" | grep -qE 'already registered|duplicate|path.*(exist|use)|webhook.*(conflict|in use)'; then
       bucket="webhook-collision"; webhook_fail=$((webhook_fail+1))
     else
       bucket="other"; other_fail=$((other_fail+1))
@@ -58,7 +60,7 @@ print(json.dumps({
 done < "$ids"
 
 echo "ACTIVATE RESULT: newly_activated=$ok already_active=$already failed=$fail total=$total"
-echo "FAILURE BUCKETS: missing-cred=$cred_fail webhook-collision=$webhook_fail other=$other_fail"
+echo "FAILURE BUCKETS: missing-cred=$cred_fail no-trigger=$notrigger_fail webhook-collision=$webhook_fail other=$other_fail"
 [ "$fail" -gt 0 ] && echo "sample failures:" && head -5 "$failures_jsonl"
 
 mkdir -p data
@@ -82,6 +84,7 @@ report = {
     'buckets': {
         'missing_cred': int(sys.argv[6]),
         'webhook_collision': int(sys.argv[7]),
+        'no_trigger': int(sys.argv[9]) if len(sys.argv)>9 else 0,
         'other': int(sys.argv[8]),
     },
     'failures': failures,
@@ -89,6 +92,6 @@ report = {
 with open('data/n8n-activate-report.json', 'w') as f:
     json.dump(report, f, indent=2)
     f.write('\n')
-" "$failures_jsonl" "$total" "$ok" "$already" "$fail" "$cred_fail" "$webhook_fail" "$other_fail"
+" "$failures_jsonl" "$total" "$ok" "$already" "$fail" "$cred_fail" "$webhook_fail" "$other_fail" "$notrigger_fail"
 
 # fire 2026-07-13T21:48:17Z
