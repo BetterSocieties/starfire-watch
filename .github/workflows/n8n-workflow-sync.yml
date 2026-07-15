@@ -9,6 +9,10 @@ on:
       workflow_id:
         description: "n8n workflow id"
         required: true
+      search:
+        description: "term for find mode"
+        required: false
+        default: ""
 concurrency:
   group: n8n-pod-mutations
   cancel-in-progress: false
@@ -38,6 +42,7 @@ jobs:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           MODE: ${{ inputs.mode }}
           WF_ID: ${{ inputs.workflow_id }}
+          SEARCH: ${{ inputs.search }}
         run: |
           export N8N_URL="$(cat core/config/n8n-cloud-url)"
           bash scripts/n8n-workflow-sync.sh
