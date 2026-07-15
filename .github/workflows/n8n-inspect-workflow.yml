@@ -1,0 +1,48 @@
+name: n8n-inspect-workflow
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_ids:
+        description: "Comma-separated n8n pod workflow ids to inspect"
+        required: true
+        type: string
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: gate
+        id: gate
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          if [ -z "$N8N_API_KEY" ]; then echo "ready=no" >> "$GITHUB_OUTPUT"; else echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: read pod url
+        if: steps.gate.outputs.ready == 'yes'
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: config/n8n-cloud-url
+      - name: inspect workflows
+        if: steps.gate.outputs.ready == 'yes'
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          WORKFLOW_IDS: ${{ inputs.workflow_ids }}
+        run: |
+          export N8N_URL="$(cat core/config/n8n-cloud-url)"
+          bash scripts/n8n-inspect-workflow.sh
+      - name: publish inspect report
+        if: always() && steps.gate.outputs.ready == 'yes'
+        run: |
+          test -f data/n8n-workflow-inspect.json || exit 0
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name starfire-watch
+          git config user.email actions@users.noreply.github.com
+          git add data/n8n-workflow-inspect.json
+          git diff --cached --quiet || git commit -m "n8n-inspect-workflow report $(date -u +%FT%TZ)"
+          for i in 1 2 3; do git push && break || { git pull --rebase; }; done
