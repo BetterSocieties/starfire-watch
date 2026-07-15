@@ -36,6 +36,16 @@ SKIP_IDS=(
   SBVdLIHUv4Bnb0V5   # BRAIN-007 Daily brief 6am Mon-Fri
   tUxaj0MPS9eCnRpO   # BRAIN-010 Karpathy hook (Sun 2:50am)
   O79usQgsfbmUYY12   # BRAIN-008 Weekly synthesis Mon 6am
+  # OJ-POD-17-REAL-FAILS "other" bucket, root-caused 2026-07-15 via the local
+  # export copies in starfire-core ventures/opsjuice/system-export/: both
+  # contain n8n-nodes-base.executeCommand nodes that write to /tmp and shell
+  # out to /Users/adrienharrison/.local/bin/claude -- Mac-local-only, same
+  # class as the BRAIN-* entries above. Pod error was identical either way:
+  # "Unrecognized node type: n8n-nodes-base.executeCommand" (the node type
+  # is not registered on the pod at all, so no content difference could ever
+  # make this activate there).
+  56KMoa1BAcLc6vgk   # OJ-Assessment-Twilio-Engine
+  SxaBrFdnwaX9v7fR   # BS-Compliance-Assessment-Engine
 )
 
 ok=0; already=0; fail=0; skipped=0
