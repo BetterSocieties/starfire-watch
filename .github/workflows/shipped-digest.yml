@@ -1,0 +1,25 @@
+# Cloud shipped-digest cron: replaces the Mac launchd com.starfire.shipped-digest
+# job. Runs every 30 minutes and posts new starfire-core commits to Slack via
+# the n8n webhook. Fully cloud, no Mac dependency.
+name: shipped-digest
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17,47 * * * *"
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: read starfire-core recent history
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          fetch-depth: 50
+      - name: post digest
+        env:
+          WINDOW_MIN: "45"
+        run: bash scripts/shipped-digest.sh
