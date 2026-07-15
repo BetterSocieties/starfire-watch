@@ -7,6 +7,7 @@ const CHECKS = [
   { name: 'os-crm', url: 'https://starfireos.pages.dev/starfire-crm/index.html', marker: 'STARFIRE', optional: true },
   { name: 'opsjuice-assessment', url: 'https://opsjuice.com/ai-assessment', marker: 'assessment', optional: true },
   { name: 'bs-comply', url: 'https://comply.bettersocieties.world/', marker: 'compliance', optional: true },
+  { name: 'br-storefront', url: 'https://bloodlustreverie.com/', negativeMarker: 'enter using password', optional: true },
 ];
 (async () => {
   fs.mkdirSync('screens', { recursive: true });
@@ -21,8 +22,10 @@ const CHECKS = [
       await p.waitForTimeout(2000);
       const body = (await p.content()).toLowerCase();
       const hasMarker = c.marker ? body.includes(c.marker.toLowerCase()) : true;
-      r.ok = r.status === 200 && hasMarker;
+      const hasNegative = c.negativeMarker ? body.includes(c.negativeMarker.toLowerCase()) : false;
+      r.ok = r.status === 200 && hasMarker && !hasNegative;
       if (!hasMarker) r.note += 'marker-missing;';
+      if (hasNegative) r.note += `negative-marker-found:${c.negativeMarker};`;
       await p.screenshot({ path: `screens/${c.name}.png`, fullPage: true });
     } catch (e) { r.note += String(e && e.message ? e.message.slice(0,100) : e); }
     if (c.optional && !r.ok) r.note += 'optional;';
