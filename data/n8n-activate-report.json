@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-07-15T17:59:38Z",
+  "generated_at": "2026-07-15T19:18:34Z",
   "total": 1209,
   "newly_activated": 0,
   "already_active": 1019,
-  "failed": 176,
-  "skipped": 14,
+  "failed": 174,
+  "skipped": 16,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 1,
     "no_trigger": 173,
-    "other": 2
+    "other": 0
   },
   "failures": [
     {
@@ -116,13 +116,6 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "56KMoa1BAcLc6vgk",
-      "name": "OJ-Assessment-Twilio-Engine",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "1K4feaieRnbrtKe2",
@@ -818,13 +811,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "SxaBrFdnwaX9v7fR",
-      "name": "BS-Compliance-Assessment-Engine",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "oQDV8TtaQIeDkBtW",
       "name": "bs-accelerator-funder-intro",
       "http_code": "400",
@@ -1267,6 +1253,11 @@
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
+      "id": "56KMoa1BAcLc6vgk",
+      "name": "OJ-Assessment-Twilio-Engine",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
       "id": "HC3X71flglZhYRIW",
       "name": "ONESHOT-psql-probe",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
@@ -1294,6 +1285,11 @@
     {
       "id": "SBVdLIHUv4Bnb0V5",
       "name": "BRAIN-007 Daily brief 6am Mon-Fri",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "SxaBrFdnwaX9v7fR",
+      "name": "BS-Compliance-Assessment-Engine",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
