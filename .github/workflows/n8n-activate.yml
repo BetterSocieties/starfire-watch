@@ -9,7 +9,8 @@ on:
 concurrency:
   group: n8n-pod-mutations
   cancel-in-progress: false
-
+permissions:
+  contents: write
 jobs:
   activate:
     runs-on: ubuntu-latest
@@ -37,3 +38,13 @@ jobs:
         run: |
           export N8N_URL="$(cat core/config/n8n-cloud-url)"
           bash scripts/n8n-activate.sh
+      - name: publish activate report
+        if: always() && steps.gate.outputs.ready == 'yes'
+        run: |
+          test -f data/n8n-activate-report.json || exit 0
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name starfire-watch
+          git config user.email actions@users.noreply.github.com
+          git add data/n8n-activate-report.json
+          git diff --cached --quiet || git commit -m "n8n-activate report $(date -u +%FT%TZ)"
+          git push
