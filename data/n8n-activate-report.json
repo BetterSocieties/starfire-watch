@@ -1,14 +1,15 @@
 {
-  "generated_at": "2026-07-15T14:46:53Z",
+  "generated_at": "2026-07-15T15:19:09Z",
   "total": 1209,
   "newly_activated": 0,
   "already_active": 1019,
-  "failed": 190,
+  "failed": 176,
+  "skipped": 14,
   "buckets": {
     "missing_cred": 0,
-    "webhook_collision": 0,
+    "webhook_collision": 1,
     "no_trigger": 173,
-    "other": 17
+    "other": 2
   },
   "failures": [
     {
@@ -54,20 +55,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "B4La6XsUcgkfm4Ky",
-      "name": "ONESHOT-alter-upsells-final",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
-      "id": "2zJcRi6fx7IToe0I",
-      "name": "BRAIN-009 Daily inbox routing 11pm",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "8KBs7cJysIYMM7gE",
       "name": "br-merch-sku-launch-post",
       "http_code": "400",
@@ -80,13 +67,6 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "8jpZ6TCySKyoan6L",
-      "name": "BRAIN-006 YouTube watch -> vault inbox",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "BKqkKadhYuHbEBrv",
@@ -108,13 +88,6 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "6v4sDlkf8RbfnZNS",
-      "name": "ONESHOT-psql-probe-v3",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "1B0VxmYA0zdjJ134",
@@ -353,13 +326,6 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "HC3X71flglZhYRIW",
-      "name": "ONESHOT-psql-probe",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "gvO70YGCbx4m5QBS",
@@ -614,25 +580,11 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "iEMQtBhy1vxERCXQ",
-      "name": "BRAIN-011 Graphify update (decoupled)",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "l8RsoIf7QzxL3T9P",
       "name": "br-music-content-drops",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "hY1N2hA8GpEdsiaG",
-      "name": "ONESHOT-probe-n8n-server",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "LihZczVmrH7VlvyR",
@@ -642,25 +594,11 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "iEgh3GEaCBji1B54",
-      "name": "ONESHOT-ddl-via-cmd",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "MyUFXK791YUu9Abo",
       "name": "bs-summit-content-capture",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "JtLDO1MBFlfNkhN4",
-      "name": "BRAIN-002 Whisper voice transcription to vault inbox",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "HsiVTbDD6EKmC8jU",
@@ -866,13 +804,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "SBVdLIHUv4Bnb0V5",
-      "name": "BRAIN-007 Daily brief 6am Mon-Fri",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "peYZShc32qT6fqO4",
       "name": "br-merch-fourthwall-product-create",
       "http_code": "400",
@@ -915,27 +846,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "tGNMhEQUqEqzEH61",
-      "name": "ONESHOT-probe-env",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
-      "id": "QwEPmdmmS9Erv4d9",
-      "name": "ONESHOT-alter-upsells-v3",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
-      "id": "tUxaj0MPS9eCnRpO",
-      "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
-    },
-    {
       "id": "qd0ECIF1o2u7ehYj",
       "name": "bs-sales-checkout-stripe-eur1k",
       "http_code": "400",
@@ -955,13 +865,6 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "O79usQgsfbmUYY12",
-      "name": "BRAIN-008 Weekly synthesis Mon 6am",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Unrecognized node type: n8n-nodes-base.executeCommand\"}"
     },
     {
       "id": "oDLqbUUXbGSyaUgV",
@@ -1156,7 +1059,7 @@
       "id": "PINHCAZTPjwWP840",
       "name": "sgtl-marketing-youtube-channel-growth-orchestrator",
       "http_code": "409",
-      "bucket": "other",
+      "bucket": "webhook-collision",
       "message": "{\"message\":\"There is a conflict with one of the webhooks.\"}"
     },
     {
@@ -1340,6 +1243,78 @@
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    }
+  ],
+  "skipped_detail": [
+    {
+      "id": "B4La6XsUcgkfm4Ky",
+      "name": "ONESHOT-alter-upsells-final",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "2zJcRi6fx7IToe0I",
+      "name": "BRAIN-009 Daily inbox routing 11pm",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "8jpZ6TCySKyoan6L",
+      "name": "BRAIN-006 YouTube watch -> vault inbox",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "6v4sDlkf8RbfnZNS",
+      "name": "ONESHOT-psql-probe-v3",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "HC3X71flglZhYRIW",
+      "name": "ONESHOT-psql-probe",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "iEMQtBhy1vxERCXQ",
+      "name": "BRAIN-011 Graphify update (decoupled)",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "hY1N2hA8GpEdsiaG",
+      "name": "ONESHOT-probe-n8n-server",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "iEgh3GEaCBji1B54",
+      "name": "ONESHOT-ddl-via-cmd",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "JtLDO1MBFlfNkhN4",
+      "name": "BRAIN-002 Whisper voice transcription to vault inbox",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "SBVdLIHUv4Bnb0V5",
+      "name": "BRAIN-007 Daily brief 6am Mon-Fri",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "tGNMhEQUqEqzEH61",
+      "name": "ONESHOT-probe-env",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "QwEPmdmmS9Erv4d9",
+      "name": "ONESHOT-alter-upsells-v3",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "tUxaj0MPS9eCnRpO",
+      "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "O79usQgsfbmUYY12",
+      "name": "BRAIN-008 Weekly synthesis Mon 6am",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     }
   ]
 }
