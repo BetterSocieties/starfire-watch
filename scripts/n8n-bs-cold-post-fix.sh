@@ -2,7 +2,7 @@
 set -uo pipefail
 : "${N8N_API_KEY:?}"
 : "${N8N_URL:?}"
-API="${N8N_URL%/}"
+API="${N8N_URL%/}/api/v1"
 WF="OLS9DHyDUOx6vCM2"
 H=(-H "X-N8N-API-KEY: $N8N_API_KEY" -H "User-Agent: Mozilla/5.0" -H "Content-Type: application/json")
 
