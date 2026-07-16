@@ -19,6 +19,7 @@ found=[]
 for n in d["nodes"]:
     if n["type"]=="n8n-nodes-base.webhook":
         n.setdefault("parameters",{})["httpMethod"]="POST"
+        n["parameters"]["responseMode"]="responseNode"
         found.append(n["name"])
 import sys
 sys.stderr.write(f"patched triggers: {found}\n")
