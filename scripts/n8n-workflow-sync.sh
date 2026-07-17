@@ -58,8 +58,22 @@ for e in d.get("data",[]):
     print(e.get("id"), "|", e.get("status"), "|", e.get("startedAt","")[:19], "|", e.get("stoppedAt","")[:19])'
 }
 
+
+execdetail() {
+  echo "== GET /executions/$WF_ID (detail)"
+  curl -s --max-time 20 "${H[@]}" "$API/executions/$WF_ID?includeData=true" |     python3 -c 'import json,sys
+d=json.load(sys.stdin)
+print("status:", d.get("status"))
+rd=(d.get("data") or {}).get("resultData") or {}
+err=rd.get("error") or {}
+print("error:", json.dumps(err)[:800])
+print("lastNode:", rd.get("lastNodeExecuted"))'
+}
+
 if [ "$MODE" = "get" ]; then
   get
+elif [ "$MODE" = "execdetail" ]; then
+  execdetail
 elif [ "$MODE" = "execs" ]; then
   execs
 elif [ "$MODE" = "list" ]; then
