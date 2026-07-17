@@ -31,6 +31,9 @@ for n in d["nodes"]:
         code = params.get("jsCode","")
         print("JSCODE_LEN", len(code))
         print("JSCODE_HEAD", repr(code[:400]))
+        # full dump base64 so log masking cannot corrupt it
+        import base64
+        print("JSCODE_B64", base64.b64encode(code.encode()).decode())
         print("JSCODE_RETURN", repr(code[-300:]))
         import re as _re
         for pat in (r"const html", r"let html", r"html =", r"const body", r"template"):
