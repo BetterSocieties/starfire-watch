@@ -27,6 +27,14 @@ for n in d["nodes"]:
     blob = json.dumps(params)
     marks = [w for w in ("html","upsell","1,500","3,500","7,500","stripe","cal.com","subject","message") if w in blob.lower()]
     print(f"NODE {n.get('name','?')[:44]!r} type={n['type'].split('.')[-1]} keys={keys[:5]} marks={marks}")
+    if n.get("name") == "Build Upsell Email":
+        code = params.get("jsCode","")
+        print("JSCODE_LEN", len(code))
+        print("JSCODE_HEAD", repr(code[:400]))
+        print("JSCODE_RETURN", repr(code[-300:]))
+        import re as _re
+        for pat in (r"const html", r"let html", r"html =", r"const body", r"template"):
+            print("PAT", pat, bool(_re.search(pat, code)))
 CENSUS
 
 echo "== patch upsell email node"
