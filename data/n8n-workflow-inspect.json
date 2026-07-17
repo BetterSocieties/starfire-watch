@@ -1,38 +1,18 @@
 {
-  "generated_at": "2026-07-17T03:09:49Z",
+  "generated_at": "2026-07-17T14:07:38Z",
   "workflows": [
     {
-      "id": "xNWE0BuyBOePIBbU",
-      "name": "OpsJuice Cold Outreach (Phase 1)",
+      "id": "Zr4tUUufIJxyV1hB",
+      "name": "OJ-Abandoned-Checkout-Recovery",
       "active": true,
-      "total_nodes": 17,
+      "total_nodes": 2,
       "node_types": [
         "n8n-nodes-base.code",
-        "n8n-nodes-base.httpRequest",
-        "n8n-nodes-base.manualTrigger",
-        "n8n-nodes-base.scheduleTrigger",
-        "n8n-nodes-base.splitInBatches",
-        "n8n-nodes-base.switch",
-        "n8n-nodes-base.webhook"
+        "n8n-nodes-base.scheduleTrigger"
       ],
       "node_names": [
-        "Schedule Trigger (9am Phoenix weekdays)",
-        "Manual Trigger (test runs)",
-        "TEST_MODE Gate",
-        "Fetch Queued Prospects",
-        "Split In Batches (1 per send)",
-        "Render Template (calls /api/outreach/render)",
-        "Switch by Channel",
-        "Send via Resend",
-        "Send via Twilio SMS",
-        "Queue LinkedIn Connection",
-        "Log outreach_sends",
-        "Log events",
-        "Time Window Gate (Phoenix 9am-1pm)",
-        "Daily Cap Enforcer",
-        "Circuit Breaker (bounce rate check)",
-        "Send All Prospects (render+send+log)",
-        "Webhook Trigger (API fire)"
+        "Every 15 Minutes",
+        "Scan and Recover Abandoned Checkouts"
       ],
       "execute_command_nodes": []
     }
