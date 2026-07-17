@@ -46,3 +46,8 @@ jobs:
         run: |
           export N8N_URL="$(cat core/config/n8n-cloud-url)"
           bash scripts/n8n-workflow-sync.sh
+      - name: commit fetched json
+        if: steps.gate.outputs.ready == 'yes' && inputs.mode == 'get'
+        run: |
+          git config user.name "starfire-watch"; git config user.email "watch@opsjuice.com"
+          git add data/n8n-fetched/ && git commit -m "n8n get ${{ inputs.workflow_id }}" && git push || echo "nothing to commit"
