@@ -46,6 +46,7 @@ r.append({
     'active': d.get('active'),
     'total_nodes': len(nodes),
     'node_types': sorted(set(n.get('type') for n in nodes)),
+    'node_names': [n.get('name','?') for n in nodes],
     'execute_command_nodes': exec_nodes,
 })
 json.dump(r, open('$results','w'))
