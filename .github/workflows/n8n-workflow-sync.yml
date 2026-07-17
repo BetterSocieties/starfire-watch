@@ -16,6 +16,8 @@ on:
 concurrency:
   group: n8n-pod-mutations
   cancel-in-progress: false
+permissions:
+  contents: write
 jobs:
   sync:
     runs-on: ubuntu-latest
