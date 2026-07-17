@@ -40,39 +40,27 @@ for n in d["nodes"]:
             print("PAT", pat, bool(_re.search(pat, code)))
 CENSUS
 
-echo "== patch upsell email node"
-python3 - "$SRC" <<'PY' > /tmp/wf-patched.json
+echo "== patch upsell email node (wholesale builder swap)"
+BUILDER="core/ventures/opsjuice/emails/upsell-builder.jscode.js"
+[ -f "$BUILDER" ] || { echo "missing $BUILDER"; exit 1; }
+python3 - "$BUILDER" <<'PY' > /tmp/wf-patched.json
 import json
-import re
 import sys
 
-src_html = open(sys.argv[1]).read()
-html_only = re.sub(r"^<!--[\s\S]*?-->\s*", "", src_html)
+builder = open(sys.argv[1]).read()
 d = json.load(open("/tmp/wf.json"))
 hit = []
 for n in d["nodes"]:
-    params = n.get("parameters", {})
-    blob = json.dumps(params)
-    name_hit = "upsell" in n.get("name", "").lower()
-    content_hit = ("3,500" in blob or "3500" in blob or "retainer" in blob.lower()) and ("html" in blob.lower() or "jsCode" in blob or "message" in blob)
-    if not (name_hit or content_hit):
-        continue
-    if "jsCode" in params:
-        code = params["jsCode"]
-        esc = (html_only.replace("\\", "\\\\").replace("`", "\\`")
-               .replace("${", "\\${").replace("{{first_name}}", "${firstName}"))
-        new_code = re.sub(r"(const html = `)[\s\S]*?(`;)",
-                          lambda m: m.group(1) + esc + m.group(2), code, count=1)
-        if new_code != code:
-            params["jsCode"] = new_code
-            hit.append(n["name"] + " (jsCode)")
-    elif "message" in params:
-        params["message"] = html_only.replace("{{first_name}}", "={{ $json.firstName }}")
-        hit.append(n["name"] + " (message)")
+    if n.get("name") == "Build Upsell Email":
+        n["parameters"]["jsCode"] = builder
+        hit.append(n["name"])
 sys.stderr.write("patched nodes: %s\n" % hit)
+if not hit:
+    sys.exit(1)
 out = {k: d[k] for k in ("name", "nodes", "connections", "settings", "staticData") if k in d}
 json.dump(out, sys.stdout)
 PY
+[ $? -eq 0 ] || { echo "patch failed"; exit 1; }
 echo "patched size: $(wc -c </tmp/wf-patched.json)"
 
 echo "== PUT workflow"
