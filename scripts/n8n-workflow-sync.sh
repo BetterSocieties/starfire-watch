@@ -9,7 +9,10 @@ get() {
   echo "== GET /workflows/$WF_ID"
   code=$(curl -s --max-time 20 -o /tmp/wf.out -w '%{http_code}' "${H[@]}" "$API/workflows/$WF_ID")
   echo "http_code=$code"
-  cat /tmp/wf.out
+  # gh run log drops very long single-line output; persist the JSON to the repo instead
+  mkdir -p data/n8n-fetched
+  cp /tmp/wf.out "data/n8n-fetched/$WF_ID.json"
+  python3 -c "import json;d=json.load(open('/tmp/wf.out'));print('name:',d.get('name'),'active:',d.get('active'),'nodes:',len(d.get('nodes',[])))"
 }
 
 list() {
