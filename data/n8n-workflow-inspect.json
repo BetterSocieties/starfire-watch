@@ -1,16 +1,18 @@
 {
-  "generated_at": "2026-07-17T00:39:00Z",
+  "generated_at": "2026-07-17T03:03:51Z",
   "workflows": [
     {
-      "id": "J3gQgu1QffAAaLrA",
-      "name": "OJ-Assessment-Followup",
+      "id": "xNWE0BuyBOePIBbU",
+      "name": "OpsJuice Cold Outreach (Phase 1)",
       "active": true,
-      "total_nodes": 11,
+      "total_nodes": 17,
       "node_types": [
         "n8n-nodes-base.code",
         "n8n-nodes-base.httpRequest",
-        "n8n-nodes-base.if",
-        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.manualTrigger",
+        "n8n-nodes-base.scheduleTrigger",
+        "n8n-nodes-base.splitInBatches",
+        "n8n-nodes-base.switch",
         "n8n-nodes-base.webhook"
       ],
       "execute_command_nodes": []
