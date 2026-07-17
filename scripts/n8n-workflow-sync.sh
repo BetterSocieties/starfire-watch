@@ -49,8 +49,19 @@ find_term() {
   done
 }
 
+
+execs() {
+  echo "== GET /executions?workflowId=$WF_ID (last 8)"
+  curl -s --max-time 20 "${H[@]}" "$API/executions?workflowId=$WF_ID&limit=8&includeData=false" |     python3 -c 'import json,sys
+d=json.load(sys.stdin)
+for e in d.get("data",[]):
+    print(e.get("id"), "|", e.get("status"), "|", e.get("startedAt","")[:19], "|", e.get("stoppedAt","")[:19])'
+}
+
 if [ "$MODE" = "get" ]; then
   get
+elif [ "$MODE" = "execs" ]; then
+  execs
 elif [ "$MODE" = "list" ]; then
   list
 elif [ "$MODE" = "find" ]; then
