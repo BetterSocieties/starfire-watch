@@ -1,22 +1,8 @@
 {
-  "generated_at": "2026-07-16T14:37:50Z",
+  "generated_at": "2026-07-17T00:32:51Z",
   "workflows": [
     {
-      "id": "OLS9DHyDUOx6vCM2",
-      "name": "BS-Cold-Outreach-Engine",
-      "active": true,
-      "total_nodes": 6,
-      "node_types": [
-        "n8n-nodes-base.code",
-        "n8n-nodes-base.gmail",
-        "n8n-nodes-base.httpRequest",
-        "n8n-nodes-base.respondToWebhook",
-        "n8n-nodes-base.webhook"
-      ],
-      "execute_command_nodes": []
-    },
-    {
-      "id": "WMTkDS2C43W41JYi",
+      "id": "2oxtWXaeRhCsbdJp",
       "http_code": "404",
       "error": "{\"message\":\"Not Found\"}"
     }
