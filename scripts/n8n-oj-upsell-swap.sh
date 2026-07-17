@@ -29,7 +29,10 @@ d = json.load(open("/tmp/wf.json"))
 hit = []
 for n in d["nodes"]:
     params = n.get("parameters", {})
-    if "upsell" not in n.get("name", "").lower():
+    blob = json.dumps(params)
+    name_hit = "upsell" in n.get("name", "").lower()
+    content_hit = ("3,500" in blob or "3500" in blob or "retainer" in blob.lower()) and ("html" in blob.lower() or "jsCode" in blob or "message" in blob)
+    if not (name_hit or content_hit):
         continue
     if "jsCode" in params:
         code = params["jsCode"]
