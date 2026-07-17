@@ -6,7 +6,7 @@
 set -uo pipefail
 : "${N8N_API_KEY:?}"; : "${N8N_URL:?}"
 API="${N8N_URL%/}/api/v1"
-WF="2oxtWXaeRhCsbdJp"
+WF="J3gQgu1QffAAaLrA"
 H=(-H "X-N8N-API-KEY: $N8N_API_KEY" -H "User-Agent: Mozilla/5.0" -H "Content-Type: application/json")
 SRC="core/ventures/opsjuice/emails/upsell-three-tiers.html"
 [ -f "$SRC" ] || { echo "missing $SRC"; exit 1; }
