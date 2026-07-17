@@ -1,0 +1,38 @@
+name: n8n-oj-abandoned-checkout-create
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: [".github/workflows/n8n-oj-abandoned-checkout-create.yml", "scripts/n8n-oj-abandoned-checkout-create.sh"]
+concurrency:
+  group: n8n-pod-mutations
+  cancel-in-progress: false
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: gate
+        id: gate
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          if [ -z "$N8N_API_KEY" ]; then echo "ready=no" >> "$GITHUB_OUTPUT"; else echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: checkout core (url + workflow json)
+        if: steps.gate.outputs.ready == 'yes'
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          path: core
+          sparse-checkout: |
+            config/n8n-cloud-url
+            ventures/opsjuice/system-export/DRAFT-OJ-Abandoned-Checkout-Recovery.json
+      - name: create
+        if: steps.gate.outputs.ready == 'yes'
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: |
+          export N8N_URL="$(cat core/config/n8n-cloud-url)"
+          bash scripts/n8n-oj-abandoned-checkout-create.sh
