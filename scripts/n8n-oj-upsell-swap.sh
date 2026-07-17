@@ -17,6 +17,18 @@ GET_CODE=$(curl -sS -o /tmp/wf.json -w "%{http_code}" --max-time 30 "${H[@]}" "$
 echo "get http_code=$GET_CODE size=$(wc -c </tmp/wf.json)"
 [ "$GET_CODE" = "200" ] || exit 1
 
+echo "== node census"
+python3 - <<'CENSUS'
+import json
+d = json.load(open("/tmp/wf.json"))
+for n in d["nodes"]:
+    params = n.get("parameters", {})
+    keys = list(params.keys())
+    blob = json.dumps(params)
+    marks = [w for w in ("html","upsell","1,500","3,500","7,500","stripe","cal.com","subject","message") if w in blob.lower()]
+    print(f"NODE {n.get('name','?')[:44]!r} type={n['type'].split('.')[-1]} keys={keys[:5]} marks={marks}")
+CENSUS
+
 echo "== patch upsell email node"
 python3 - "$SRC" <<'PY' > /tmp/wf-patched.json
 import json
