@@ -29,6 +29,7 @@ jobs:
           sparse-checkout: |
             config/n8n-cloud-url
             ventures/opsjuice/emails/upsell-three-tiers.html
+            ventures/opsjuice/emails/upsell-builder.jscode.js
       - name: swap
         if: steps.gate.outputs.ready == 'yes'
         env:
