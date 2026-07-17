@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-17T03:07:52Z",
+  "generated_at": "2026-07-17T03:09:49Z",
   "workflows": [
     {
       "id": "xNWE0BuyBOePIBbU",
@@ -14,6 +14,25 @@
         "n8n-nodes-base.splitInBatches",
         "n8n-nodes-base.switch",
         "n8n-nodes-base.webhook"
+      ],
+      "node_names": [
+        "Schedule Trigger (9am Phoenix weekdays)",
+        "Manual Trigger (test runs)",
+        "TEST_MODE Gate",
+        "Fetch Queued Prospects",
+        "Split In Batches (1 per send)",
+        "Render Template (calls /api/outreach/render)",
+        "Switch by Channel",
+        "Send via Resend",
+        "Send via Twilio SMS",
+        "Queue LinkedIn Connection",
+        "Log outreach_sends",
+        "Log events",
+        "Time Window Gate (Phoenix 9am-1pm)",
+        "Daily Cap Enforcer",
+        "Circuit Breaker (bounce rate check)",
+        "Send All Prospects (render+send+log)",
+        "Webhook Trigger (API fire)"
       ],
       "execute_command_nodes": []
     }
