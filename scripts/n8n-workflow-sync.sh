@@ -70,8 +70,32 @@ print("error:", json.dumps(err)[:800])
 print("lastNode:", rd.get("lastNodeExecuted"))'
 }
 
+
+create() {
+  STAGE="data/n8n-staged/$WF_ID.json"
+  [ -f "$STAGE" ] || { echo "missing staged file $STAGE"; exit 1; }
+  NAME=$(python3 -c "import json;print(json.load(open('$STAGE'))['name'])")
+  # idempotency: existing workflow with same name?
+  EXIST=$(curl -s --max-time 20 "${H[@]}" "$API/workflows?limit=250" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for w in d.get('data',[]):
+    if w['name']=='$NAME': print(w['id']); break")
+  if [ -n "$EXIST" ]; then echo "exists id=$EXIST — updating instead"; 
+    code=$(curl -s --max-time 20 -o /tmp/wf-put.out -w '%{http_code}' -X PUT "${H[@]}" --data-binary @"$STAGE" "$API/workflows/$EXIST")
+    echo "PUT http_code=$code id=$EXIST"
+  else
+    code=$(curl -s --max-time 20 -o /tmp/wf-create.out -w '%{http_code}' -X POST "${H[@]}" --data-binary @"$STAGE" "$API/workflows")
+    EXIST=$(python3 -c "import json;print(json.load(open('/tmp/wf-create.out')).get('id',''))" 2>/dev/null)
+    echo "POST http_code=$code new_id=$EXIST"
+  fi
+  [ -n "$EXIST" ] && { acode=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' -X POST "${H[@]}" "$API/workflows/$EXIST/activate"); echo "activate http_code=$acode id=$EXIST"; }
+}
+
 if [ "$MODE" = "get" ]; then
   get
+elif [ "$MODE" = "create" ]; then
+  create
 elif [ "$MODE" = "execdetail" ]; then
   execdetail
 elif [ "$MODE" = "execs" ]; then
