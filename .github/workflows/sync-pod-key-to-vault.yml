@@ -1,0 +1,28 @@
+name: sync-pod-key-to-vault
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: put pod key into vault
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          [ -n "$N8N_API_KEY" ] || { echo "no pod key secret"; exit 1; }
+          [ -n "$VAULT_BEARER" ] || { echo "no vault bearer secret"; exit 1; }
+          code=$(curl -s -o /tmp/r.out -w '%{http_code}' -X PUT \
+            "https://starfire-vault.dark-wildflower-46d6.workers.dev/v1/secret/N8N_POD_API_KEY" \
+            -H "Authorization: Bearer $VAULT_BEARER" \
+            -H "Content-Type: application/json" \
+            -d "{\"value\": \"$N8N_API_KEY\"}")
+          echo "vault PUT http=$code"
+          [ "$code" = "200" ] || { cat /tmp/r.out; exit 1; }
+          # verify readback length only (never print the key)
+          len=$(curl -s "https://starfire-vault.dark-wildflower-46d6.workers.dev/v1/secret/N8N_POD_API_KEY" \
+            -H "Authorization: Bearer $VAULT_BEARER" | python3 -c "import json,sys;print(len(json.load(sys.stdin).get('value','')))")
+          echo "readback len=$len"
