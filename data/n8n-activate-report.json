@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-19T23:42:40Z",
-  "total": 1214,
+  "generated_at": "2026-07-20T04:33:08Z",
+  "total": 1218,
   "newly_activated": 0,
-  "already_active": 1024,
+  "already_active": 1028,
   "failed": 174,
   "skipped": 16,
   "buckets": {
@@ -636,13 +636,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "NGUkNK4cIO5c67Rp",
-      "name": "echo-studio-sales-contract-send",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "JaAp2EIsLo2NVjl2",
       "name": "echo-studio-sales-reply-classify",
       "http_code": "400",
@@ -694,13 +687,6 @@
     {
       "id": "JaR6BCcjYEtfwSrH",
       "name": "opsjuice-call-outbound-followup-cadence",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "NGODQVk2mY6mkxap",
-      "name": "opsjuice-cs-churn-save-playbook",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
@@ -902,6 +888,13 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
+      "id": "NGUkNK4cIO5c67Rp",
+      "name": "echo-studio-sales-contract-send",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
       "id": "tO2H6Qig4NTTEBKI",
       "name": "frontend-design-standard",
       "http_code": "400",
@@ -925,6 +918,13 @@
     {
       "id": "PKfJh7Re2RwiRDF0",
       "name": "loop-tick",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "NGODQVk2mY6mkxap",
+      "name": "opsjuice-cs-churn-save-playbook",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
