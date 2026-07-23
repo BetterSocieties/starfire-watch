@@ -1,0 +1,60 @@
+# Cloud regen + deploy for the Starfire OS (starfireos.pages.dev).
+# Lives in starfire-watch (public repo, free Actions minutes) because
+# starfire-core is private and the org's Actions billing is broken.
+# Checks out starfire-core with GH_PAT, regenerates the live feeds on a
+# real-internet runner, builds the app, deploys with wrangler.
+# Hourly cron keeps the OS accurate with zero Mac dependency.
+name: os-deploy
+on:
+  schedule:
+    - cron: '10 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: os-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Regenerate live feeds
+        env:
+          N8N_POD_API_KEY: ${{ secrets.N8N_API_KEY }}
+          STRIPE_SK_OJ: ${{ secrets.STRIPE_SK_OJ }}
+          STRIPE_SK_BS: ${{ secrets.STRIPE_SK_BS }}
+        run: |
+          for g in gen-northstar-json gen-funnel-live-json gen-roadmap-json \
+                   gen-attention-json gen-tasks-board-json gen-expenses-json \
+                   gen-os-progress gen-os-loops gen-gates-json; do
+            python3 "scripts/$g.py" || echo "WARN $g failed, keeping committed feed"
+          done
+
+      - name: Build app
+        working-directory: apps/starfire-os
+        run: |
+          npm ci --no-fund --no-audit
+          npm run build
+          rsync -a ../../cf-pages/starfire/ dist/legacy/
+          cp ../../cf-pages/starfire/northstar.json ../../cf-pages/starfire/gates.json \
+             ../../cf-pages/starfire/loops.json dist/ 2>/dev/null || true
+          cp ../../cf-pages/starfire/walkthrough.json dist/ 2>/dev/null || true
+
+      - name: Deploy to Cloudflare Pages
+        working-directory: apps/starfire-os
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 87f2dc2c8ff70d0d68099a12e06a5894
+        run: npx wrangler pages deploy dist --project-name=starfireos --branch main --commit-dirty=true
