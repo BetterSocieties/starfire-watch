@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-23T04:00:45Z",
-  "total": 1221,
+  "generated_at": "2026-07-23T07:25:29Z",
+  "total": 1222,
   "newly_activated": 0,
-  "already_active": 1031,
+  "already_active": 1032,
   "failed": 174,
   "skipped": 16,
   "buckets": {
@@ -559,13 +559,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "nEmZZNpIvx1CfdOV",
-      "name": "br-content-mockup-generation",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "l8RsoIf7QzxL3T9P",
       "name": "br-music-content-drops",
       "http_code": "400",
@@ -778,6 +771,13 @@
     {
       "id": "SnJJUY9poWq0m5qq",
       "name": "after-work-post-event-content-capture",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "nEmZZNpIvx1CfdOV",
+      "name": "br-content-mockup-generation",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
