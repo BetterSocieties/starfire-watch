@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-23T10:55:06Z",
-  "total": 1223,
-  "newly_activated": 5,
-  "already_active": 1028,
+  "generated_at": "2026-07-23T14:55:43Z",
+  "total": 1226,
+  "newly_activated": 0,
+  "already_active": 1036,
   "failed": 174,
   "skipped": 16,
   "buckets": {
@@ -1028,13 +1028,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "UEGVb074dssfDJ7E",
-      "name": "sop-cohort-visa-support",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "SC2PgL0F8gcleD39",
       "name": "worker-template",
       "http_code": "400",
@@ -1212,6 +1205,13 @@
     {
       "id": "Xy5QUn5LqotTjuak",
       "name": "sop-application-scoring",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "UEGVb074dssfDJ7E",
+      "name": "sop-cohort-visa-support",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
