@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-07-26T11:51:03Z",
-  "total": 1234,
+  "generated_at": "2026-07-26T14:20:19Z",
+  "total": 1235,
   "newly_activated": 0,
-  "already_active": 1045,
+  "already_active": 1047,
   "failed": 173,
-  "skipped": 16,
+  "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
@@ -573,13 +573,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "MyUFXK791YUu9Abo",
-      "name": "bs-summit-content-capture",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "HsiVTbDD6EKmC8jU",
       "name": "bs-summit-post-event-nurture",
       "http_code": "400",
@@ -834,6 +827,13 @@
     {
       "id": "p4BnxHMuG8QajcLF",
       "name": "bs-sales-process",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "MyUFXK791YUu9Abo",
+      "name": "bs-summit-content-capture",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
@@ -1278,11 +1278,6 @@
     {
       "id": "SBVdLIHUv4Bnb0V5",
       "name": "BRAIN-007 Daily brief 6am Mon-Fri",
-      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
-    },
-    {
-      "id": "SxaBrFdnwaX9v7fR",
-      "name": "BS-Compliance-Assessment-Engine",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
