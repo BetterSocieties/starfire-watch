@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-27T12:01:34Z",
-  "total": 1237,
+  "generated_at": "2026-07-27T15:33:07Z",
+  "total": 1239,
   "newly_activated": 0,
-  "already_active": 1049,
+  "already_active": 1051,
   "failed": 173,
   "skipped": 15,
   "buckets": {
@@ -1014,13 +1014,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "tusmyFwaJyr3eGa6",
-      "name": "sgtl-marketing-beehiiv-newsletter-weekly-anchor-orchestrator",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "pUvy8dD4hS1lkwbD",
       "name": "small-business",
       "http_code": "400",
@@ -1191,6 +1184,13 @@
     {
       "id": "zyedeRQBAiFWOWlb",
       "name": "sgtl-content-repurposing-pipeline",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "tusmyFwaJyr3eGa6",
+      "name": "sgtl-marketing-beehiiv-newsletter-weekly-anchor-orchestrator",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
