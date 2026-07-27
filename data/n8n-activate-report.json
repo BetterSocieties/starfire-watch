@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-26T23:46:24Z",
-  "total": 1235,
-  "newly_activated": 0,
+  "generated_at": "2026-07-27T04:28:43Z",
+  "total": 1236,
+  "newly_activated": 1,
   "already_active": 1047,
   "failed": 173,
   "skipped": 15,
@@ -1251,11 +1251,6 @@
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
-      "id": "HC3X71flglZhYRIW",
-      "name": "ONESHOT-psql-probe",
-      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
-    },
-    {
       "id": "iEMQtBhy1vxERCXQ",
       "name": "BRAIN-011 Graphify update (decoupled)",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
@@ -1273,6 +1268,11 @@
     {
       "id": "JtLDO1MBFlfNkhN4",
       "name": "BRAIN-002 Whisper voice transcription to vault inbox",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "HC3X71flglZhYRIW",
+      "name": "ONESHOT-psql-probe",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
