@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-27T04:28:43Z",
-  "total": 1236,
-  "newly_activated": 1,
-  "already_active": 1047,
+  "generated_at": "2026-07-27T08:18:40Z",
+  "total": 1237,
+  "newly_activated": 0,
+  "already_active": 1049,
   "failed": 173,
   "skipped": 15,
   "buckets": {
@@ -1291,13 +1291,13 @@
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
-      "id": "tUxaj0MPS9eCnRpO",
-      "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
+      "id": "O79usQgsfbmUYY12",
+      "name": "BRAIN-008 Weekly synthesis Mon 6am",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
-      "id": "O79usQgsfbmUYY12",
-      "name": "BRAIN-008 Weekly synthesis Mon 6am",
+      "id": "tUxaj0MPS9eCnRpO",
+      "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     }
   ]
