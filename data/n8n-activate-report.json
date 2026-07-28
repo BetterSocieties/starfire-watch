@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-28T03:52:53Z",
-  "total": 1241,
+  "generated_at": "2026-07-28T07:27:50Z",
+  "total": 1242,
   "newly_activated": 0,
-  "already_active": 1053,
+  "already_active": 1054,
   "failed": 173,
   "skipped": 15,
   "buckets": {
@@ -335,13 +335,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "H7Th1piQxBxPqPSz",
-      "name": "builder-safety-gate",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "CiJiwCLoaYGxre5d",
       "name": "canonical-rules-and-lessons",
       "http_code": "400",
@@ -589,6 +582,13 @@
     {
       "id": "Jy8zIDMel24lJGgF",
       "name": "builder-loop",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "H7Th1piQxBxPqPSz",
+      "name": "builder-safety-gate",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
