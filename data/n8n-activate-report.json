@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-07-29T07:34:12Z",
+  "generated_at": "2026-07-29T11:12:07Z",
   "total": 1245,
   "newly_activated": 0,
-  "already_active": 1057,
-  "failed": 173,
+  "already_active": 1058,
+  "failed": 172,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
-    "no_trigger": 173,
+    "no_trigger": 172,
     "other": 0
   },
   "failures": [
@@ -1030,13 +1030,6 @@
     {
       "id": "z3lejnMBvaPijmRi",
       "name": "after-work-event-day-ops",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "xHJNdDa92ZAiz6lI",
-      "name": "after-work-sponsor-outreach",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
