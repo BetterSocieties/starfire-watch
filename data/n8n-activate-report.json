@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-30T18:06:17Z",
+  "generated_at": "2026-07-30T20:09:06Z",
   "total": 1251,
-  "newly_activated": 5,
-  "already_active": 1059,
+  "newly_activated": 0,
+  "already_active": 1064,
   "failed": 172,
   "skipped": 15,
   "buckets": {
