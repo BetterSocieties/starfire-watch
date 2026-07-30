@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-30T21:53:45Z",
-  "total": 1251,
+  "generated_at": "2026-07-30T23:47:31Z",
+  "total": 1252,
   "newly_activated": 0,
-  "already_active": 1064,
+  "already_active": 1065,
   "failed": 172,
   "skipped": 15,
   "buckets": {
@@ -183,13 +183,6 @@
     {
       "id": "1ROz5qmRx37jFXjt",
       "name": "bs-mktg-unified",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "BKqkKadhYuHbEBrv",
-      "name": "bs-eu-compliance-outreach",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
@@ -477,6 +470,13 @@
     {
       "id": "GE7VFYFQ1zgfoClW",
       "name": "bs-sales-qualifier-comply-landing",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "BKqkKadhYuHbEBrv",
+      "name": "bs-eu-compliance-outreach",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
