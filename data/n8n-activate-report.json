@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-29T23:47:22Z",
-  "total": 1247,
+  "generated_at": "2026-07-30T03:48:09Z",
+  "total": 1249,
   "newly_activated": 0,
-  "already_active": 1060,
+  "already_active": 1062,
   "failed": 172,
   "skipped": 15,
   "buckets": {
@@ -538,13 +538,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "MrN3UTMxSDPZsmkY",
-      "name": "agent-teams-topology",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "jKKdEqwDETTtVlwr",
       "name": "auditor-rules",
       "http_code": "400",
@@ -769,6 +762,13 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
+      "id": "MrN3UTMxSDPZsmkY",
+      "name": "agent-teams-topology",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
       "id": "nEmZZNpIvx1CfdOV",
       "name": "br-content-mockup-generation",
       "http_code": "400",
@@ -890,13 +890,6 @@
     {
       "id": "NGUkNK4cIO5c67Rp",
       "name": "echo-studio-sales-contract-send",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
-      "id": "tO2H6Qig4NTTEBKI",
-      "name": "frontend-design-standard",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
@@ -1121,6 +1114,13 @@
     {
       "id": "zRBp9CJkEC6AjMXJ",
       "name": "echo-studio-sales-proposal-generate",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "tO2H6Qig4NTTEBKI",
+      "name": "frontend-design-standard",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
