@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-31T18:12:54Z",
-  "total": 1253,
+  "generated_at": "2026-07-31T20:12:59Z",
+  "total": 1254,
   "newly_activated": 0,
-  "already_active": 1066,
+  "already_active": 1067,
   "failed": 172,
   "skipped": 15,
   "buckets": {
@@ -587,13 +587,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "MpyLrZffHKvFtLUK",
-      "name": "orchestrator-brief",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "HI6xasVjwMkURRIa",
       "name": "opsjuice-sales-cpq-scale-tier-quote-approval",
       "http_code": "400",
@@ -846,6 +839,13 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
+      "id": "MpyLrZffHKvFtLUK",
+      "name": "orchestrator-brief",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
       "id": "qBHsTkI8c1TSIqK5",
       "name": "opsjuice-product-usage-analytics-dashboard",
       "http_code": "400",
@@ -1056,13 +1056,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "zyedeRQBAiFWOWlb",
-      "name": "sgtl-content-repurposing-pipeline",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "vTOWXt7H8VXr8FsI",
       "name": "sgtl-audience-warm-lead-handoff",
       "http_code": "400",
@@ -1212,6 +1205,13 @@
     {
       "id": "z3lejnMBvaPijmRi",
       "name": "after-work-event-day-ops",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "zyedeRQBAiFWOWlb",
+      "name": "sgtl-content-repurposing-pipeline",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
