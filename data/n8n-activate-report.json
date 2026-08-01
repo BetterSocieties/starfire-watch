@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-01T20:06:37Z",
-  "total": 1262,
+  "generated_at": "2026-08-01T21:43:58Z",
+  "total": 1263,
   "newly_activated": 957,
-  "already_active": 118,
+  "already_active": 119,
   "failed": 172,
   "skipped": 15,
   "buckets": {
@@ -853,13 +853,6 @@
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
     },
     {
-      "id": "taHdUcWkCODMhwoM",
-      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
-      "http_code": "400",
-      "bucket": "no-trigger",
-      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
-    },
-    {
       "id": "okkQpU8RcNMevIHH",
       "name": "echo-studio-pre-accelerator-demo-day-scheduler",
       "http_code": "400",
@@ -1100,6 +1093,13 @@
     {
       "id": "zldwV7I6jy88XruM",
       "name": "echo-studio-cs-post-engagement-retrospective-referral",
+      "http_code": "400",
+      "bucket": "no-trigger",
+      "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
+    },
+    {
+      "id": "taHdUcWkCODMhwoM",
+      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
       "http_code": "400",
       "bucket": "no-trigger",
       "message": "{\"message\":\"Workflow cannot be activated because it has no trigger node. At least one trigger, webhook, or polling node is required.\"}"
