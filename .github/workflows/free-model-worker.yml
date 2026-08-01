@@ -43,9 +43,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           mkdir -p data/free-model-receipts
-          head -40 core/ops/CHANGELOG.md \
+          { echo "Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Entry:"; \
+            head -40 core/ops/CHANGELOG.md; } \
             | python3 core/scripts/llm-router.py --task bulk --max-tokens 400 \
-              "Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Entry:" \
               2> data/free-model-receipts/last-route.txt \
               > data/free-model-receipts/last-summary.txt
           date -u +%Y-%m-%dT%H:%M:%SZ > data/free-model-receipts/last-run.txt
