@@ -1,2 +1,1 @@
-Here is a summary of the newest changelog entry in 1 plain-English sentence: 
-The development team fixed 5 major issues, including a missing worksheet, a case study drafter, a content gate, a client intake form, and an issue with targeting law firms, and made several other improvements to the system, all of which are now live and working as intended.
+Here is a summary of the newest changelog entry in 1 plain-English sentence: The development team made several changes to the system, including fixing a broken worksheet download, creating a new case study drafter, implementing a content gate to block certain claims, and launching a new client intake process, all of which are now live and functioning as intended.
