@@ -1,0 +1,59 @@
+# Free-model swarm worker: proves and provides mechanical AI work in the cloud
+# with 0 Claude tokens. Runs the llm-router (lives in starfire-core) against the
+# free tiers (Groq, Gemini) and commits a dated receipt here so any session can
+# verify the swarm is alive without trusting anyone's word.
+# 2026-08-01: GitHub Models was retired by GitHub on 2026-07-30, so workers carry
+# provider keys as Action secrets instead.
+name: free-model-worker
+on:
+  schedule:
+    - cron: '25 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: free-model-worker
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout starfire-watch
+        uses: actions/checkout@v4
+      - name: Checkout starfire-core (router + changelog)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Router self-test on free tiers
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python3 core/scripts/llm-router.py --self-test
+      - name: 1 real mechanical task on a free model
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          mkdir -p data/free-model-receipts
+          head -40 core/ops/CHANGELOG.md \
+            | python3 core/scripts/llm-router.py --task bulk --max-tokens 400 \
+              "Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Entry:" \
+              2> data/free-model-receipts/last-route.txt \
+              > data/free-model-receipts/last-summary.txt
+          date -u +%Y-%m-%dT%H:%M:%SZ > data/free-model-receipts/last-run.txt
+          cat data/free-model-receipts/last-route.txt data/free-model-receipts/last-summary.txt
+      - name: Commit the receipt
+        run: |
+          git config user.name "starfire-free-model-worker"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/free-model-receipts
+          git commit -m "free-model worker receipt: $(cat data/free-model-receipts/last-run.txt)" || exit 0
+          for i in 1 2 3 4 5; do git push && break || git pull --rebase; done
