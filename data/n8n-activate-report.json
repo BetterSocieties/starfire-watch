@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-01T04:14:24Z",
-  "total": 1254,
+  "generated_at": "2026-08-01T07:19:38Z",
+  "total": 1255,
   "newly_activated": 0,
-  "already_active": 1067,
+  "already_active": 1068,
   "failed": 172,
   "skipped": 15,
   "buckets": {
@@ -1279,11 +1279,6 @@
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     },
     {
-      "id": "tGNMhEQUqEqzEH61",
-      "name": "ONESHOT-probe-env",
-      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
-    },
-    {
       "id": "SBVdLIHUv4Bnb0V5",
       "name": "BRAIN-007 Daily brief 6am Mon-Fri",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
@@ -1291,6 +1286,11 @@
     {
       "id": "tUxaj0MPS9eCnRpO",
       "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
+      "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "tGNMhEQUqEqzEH61",
+      "name": "ONESHOT-probe-env",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
     }
   ]
