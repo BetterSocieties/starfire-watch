@@ -40,7 +40,7 @@ jobs:
         run: |
           for g in gen-northstar-json gen-funnel-live-json gen-roadmap-json \
                    gen-attention-json gen-tasks-board-json gen-expenses-json \
-                   gen-os-progress gen-os-loops gen-gates-json; do
+                   gen-os-progress gen-os-loops gen-gates-json gen-library-json; do
             python3 "scripts/$g.py" || echo "WARN $g failed, keeping committed feed"
           done
 
