@@ -3,11 +3,13 @@
 # starfire-core is private and the org's Actions billing is broken.
 # Checks out starfire-core with GH_PAT, regenerates the live feeds on a
 # real-internet runner, builds the app, deploys with wrangler.
-# Hourly cron keeps the OS accurate with zero Mac dependency.
+# 15-min cron keeps the OS accurate with zero Mac dependency (2026-08-01:
+# was hourly; fixes came off a preview-only Mac deployer so production
+# lagged up to an hour behind every fix. Public repo = free minutes).
 name: os-deploy
 on:
   schedule:
-    - cron: '10 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
 concurrency:
