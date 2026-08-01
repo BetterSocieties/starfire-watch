@@ -1,1 +1,1 @@
-There is no entry to summarize, please provide the changelog entry. I'll be happy to assist you in summarizing it in 1 plain-English sentence.
+We fixed 3 major issues with our email follow-up system: 86 old emails were not being followed up on and are now being sent out, our system was leaking database keys and that has been secured, and our outreach list was not refilling itself and now has a steady stream of new contacts to email.
