@@ -1,1 +1,1 @@
-A software program was allowing certain tasks to stay open indefinitely, even after the people working on them were finished, by incorrectly treating a task claim as permanent ownership.
+A technical issue with our system allowed old claims to be kept indefinitely, causing 31 open tasks to be stuck and not updated even though the work was done a long time ago.
