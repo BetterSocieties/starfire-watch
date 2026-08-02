@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02T11:51:28Z",
+  "generated_at": "2026-08-02T14:23:19Z",
   "total": 1262,
   "newly_activated": 0,
   "already_active": 118,
@@ -6630,7 +6630,7 @@
     {
       "id": "znpZj6WUbIyvY30R",
       "name": "bs-product-eu-ai-act-service-roadmap-orchestrator",
-      "http_code": "000",
+      "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
