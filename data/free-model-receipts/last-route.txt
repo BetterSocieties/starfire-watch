@@ -1,1 +1,1 @@
-[llm-router] bulk -> groq/llama-3.3-70b-versatile, 2926 tokens, $0
+[llm-router] bulk -> groq/llama-3.3-70b-versatile, 973 tokens, $0

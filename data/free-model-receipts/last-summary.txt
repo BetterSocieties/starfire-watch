@@ -1,2 +1,1 @@
-Here is a plain-English summary of the newest changelog entry in 1 sentence: 
-The development team made several improvements to the system, including fixes to sign-up forms, the addition of a new client intake process, and improvements to content gates and automation, all of which are now live and functioning as intended, with 6 sites now accepting real sign-ups and 937 non-functional automations being switched off, bringing the total number of automations from 1,058 to 139.
+The company's system had a problem where 31 important tasks were being held up by old, completed processes, but a recent fix has released these tasks and implemented a new leasing system to prevent this issue from happening again.
