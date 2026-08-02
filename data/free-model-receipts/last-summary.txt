@@ -1,1 +1,3 @@
-The company's system had a flaw where 31 tasks were left unfinished and unnoticed because they were incorrectly marked as being worked on, but a recent fix has changed the system to use a "lease" instead of permanent ownership, allowing these tasks to be released and worked on again after 4 hours of inactivity.
+Here's a summary of the changelog entry in one plain-English sentence:
+
+The system is now preventing open, but unfinished tasks from being ignored or hidden by changing how ownership claims are handled, so more urgent tasks can be addressed.
