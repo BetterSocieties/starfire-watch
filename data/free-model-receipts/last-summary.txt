@@ -1,3 +1,1 @@
-Here's a summary of the changelog entry in one plain-English sentence:
-
-The system is now preventing open, but unfinished tasks from being ignored or hidden by changing how ownership claims are handled, so more urgent tasks can be addressed.
+A software program was allowing certain tasks to stay open indefinitely, even after the people working on them were finished, by incorrectly treating a task claim as permanent ownership.
