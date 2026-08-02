@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-02T15:49:44Z",
-  "total": 1262,
+  "generated_at": "2026-08-02T17:49:39Z",
+  "total": 1263,
   "newly_activated": 0,
-  "already_active": 118,
+  "already_active": 119,
   "failed": 1129,
   "skipped": 15,
   "buckets": {
@@ -5354,13 +5354,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "taHdUcWkCODMhwoM",
-      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "okkQpU8RcNMevIHH",
       "name": "echo-studio-pre-accelerator-demo-day-scheduler",
       "http_code": "400",
@@ -6931,6 +6924,13 @@
     {
       "id": "ZFnb5hLVEpvnyJUN",
       "name": "echo-studio-ops-project-milestone-tracker",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "taHdUcWkCODMhwoM",
+      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
