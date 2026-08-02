@@ -1,1 +1,1 @@
-The company's system had a problem where 31 tasks were being held up by old, inactive sessions, but a new fix has been implemented to release these tasks by treating claims as temporary leases that expire after 4 hours, rather than permanent ownership.
+The company's system had a flaw where 31 tasks were left unfinished and unnoticed because they were incorrectly marked as being worked on, but a recent fix has changed the system to use a "lease" instead of permanent ownership, allowing these tasks to be released and worked on again after 4 hours of inactivity.
