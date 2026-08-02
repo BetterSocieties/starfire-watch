@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-02T10:25:34Z",
-  "total": 1263,
+  "generated_at": "2026-08-02T11:51:28Z",
+  "total": 1262,
   "newly_activated": 0,
   "already_active": 118,
-  "failed": 1130,
+  "failed": 1129,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1130
+    "other": 1129
   },
   "failures": [
     {
@@ -1469,6 +1469,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "BHw03loh9j2XXvkA",
+      "name": "sop-growth-alumni-founding-cohort-culture-anchor",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "aC6iWCPlSREyHIsK",
       "name": "sop-growth-partner-corporate-sponsorship",
       "http_code": "400",
@@ -1548,13 +1555,6 @@
     {
       "id": "a56Y6Am0iTQdDBAY",
       "name": "verify-audit",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "1K4feaieRnbrtKe2",
-      "name": "TEMP-OJ-ANALYTICS-DDL",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -2038,6 +2038,13 @@
     {
       "id": "cRXLFGhA1t7bWUU6",
       "name": "decision-precedence",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "gZfB6UC5xNgxmNH1",
+      "name": "echo-collective-agent-ops-portfolio-agent-fleet-registry",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -3051,13 +3058,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "BHw03loh9j2XXvkA",
-      "name": "sop-growth-alumni-founding-cohort-culture-anchor",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "fkdsKrpk6M55bIDJ",
       "name": "sop-growth-attribution-content-to-application",
       "http_code": "400",
@@ -3569,13 +3569,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "gZfB6UC5xNgxmNH1",
-      "name": "echo-collective-agent-ops-portfolio-agent-fleet-registry",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "LFlfVJmCfYnOI1gN",
       "name": "echo-collective-corporate-record-keeping",
       "http_code": "400",
@@ -3998,6 +3991,13 @@
     {
       "id": "igsPgQl4NZCtTTPO",
       "name": "opsjuice-marketing-programmatic-vertical-microsites",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "MjXtsI5bhIXEhwsR",
+      "name": "opsjuice-marketing-review-aggregation-g2-capterra",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5354,6 +5354,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "taHdUcWkCODMhwoM",
+      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "okkQpU8RcNMevIHH",
       "name": "echo-studio-pre-accelerator-demo-day-scheduler",
       "http_code": "400",
@@ -5587,13 +5594,6 @@
     {
       "id": "SnmM0E9NP2VyXGn5",
       "name": "opsjuice-marketing-evergreen-webinar",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "MjXtsI5bhIXEhwsR",
-      "name": "opsjuice-marketing-review-aggregation-g2-capterra",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -6630,7 +6630,7 @@
     {
       "id": "znpZj6WUbIyvY30R",
       "name": "bs-product-eu-ai-act-service-roadmap-orchestrator",
-      "http_code": "400",
+      "http_code": "000",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
@@ -6931,13 +6931,6 @@
     {
       "id": "ZFnb5hLVEpvnyJUN",
       "name": "echo-studio-ops-project-milestone-tracker",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "taHdUcWkCODMhwoM",
-      "name": "echo-studio-pre-accelerator-cohort-selection-notification",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
