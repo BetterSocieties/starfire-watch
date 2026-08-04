@@ -1,3 +1,3 @@
-Here's a summary in one plain-English sentence:
+Here is a plain-English summary of the newest changelog entry in one sentence:
 
-We fixed a couple of issues that caused a scheduling job to mistakenly commit work from other users under its own name, and while we were fixing one issue, another scheduled job caught and copied the fix, so we had to find a way to make sure jobs only commit their own work.
+The coding team corrected two problems: the documentation for how to keep sensitive information safe on a laptop had a mistake that made it hard to test, and a scheduled job was mistakenly taking and committing other team members' work as if it were its own.
