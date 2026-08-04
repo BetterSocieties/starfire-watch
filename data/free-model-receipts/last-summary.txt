@@ -1,3 +1,3 @@
-Here is a plain-English summary of the newest changelog entry in one sentence:
+Here's a plain-English summary of the newest changelog entry: 
 
-The coding team corrected two problems: the documentation for how to keep sensitive information safe on a laptop had a mistake that made it hard to test, and a scheduled job was mistakenly taking and committing other team members' work as if it were its own.
+The developers fixed two issues: first, they corrected the documentation for how vaults work, and second, they fixed a job that was incorrectly committing changes made by other users under its own name.
