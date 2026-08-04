@@ -1,4 +1,3 @@
-Here are the two latest changelog entries summarized in plain English:
+Here's a 1-sentence summary of the newest changelog entry:
 
-1. The documentation was fixed so it no longer incorrectly points to a laptop vault, and a script now correctly checks for this vault.
-2. There were two issues fixed. One was with a script that was misbehaving due to incorrect coding logic, and the other was with a scheduled job that was wrongly taking and committing the work of other jobs. Both issues are now fixed.
+To fix a bug, the documentation was updated to remove a mistaken reference to a vault, and a scheduled job was also fixed to correctly commit changes without stealing work from other sessions.
