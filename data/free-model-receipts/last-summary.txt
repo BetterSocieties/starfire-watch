@@ -1,3 +1,4 @@
-Here's a plain-English summary of the newest changelog entry: 
+Here are the two latest changelog entries summarized in plain English:
 
-The developers fixed two issues: first, they corrected the documentation for how vaults work, and second, they fixed a job that was incorrectly committing changes made by other users under its own name.
+1. The documentation was fixed so it no longer incorrectly points to a laptop vault, and a script now correctly checks for this vault.
+2. There were two issues fixed. One was with a script that was misbehaving due to incorrect coding logic, and the other was with a scheduled job that was wrongly taking and committing the work of other jobs. Both issues are now fixed.
