@@ -1,1 +1,3 @@
-A technical issue with our system allowed old claims to be kept indefinitely, causing 31 open tasks to be stuck and not updated even though the work was done a long time ago.
+Here's a summary in one plain-English sentence:
+
+We fixed a couple of issues that caused a scheduling job to mistakenly commit work from other users under its own name, and while we were fixing one issue, another scheduled job caught and copied the fix, so we had to find a way to make sure jobs only commit their own work.
