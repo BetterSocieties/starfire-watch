@@ -1,5 +1,4 @@
-Here are two summaries of the new changelog entry in plain English:
+Here are two separate sentences summarizing the changelog entries in plain English:
 
-1. Fixing laptop-related documentation issues: The team updated documentation to point to the correct secrets vault and made sure scripts don't use incorrect laptop host addresses anymore.
-
-2. Resolving a housekeeping job issue: A scheduled job was committing work under other session's names instead of its own, but this was caught in the act while fixing another issue, and the solution is to explicitly specify the paths for each commit to avoid inheriting other sessions' work.
+1. The development team fixed a mistake in their documentation that incorrectly pointed users to a laptop vault host, and ensured all automated tests reflect this change.
+2. The team also discovered a technical issue where automated jobs were incorrectly adding their own changes to existing work, which they have now fixed by explicitly specifying the work they are modifying.
