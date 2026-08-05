@@ -1,3 +1,5 @@
-Here's a one-sentence summary of the newest changelog entry in plain English: 
+Here are two summaries of the new changelog entry in plain English:
 
-The team fixed a bug that was affecting the documentation about security and a related automated check by ensuring that it correctly follows the intended security rules and preventing a scheduled job from mistakenly committing other users' changes under its own name.
+1. Fixing laptop-related documentation issues: The team updated documentation to point to the correct secrets vault and made sure scripts don't use incorrect laptop host addresses anymore.
+
+2. Resolving a housekeeping job issue: A scheduled job was committing work under other session's names instead of its own, but this was caught in the act while fixing another issue, and the solution is to explicitly specify the paths for each commit to avoid inheriting other sessions' work.
