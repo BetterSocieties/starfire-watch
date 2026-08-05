@@ -1,3 +1,3 @@
-Here's a summary of the newest changelog entry in one plain English sentence with digits:
+Here's a one-sentence summary of the newest changelog entry in plain English: 
 
-The documentation for the laptop vault host was changed, and at the same time, the system fixed a scheduling problem where automated jobs were accidentally committing work under their own names, which has now been changed to allow for specific paths to be committed.
+The team fixed a bug that was affecting the documentation about security and a related automated check by ensuring that it correctly follows the intended security rules and preventing a scheduled job from mistakenly committing other users' changes under its own name.
