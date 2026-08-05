@@ -1,3 +1,4 @@
-Here's a summary of the newest changelog entry in 1 plain-English sentence:
+Here is a summary of the changelog entries in plain English: 
 
-The documentation no longer recommends using a laptop as a secrets vault, and fixes were made to prevent scheduled jobs from mistakenly taking credit for other users' work by changing how they commit changes.
+1. We fixed a problem in our documentation and scripts that was telling a laptop vault host to be used, but we actually don't use it anymore, and we updated some code to reference the correct vault host instead.
+2. We also discovered a scheduling issue where automated jobs were taking work from one another, and we fixed this by explicitly stating which paths the jobs are committing to.
