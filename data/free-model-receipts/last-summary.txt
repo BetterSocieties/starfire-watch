@@ -1,4 +1,3 @@
-Here is a summary of the changelog entries in plain English: 
+Here's a 1-sentence summary:
 
-1. We fixed a problem in our documentation and scripts that was telling a laptop vault host to be used, but we actually don't use it anymore, and we updated some code to reference the correct vault host instead.
-2. We also discovered a scheduling issue where automated jobs were taking work from one another, and we fixed this by explicitly stating which paths the jobs are committing to.
+The documentation and scripts were updated to correctly show the laptop vault's URL, and automated jobs were fixed to only commit their own changes, not other sessions', preventing mistakes and conflicts.
