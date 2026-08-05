@@ -1,3 +1,7 @@
-Here's a 1-sentence summary:
+Here are the two newest changelog entries summarized in 1 plain-English sentence per entry, using digits for numbers:
 
-The documentation and scripts were updated to correctly show the laptop vault's URL, and automated jobs were fixed to only commit their own changes, not other sessions', preventing mistakes and conflicts.
+Entry #1:
+The laptop vault's hostname is no longer being taught in documentation, and it's now being referred to by a specific URL instead.
+
+Entry #2:
+Scheduled housekeeping jobs accidentally committed other users' work under their own names and then uploaded it before it was caught and fixed by making commits for each user's paths specifically.
