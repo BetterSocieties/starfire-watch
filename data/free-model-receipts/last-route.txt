@@ -1,1 +1,1 @@
-[llm-router] bulk -> groq/llama-3.1-8b-instant, 919 tokens, $0
+[llm-router] bulk -> groq/llama-3.1-8b-instant, 893 tokens, $0
