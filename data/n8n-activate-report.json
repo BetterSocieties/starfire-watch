@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-05T20:22:43Z",
+  "generated_at": "2026-08-05T22:03:33Z",
   "total": 1263,
   "newly_activated": 0,
   "already_active": 119,
@@ -4012,7 +4012,7 @@
     {
       "id": "Liy8yfELbv0aFnV1",
       "name": "opsjuice-ops-infra-cost-attribution-per-customer",
-      "http_code": "000",
+      "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
