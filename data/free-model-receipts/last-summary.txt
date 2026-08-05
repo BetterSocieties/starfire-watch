@@ -1,3 +1,3 @@
-Here's a 1-sentence summary of the newest changelog entry:
+Here's a 1 plain-English sentence summarizing the changelog entry: 
 
-To fix a bug, the documentation was updated to remove a mistaken reference to a vault, and a scheduled job was also fixed to correctly commit changes without stealing work from other sessions.
+Two separate issues were fixed: first, the documentation was updated to no longer direct users to a secret vault hosted on their laptop, and second, the system preventing other automated tasks from committing other people's work was fixed.
