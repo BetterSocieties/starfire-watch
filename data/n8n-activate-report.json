@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-06T04:00:31Z",
+  "generated_at": "2026-08-06T07:34:18Z",
   "total": 1263,
   "newly_activated": 0,
-  "already_active": 119,
-  "failed": 1129,
+  "already_active": 118,
+  "failed": 1130,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1129
+    "other": 1130
   },
   "failures": [
     {
@@ -3865,6 +3865,13 @@
     {
       "id": "M6NEX9Ch8qj5lIsJ",
       "name": "opsjuice-finance-fpa-driver-based-budget-forecast",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "mdzwCRRKR1gFTPu5",
+      "name": "ONESHOT-add-stripe-link-col",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
