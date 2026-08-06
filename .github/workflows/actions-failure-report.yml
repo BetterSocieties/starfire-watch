@@ -31,7 +31,15 @@ jobs:
         with:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.CORE_READ_TOKEN }}
-          sparse-checkout: scripts/report-actions-failures-to-slack.py
+          # Three paths, not one. The digest reports failures; the checker and
+          # its registry are the half that notices a job which stopped running
+          # at all. Leaving them out does not disable that half quietly, it
+          # makes every run report "the silent-job check did not run", which is
+          # louder than the hole it replaced but still not the job working.
+          sparse-checkout: |
+            scripts/report-actions-failures-to-slack.py
+            scripts/check-scheduled-jobs-alive.py
+            ops/scheduled-jobs-registry.json
           sparse-checkout-cone-mode: false
 
       - name: Post the digest to Slack
