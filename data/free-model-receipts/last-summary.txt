@@ -1,8 +1,1 @@
-Here are the summaries in plain-English sentences for each changelog entry:
-
-1. The system can now tell the difference between different parts of the "Societies" tool and report accurate data, so you don't have to make incorrect assumptions.
-2. The report feature now works with a guaranteed level of performance and can handle real-sized requests, whereas previously it made estimates.
-3. A script has been updated to report the correct amount of "room" available for the "Societies" and "OpsJuice" tools, based on their internal records, rather than making incorrect estimates.
-4. Follow-up work is being done to fix a bug where the "Societies" and "OpsJuice" tools were running out of people too quickly and couldn't be replenished.
-5. The documentation about how the laptop vault works has been clarified, so that users know they shouldn't use a specific hostname anymore.
-6. The system has been fixed to prevent a bug where scheduled housekeeping jobs were accidentally taking credit for other users' work.
+A hacker was able to access and try to make changes to four areas of the company's database, but the system's security stopped this from being successful except in one area, and it was able to detect and fix the issue through automated monitoring.
