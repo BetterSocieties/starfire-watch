@@ -1,3 +1,1 @@
-Here's a plain-English summary of the newest changelog entry: 
-
-"We've patched a significant security vulnerability that would have allowed anyone to write to four tables in our database and potentially expose sensitive information, and we've also fixed other smaller issues including an expired password and a broken payment status message."
+Here's a plain English summary of the newest changelog entry: They fixed a major security issue where an unauthorized person could have accessed or altered sensitive data in the company's database, by enabling row-level security on vulnerable tables and removing any unnecessary public access.
