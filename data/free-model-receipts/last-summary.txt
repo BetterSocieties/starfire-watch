@@ -1,4 +1,5 @@
-Here are two separate sentences summarizing the changelog entries in plain English:
+Here are summaries of the two most recent changelog entries in plain English:
 
-1. The development team fixed a mistake in their documentation that incorrectly pointed users to a laptop vault host, and ensured all automated tests reflect this change.
-2. The team also discovered a technical issue where automated jobs were incorrectly adding their own changes to existing work, which they have now fixed by explicitly specifying the work they are modifying.
+1. The documentation for how to use the laptop vault is no longer teaching people to point it to the wrong host. It now correctly teaches people to point to the right host.
+
+2. Some automated tasks (housekeeping jobs) were accidentally adding and committing other people's work under their own names and making it look like they had done that work. We fixed this by telling git exactly which paths to commit, so it only includes its own work and not anyone else's.
