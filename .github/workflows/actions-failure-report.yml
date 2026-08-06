@@ -1,0 +1,43 @@
+# Report in Slack, once a day, which scheduled jobs failed.
+#
+# It exists to let GitHub's own run-failure email be switched off. That email
+# sent 276 messages in 21 days to an inbox nobody reads, one per failed run, so
+# 22 failures of a single job arrived as 22 separate notices. This sends one
+# message grouped by job, and sends nothing at all on a day when nothing failed.
+#
+# It lives in starfire-watch rather than starfire-core because the report covers
+# BOTH repos and a workflow's built-in token can only read its own. This repo
+# already holds GH_PAT, which reads across them. The script itself stays in
+# starfire-core, where it is maintained; this job checks that repo out and runs
+# it, so there is one copy of the logic rather than two that drift apart.
+#
+# 22:00 UTC is 07:00 in Tokyo: it arrives with the morning, not at midnight.
+name: actions-failure-report
+
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch the script from starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          sparse-checkout: scripts/report-actions-failures-to-slack.py
+          sparse-checkout-cone-mode: false
+
+      - name: Post the digest to Slack
+        env:
+          # The built-in token cannot read the other repo. GH_PAT can, and the
+          # script names any repo it was refused rather than quietly reporting
+          # half the failures as though they were all of them.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: python3 scripts/report-actions-failures-to-slack.py --hours 24
