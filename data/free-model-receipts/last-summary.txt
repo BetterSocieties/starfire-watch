@@ -1,5 +1,8 @@
-Here are summaries of the two most recent changelog entries in plain English:
+Here are the summaries in plain-English sentences for each changelog entry:
 
-1. The documentation for how to use the laptop vault is no longer teaching people to point it to the wrong host. It now correctly teaches people to point to the right host.
-
-2. Some automated tasks (housekeeping jobs) were accidentally adding and committing other people's work under their own names and making it look like they had done that work. We fixed this by telling git exactly which paths to commit, so it only includes its own work and not anyone else's.
+1. The system can now tell the difference between different parts of the "Societies" tool and report accurate data, so you don't have to make incorrect assumptions.
+2. The report feature now works with a guaranteed level of performance and can handle real-sized requests, whereas previously it made estimates.
+3. A script has been updated to report the correct amount of "room" available for the "Societies" and "OpsJuice" tools, based on their internal records, rather than making incorrect estimates.
+4. Follow-up work is being done to fix a bug where the "Societies" and "OpsJuice" tools were running out of people too quickly and couldn't be replenished.
+5. The documentation about how the laptop vault works has been clarified, so that users know they shouldn't use a specific hostname anymore.
+6. The system has been fixed to prevent a bug where scheduled housekeeping jobs were accidentally taking credit for other users' work.
