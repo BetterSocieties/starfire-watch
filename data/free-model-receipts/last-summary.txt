@@ -1,1 +1,3 @@
-A hacker was able to access and try to make changes to four areas of the company's database, but the system's security stopped this from being successful except in one area, and it was able to detect and fix the issue through automated monitoring.
+Here's a plain-English summary of the newest changelog entry: 
+
+"We've patched a significant security vulnerability that would have allowed anyone to write to four tables in our database and potentially expose sensitive information, and we've also fixed other smaller issues including an expired password and a broken payment status message."
