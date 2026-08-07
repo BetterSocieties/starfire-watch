@@ -1,3 +1,4 @@
-Here's a summary of the latest changelog entry in 1 plain-English sentence:
+Here are two summarized changelog entries in plain English:
 
-Yesterday, our system had some small issues with its databases and web pages not loading properly, but we were able to quickly identify and fix the problems, making sure all data and users' access were secure.
+1. Our database recently had an issue when it disabled old sign-in keys, but a hidden problem was caught and fixed, ensuring that all 31 cloud workers that connect to our system are now using the correct sign-in information.
+2. We fixed a problem where some people's dashboards were not displaying correctly, and we also improved our system so that even if one of our searches can't find any information, it won't affect other searches that are running, allowing us to find businesses more efficiently.
