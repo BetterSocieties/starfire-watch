@@ -1,0 +1,4 @@
+
+# n8n workflow JSON carries credentials inline in node code - never in a PUBLIC repo
+data/n8n-fetched/
+data/n8n-staged/
