@@ -1,3 +1,1 @@
-Here's a plain-English summary of the recent update:
-
-The system fixed a problem where nearly 800 of the 781 cards on a leader's task board had confusing titles that only displayed technical settings, instead of what the actual work was, and this issue has now been resolved.
+A previously hidden flaw was causing our system to underreport daily deal values by 675,000 euros, but we've now fixed it by having the system ask for the exact count of deals instead of just fetching a limited number of rows.
