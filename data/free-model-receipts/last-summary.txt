@@ -1,4 +1,3 @@
-Here are two summarized changelog entries in plain English:
+Here is a summary of the first changelog entry in 1 plain-English sentence:
 
-1. Our database recently had an issue when it disabled old sign-in keys, but a hidden problem was caught and fixed, ensuring that all 31 cloud workers that connect to our system are now using the correct sign-in information.
-2. We fixed a problem where some people's dashboards were not displaying correctly, and we also improved our system so that even if one of our searches can't find any information, it won't affect other searches that are running, allowing us to find businesses more efficiently.
+The team updated the way one of our Cloudflare workers connects to the database to prevent old and broken connections, which allowed us to catch and fix several issues that were causing problems behind the scenes.
