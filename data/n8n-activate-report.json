@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-07T15:44:59Z",
-  "total": 1264,
+  "generated_at": "2026-08-07T17:41:35Z",
+  "total": 1266,
   "newly_activated": 0,
   "already_active": 119,
-  "failed": 1130,
+  "failed": 1132,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1130
+    "other": 1132
   },
   "failures": [
     {
@@ -2043,13 +2043,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "gZfB6UC5xNgxmNH1",
-      "name": "echo-collective-agent-ops-portfolio-agent-fleet-registry",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "CDzbQv3bwVKiQkp7",
       "name": "echo-collective-bank-reconciliation",
       "http_code": "400",
@@ -3128,6 +3121,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "ghzcMAAgtA6xF9wQ",
+      "name": "ZZ-prove-resend-split-sends",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "kJ1lgU4pYaTcfShF",
       "name": "after-work-agent-ops-attendee-concierge-agent",
       "http_code": "400",
@@ -3548,13 +3548,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "MhrrJzYh2RhHbm92",
-      "name": "bs-summit-speaker-outreach-drafts",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "Jy8zIDMel24lJGgF",
       "name": "builder-loop",
       "http_code": "400",
@@ -3564,6 +3557,13 @@
     {
       "id": "H7Th1piQxBxPqPSz",
       "name": "builder-safety-gate",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "gZfB6UC5xNgxmNH1",
+      "name": "echo-collective-agent-ops-portfolio-agent-fleet-registry",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -3998,13 +3998,6 @@
     {
       "id": "igsPgQl4NZCtTTPO",
       "name": "opsjuice-marketing-programmatic-vertical-microsites",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "MjXtsI5bhIXEhwsR",
-      "name": "opsjuice-marketing-review-aggregation-g2-capterra",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -4675,6 +4668,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "HQvU3QHORcvoPQ7N",
+      "name": "ZZ-probe-code-node-credential-access",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "OqYTkZSQ5Ss4uyj9",
       "name": "after-work-cs-VIP-private-brand-activation-invite",
       "http_code": "400",
@@ -4705,13 +4705,6 @@
     {
       "id": "MS5ULDLrTQTsmXW0",
       "name": "after-work-finance-vendor-payment-post-event",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "T88nPXBbdylnEfdK",
-      "name": "after-work-growth-attendee-LTV-segmentation",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5097,6 +5090,13 @@
     {
       "id": "oDLqbUUXbGSyaUgV",
       "name": "bs-summit-media-outreach",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "MhrrJzYh2RhHbm92",
+      "name": "bs-summit-speaker-outreach-drafts",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5599,6 +5599,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "MjXtsI5bhIXEhwsR",
+      "name": "opsjuice-marketing-review-aggregation-g2-capterra",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "nQ9igpB6Ux9QX7w1",
       "name": "opsjuice-marketing-testimonial-capture",
       "http_code": "400",
@@ -5699,13 +5706,6 @@
     {
       "id": "RBMLQoOu3SDUx7Kc",
       "name": "opsjuice-resilience-postmortem-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "szSa4dQtX5ueLSfZ",
-      "name": "opsjuice-sales-enablement-battlecards-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -6278,6 +6278,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "T88nPXBbdylnEfdK",
+      "name": "after-work-growth-attendee-LTV-segmentation",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "WzLQupBG8Pvh8ukV",
       "name": "after-work-growth-corporate-retreat-package",
       "http_code": "400",
@@ -6630,13 +6637,6 @@
     {
       "id": "znpZj6WUbIyvY30R",
       "name": "bs-product-eu-ai-act-service-roadmap-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "ZR1GnsSdzK8aKZd7",
-      "name": "bs-revops-donor-journey-attribution",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7286,13 +7286,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "zQtYK0M7Y1nwNyuD",
-      "name": "opsjuice-product-launch-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "Uh72UDOFtG3g2ibY",
       "name": "opsjuice-product-npv-value-hypothesis-orchestrator",
       "http_code": "400",
@@ -7344,6 +7337,13 @@
     {
       "id": "zltNTkCZL6ACsy0j",
       "name": "opsjuice-sales-discovery-call-prep-ai",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "szSa4dQtX5ueLSfZ",
+      "name": "opsjuice-sales-enablement-battlecards-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7860,6 +7860,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "ZR1GnsSdzK8aKZd7",
+      "name": "bs-revops-donor-journey-attribution",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "zUbcGtFDtMXOVHth",
       "name": "echo-studio-marketing-founder-podcast-guest-tour",
       "http_code": "400",
@@ -7890,6 +7897,13 @@
     {
       "id": "zzk4knfSyCuEBCn5",
       "name": "opsjuice-devops-continuous-deployment-orchestrator",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "zQtYK0M7Y1nwNyuD",
+      "name": "opsjuice-product-launch-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
