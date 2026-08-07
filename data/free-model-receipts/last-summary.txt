@@ -1,3 +1,4 @@
-Here's a 1 plain-English sentence summary for a non-technical founder to understand:
+Here are 2 plain-English summaries:
 
-Some minor issues arose with the system's infrastructure, but they've been fixed: workers accessing a database were updated, a dashboard glitch has been resolved, and the system is now handling database searches more efficiently.
+1. The team updated the system's security features to prevent old sign-in keys from working, which fixed a hidden problem where one of the automated workers wasn't verifying some information correctly.
+2. The team made improvements to the system's performance, allowing it to handle individual search requests without slowing down the entire system and successfully added some new business data.
