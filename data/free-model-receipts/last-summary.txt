@@ -1,1 +1,3 @@
-A previously hidden flaw was causing our system to underreport daily deal values by 675,000 euros, but we've now fixed it by having the system ask for the exact count of deals instead of just fetching a limited number of rows.
+Here's the newest changelog entry summarized in 1 plain-English sentence: 
+
+We've fixed a problem where the system was underreporting numbers by 675,000 euro because the previous system couldn't collect all the data at once.
