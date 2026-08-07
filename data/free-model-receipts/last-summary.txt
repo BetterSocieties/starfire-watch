@@ -1,2 +1,3 @@
-Here's a plain-English summary of the newest changelog entry:
-The system now uses the correct way to sign in to its database, which fixes problems with verifying user information and displaying the correct dashboard for users.
+Here's a summary of the newest changelog entry in 1 plain-English sentence a non-technical founder understands:
+
+The team fixed several technical problems, including updating sign-in keys, debugging issues with some workers, and fixing a dashboard that was showing a blank screen due to rapid production updates.
