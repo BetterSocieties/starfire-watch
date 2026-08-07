@@ -1,3 +1,3 @@
-Here's the newest changelog entry summarized in 1 plain-English sentence: 
+Here's a summary of the changelog in simple language: 
 
-We've fixed a problem where the system was underreporting numbers by 675,000 euro because the previous system couldn't collect all the data at once.
+The system that reports daily deals was inaccurately reporting lower numbers because it was limited to showing only a certain number of rows, and now it will ask for the actual total number as well, which should provide a more accurate figure.
