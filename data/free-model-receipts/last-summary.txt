@@ -1,3 +1,3 @@
-Here's a plain-English summary of the newest changelog in 1 sentence:
+Here is a summary of the latest changelog entry in 1 plain-English sentence: 
 
-The technical team fixed some issues, including a database revoking its old sign-in keys, problems with dashboard displays, and a gate that checks if certain workers are signed in, which are now all working correctly.
+The team fixed several issues, including revoking old login keys, updating Cloudflare workers to use the new keys, and resolving problems with the app's dashboard and layout gates, which should now be working properly.
