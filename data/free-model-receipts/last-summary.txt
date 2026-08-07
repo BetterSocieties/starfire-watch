@@ -1,3 +1,2 @@
-Here's a plain-English summary of the latest changelog entry in one sentence using digits for numbers:
-
-The system successfully replaced old sign-in keys, updated 10 Cloudflare workers, fixed a critical dashboard issue by preventing over-publsihing, and made further improvements to OpsJuice, a database that manages sending counts, customer replies, and active subscriptions.
+Here's a plain-English summary of the newest changelog entry:
+The system now uses the correct way to sign in to its database, which fixes problems with verifying user information and displaying the correct dashboard for users.
