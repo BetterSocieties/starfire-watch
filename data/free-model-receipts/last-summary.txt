@@ -1,7 +1,5 @@
-Here are the newest log entries in plain English: 
+Here are the three most recent changelog entries summarized in plain English:
 
-1.  The Better Societies paid report now reads both the name the customer pays with and the actual name written by the receiver. This was tested with two rehearsal calls and now a customer can no longer be issued the letter that is meant to be read after a payment is live.
-
-2.  The Better Societies paywall letter is now accurate and no longer shows a price that an item is not actually being sold for. This change was made to make sure customers are not misled.
-
-3.  A problem had been found where some letters that were meant for businesses were being given away, and they were not being correctly addressed due to a test mode flag.
+1. The system was fixed so it no longer tells a customer their payment is credited to a wrong price plan, and it no longer hands a paying customer a paywall letter that they shouldn't be seeing.
+2. A new rule was implemented that requires a surname to identify a business on a mail platform, and another rule was tightened to make searches faster.
+3. The system was fixed so it no longer shows the wrong price plan names when a customer makes a payment, and 10 workers that sign in to a database were updated.
