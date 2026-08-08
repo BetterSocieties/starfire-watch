@@ -1,9 +1,5 @@
-Here are the summations as 1 plain-English sentence each:
+Here are three summaries of the newest changelog entry in 1 plain-English sentence a non-technical founder understands:
 
-1. The system now correctly checks the name of the person making payments for certain reports so that paid customers can't get an error message.
-2. The system now checks names correctly in paywall letters, ensuring that customers understand which products they're buying.
-3. A report was filed because a payment report can be generated even if no payment has been made because of a practice flag that is currently on.
-4. The system now requires a surname to confirm business names in order to prevent incorrect matches, and also improved its handling of bounce addresses.
-5. The system has improved its search efficiency and now correctly checks addresses against the correct mail routes.
-6. A system fix was applied to correctly handle a percent escape in addresses, and the stored addresses were also corrected.
-7. The OpsJuice database has been updated, and a worker that was causing verification issues has been fixed and reauthenticated.
+1. The company's payment system was fixed so that only paying customers get charged and the company can't deliver its EUR 1,000 report for free even if you've chosen not to pay.
+2. The system that checks addresses now requires at least the surname of the person, not just the business name, to avoid confusion and incorrect addresses.
+3. The company fixed an issue with its OpsJuice database by removing old login keys and updating its Cloudflare workers to use the new keys, making its verification process secure again.
