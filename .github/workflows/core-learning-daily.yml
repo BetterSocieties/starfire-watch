@@ -57,7 +57,7 @@ jobs:
         run: |
           git config user.name "starfire-learning-daily"
           git config user.email "info@bettersocieties.world"
-          git add config/learning-sources.json ops/library/transcripts agent/learning-daily-heartbeat.log agent/learning-daily-last.log || true
+          git add config/learning-sources.json ops/library/transcripts agent/learning-daily-heartbeat.log agent/learning-daily-last.log agent/learning-daily-misses.json || true
           git diff --cached --quiet && { echo "nothing new"; exit 0; }
           git commit -m "learning-daily: poll + transcript pull (public runner, 0 Claude tokens)"
           for i in 1 2 3 4 5; do
