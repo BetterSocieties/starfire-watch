@@ -1,5 +1,3 @@
-Here are three summaries of the newest changelog entry in 1 plain-English sentence a non-technical founder understands:
+Here's a plain-English summary of the newest changelog entry in 1 sentence:
 
-1. The company's payment system was fixed so that only paying customers get charged and the company can't deliver its EUR 1,000 report for free even if you've chosen not to pay.
-2. The system that checks addresses now requires at least the surname of the person, not just the business name, to avoid confusion and incorrect addresses.
-3. The company fixed an issue with its OpsJuice database by removing old login keys and updating its Cloudflare workers to use the new keys, making its verification process secure again.
+The payment system for the Better Societies report now correctly reads the name entered by the payment receiver and ensures that only paying customers receive the paywall letter with correct information about their payment.
