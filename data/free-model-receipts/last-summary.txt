@@ -1,7 +1,5 @@
-Here are the summaries of the newest changelog entry in 1 plain-English sentence each that a non-technical founder can understand:
+Here are three changelog entries summarized in plain-English sentences:
 
-1. The Better Societies payment gate now reads the correct payment information and won't give customers the wrong paywall letter, which was misprinting prices for two services (the Implementation Accelerator and the Conformity Sprint).
-
-2. The system needs the last name as well as the first name to correctly identify business addresses, and it has fixed some issues with how it handles bounce return paths from email platforms.
-
-3. The Better Societies search now works more efficiently, taking about 95ms compared to 105ms before the change.
+1. The better societies payment system now checks to see the actual payment name, preventing buyers from getting the wrong paywall letter. 
+2. The Better Societies system now requires an owner's surname when rescuing an address, and has corrected 3 business addresses with incorrect mail return paths. 
+3. The Better Societies system's search functionality has been improved, reducing search times by up to 50%, and 10 cloud workers using an older sign-in method to an OpsJuice database have been updated to use the current method.
