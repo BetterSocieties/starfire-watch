@@ -1,5 +1,7 @@
-Here are three changelog entries summarized in plain-English sentences:
+Here are the summaries in plain-English sentences for each of the changelog entries:
 
-1. The better societies payment system now checks to see the actual payment name, preventing buyers from getting the wrong paywall letter. 
-2. The Better Societies system now requires an owner's surname when rescuing an address, and has corrected 3 business addresses with incorrect mail return paths. 
-3. The Better Societies system's search functionality has been improved, reducing search times by up to 50%, and 10 cloud workers using an older sign-in method to an OpsJuice database have been updated to use the current method.
+1. Three automated notes are now working correctly, and a system that checks for full hours is now only reporting errors for the last hour of a crowded day.
+
+2. The payment report system for the Better Societies now correctly identifies the payment name and the recipient of the payment, preventing a paying customer from seeing incorrect information.
+
+3. The Better Societies paywall letter now shows the correct prices for the services it's selling, rather than incorrect information.
