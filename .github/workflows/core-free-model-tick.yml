@@ -1,0 +1,114 @@
+# THE LIVE COPY OF free-model-tick. The one in starfire-core is dispatch-only and inert.
+#
+# WHY IT MOVED HERE, 2026-08-08: the same reason as core-canon-drift.yml, written out in
+# full in that file's header. starfire-core is private and metered, spent its 2,000 minutes
+# by 2026-08-08T00:43Z, and gets no machine again until 2026-09-01. This repository is
+# public and its runners are free.
+#
+# THIS IS NOT free-model-worker.yml, which also lives here. That job proves the free lanes
+# answer at all, hourly, and commits a receipt. This one carries the three things only it
+# does: it releases task claims whose 4-hour lease expired, it rebuilds the master plan and
+# proves the generator converged, and it writes the heartbeat that check-agent-host-alive.py
+# reads. Losing it means stale claims block work and the plan of record silently ages.
+name: core-free-model-tick
+on:
+  schedule:
+    - cron: "20 */4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-free-model-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Release expired task claims (4h lease)
+        working-directory: core
+        run: python3 scripts/check-task-claims-live.py --release > /dev/null 2>&1 || true
+
+      - name: Free-model router self-test
+        working-directory: core
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "${GROQ_API_KEY}${GEMINI_API_KEY}${OPENROUTER_API_KEY}" ]; then
+            echo "no free-model secrets; skip self-test"
+            exit 0
+          fi
+          mkdir -p agent
+          rc=0; python3 scripts/llm-router.py --self-test > agent/free-model-tick-selftest.log 2>&1 || rc=$?
+          echo "self-test exit=$rc"; exit $rc
+
+      # --verify proves the generator converged against its own output rather than trusting
+      # that it ran. A generator that does not converge is a real defect and must not be
+      # committed over.
+      - name: Rebuild the master plan and prove it converged
+        working-directory: core
+        run: |
+          python3 scripts/build-master-plan.py > /dev/null
+          python3 scripts/build-master-plan.py --verify > /dev/null
+          echo "plan rebuilt and converged"
+
+      - name: Heartbeat + alive gate
+        working-directory: core
+        run: |
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          mkdir -p agent
+          echo "$ts host=cloud-free-model-tick status=ok run=${{ github.run_id }}" >> agent/cloud-tick-heartbeat.log
+          echo "$ts free-model-tick alive run=${{ github.run_id }}" >> agent/free-model-tick-heartbeat.log
+          python3 scripts/check-agent-host-alive.py > /dev/null
+          echo "host alive"
+
+      - name: Commit and push (race-safe)
+        working-directory: core
+        run: |
+          set -e
+          git config user.name "starfire-free-model-tick"
+          git config user.email "info@bettersocieties.world"
+          git add agent/free-model-tick-heartbeat.log agent/cloud-tick-heartbeat.log agent/free-model-tick-selftest.log TASKS.md agent/llm-router-usage.jsonl ops/STARFIRE-MASTER-PLAN.md ops/HANDOFF-CURRENT.md 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "free-model-tick: cloud heartbeat run ${{ github.run_id }} (public runner, zero Claude)"
+          for i in 1 2 3 4 5 6 7 8; do
+            if git push origin HEAD:main; then
+              echo "push_ok attempt=$i"
+              exit 0
+            fi
+            git fetch origin main
+            git reset --hard origin/main
+            # Re-apply the heartbeats after the reset, and rebuild the plan from the NEWER
+            # sources we just took. Never replay our generated copy on top of theirs: it is
+            # disposable by construction, so rebuilding is exactly what this job would have
+            # produced had it started a moment later, and it can never conflict.
+            ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            echo "$ts host=cloud-free-model-tick status=ok run=${{ github.run_id }} retry=$i" >> agent/cloud-tick-heartbeat.log
+            echo "$ts free-model-tick alive run=${{ github.run_id }} retry=$i" >> agent/free-model-tick-heartbeat.log
+            python3 scripts/build-master-plan.py > /dev/null || true
+            git add agent/free-model-tick-heartbeat.log agent/cloud-tick-heartbeat.log ops/STARFIRE-MASTER-PLAN.md ops/HANDOFF-CURRENT.md
+            git commit -m "free-model-tick: cloud heartbeat run ${{ github.run_id }} retry=$i" || true
+            sleep $((i))
+          done
+          echo "push_failed"
+          exit 1

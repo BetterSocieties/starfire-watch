@@ -1,0 +1,66 @@
+# THE LIVE COPY OF learning-daily. The one in starfire-core is dispatch-only and inert.
+#
+# WHY IT MOVED HERE, 2026-08-08: the same reason as core-canon-drift.yml, written out in
+# full in that file's header. Short version: private repositories on this account are
+# metered at 2,000 runner minutes a month and starfire-core spent all of them by
+# 2026-08-08T00:43Z, so nothing scheduled there gets a machine until 2026-09-01. This
+# repository is public, so its runners are free and unmetered.
+#
+# The work itself is unchanged: poll the operator roster, pull any new transcripts, commit
+# them to the private repository. Zero LLM calls. The only secret it needs is a token that
+# can write to starfire-core.
+name: core-learning-daily
+on:
+  schedule:
+    - cron: "30 5 * * *"   # 05:30 UTC daily, before the 06:30 UTC learning-monitor fire
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-learning-daily
+  cancel-in-progress: false
+
+jobs:
+  poll-and-pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install youtube-transcript-api
+
+      # Quiet on purpose: this log is public and the script names private paths as it
+      # writes them. The roster it polls is public, the destination is not.
+      - name: Poll roster and pull new transcripts
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/learning-daily-pull.py > agent/learning-daily-last.log 2>&1 || rc=$?
+          echo "exit=$rc"
+          tail -1 agent/learning-daily-last.log | cut -c1-120
+          exit $rc
+
+      - name: Commit results (retry-rebase, HEAD:main per d-cloud-push)
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-learning-daily"
+          git config user.email "info@bettersocieties.world"
+          git add config/learning-sources.json ops/library/transcripts agent/learning-daily-heartbeat.log agent/learning-daily-last.log || true
+          git diff --cached --quiet && { echo "nothing new"; exit 0; }
+          git commit -m "learning-daily: poll + transcript pull (public runner, 0 Claude tokens)"
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:main && exit 0 || { git fetch origin main && git rebase origin/main || git rebase --abort; }
+          done
+          echo "push failed after 5 attempts" >&2; exit 1

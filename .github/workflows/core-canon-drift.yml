@@ -1,0 +1,111 @@
+# THE LIVE COPY OF canon-drift. The one in starfire-core is dispatch-only and inert.
+#
+# WHY IT MOVED HERE, 2026-08-08. GitHub meters Actions minutes on PRIVATE repositories
+# only: 2,000 a month on this account, billed with a one-minute minimum however short the
+# run. starfire-core is private and spent all 2,000 by 2026-08-08T00:43Z, after which every
+# scheduled job in it was refused a machine and failed in four seconds with a message about
+# payments that has nothing to do with what is wrong. Runners do not come back there until
+# 2026-09-01. This repository is PUBLIC, so its runners are free and unmetered, which was
+# proved live at 05:31Z the same morning while the private repository was still being
+# refused. Moving the job is what makes the daily drift check exist for the rest of August
+# instead of being a thing that resumes in three and a half weeks.
+#
+# WHY THE LOGS ARE QUIET. This repository's Actions logs are public and the gates read a
+# private repository. A failing gate prints the doctrine line it tripped on, which is
+# private text, so every gate writes its detail to a file inside the private checkout and
+# that file is pushed back to starfire-core. The public log carries pass or fail and
+# nothing else. Detail is not lost, it just lands where it belongs.
+name: core-canon-drift
+on:
+  schedule:
+    - cron: "10 5 * * *"   # 05:10 UTC daily, ahead of learning-daily at 05:30
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-canon-drift
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository being checked)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Run every gate even if an earlier one fails, so one red gate does not hide the
+      # other three. Each records its own exit code; the last step decides the job.
+      - name: No superseded directive is still live anywhere in the repo
+        id: directives
+        if: always()
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/tests/test-directives-not-contradictory.py > agent/canon-drift-directives.log 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
+      - name: Brand tokens consistent across every venture
+        id: brand
+        if: always()
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/check-brand-tokens.py --strict > agent/canon-drift-brand.log 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
+      - name: Every message to Adrien links to what it is about
+        id: links
+        if: always()
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/check-adrien-facing-links.py > agent/canon-drift-links.log 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
+      - name: No document asserts a stale master-plan content id
+        id: contentid
+        if: always()
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/check-handoff-content-id.py > agent/canon-drift-contentid.log 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
+      - name: Push the detail back to the private repository
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-canon-drift"
+          git config user.email "info@bettersocieties.world"
+          git add agent/canon-drift-*.log || true
+          if git diff --cached --quiet; then echo "no change in gate detail"; exit 0; fi
+          git commit -m "canon-drift: gate detail from public runner ${{ github.run_id }}"
+          for i in 1 2 3 4 5; do
+            git push origin HEAD:main && exit 0 || { git fetch origin main && git rebase origin/main || git rebase --abort; }
+          done
+          echo "could not push gate detail; the verdict below still stands" >&2
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| gate | result |"
+            echo "|---|---|"
+            echo "| directives-not-contradictory | ${{ steps.directives.outcome }} |"
+            echo "| brand-tokens | ${{ steps.brand.outcome }} |"
+            echo "| adrien-facing-links | ${{ steps.links.outcome }} |"
+            echo "| handoff-content-id | ${{ steps.contentid.outcome }} |"
+            echo ""
+            echo "Detail is in starfire-core at agent/canon-drift-*.log, deliberately not here."
+          } >> "$GITHUB_STEP_SUMMARY"
