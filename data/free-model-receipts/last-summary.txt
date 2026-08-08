@@ -1,5 +1,7 @@
-Here are summaries of the newest changelog entries in plain-English sentences for a non-technical founder:
+Here are the summaries of the newest changelog entry in plain-English sentences:
 
-1. The payment system has been fixed so that it no longer allows paying customers to receive incorrect letters saying they've paid for services they didn't buy.
+1. The payment report gate now correctly reads the payment name and key entered by the buyer, and the paywall letter now displays accurate prices for products and services offered.
+2. The OpsJuice address validation rule now requires surnames to be entered, which helps prevent businesses from using their first name as their business name.
+3. The system has removed 3 Better Societies contacts that were using the mail platform's bounce return path instead of the business mailbox.
 
-2. The Better Societies paywall letter now accurately lists the prices of services, avoiding a previous mistake that understated prices by €20,000.
+Note: These summaries focus on the last changelog entry (2026-08-08T13:15Z cloud tick v2) only.
