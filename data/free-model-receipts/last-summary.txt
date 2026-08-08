@@ -1,1 +1,3 @@
-The system's key to access its database was changed, and all affected workers were re-checked to make sure they were working correctly.
+Here's a plain-English summary in 1 sentence:
+
+Engineers made some changes and fixes to how the system handles logins and data access, which included revoking old login keys, fixing some broken functions, and updating some settings to make sure everything runs smoothly and correctly.
