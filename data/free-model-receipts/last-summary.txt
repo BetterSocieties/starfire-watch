@@ -1,7 +1,5 @@
-Here are the summaries of the newest changelog entry in plain-English sentences:
+Here are the summaries for the two newest changelog entries:
 
-1. The payment report gate now correctly reads the payment name and key entered by the buyer, and the paywall letter now displays accurate prices for products and services offered.
-2. The OpsJuice address validation rule now requires surnames to be entered, which helps prevent businesses from using their first name as their business name.
-3. The system has removed 3 Better Societies contacts that were using the mail platform's bounce return path instead of the business mailbox.
+1. **2026-08-08T13:15Z cloud tick v2**: The system now correctly identifies paying customers and doesn't send a paywall letter with incorrect pricing information.
 
-Note: These summaries focus on the last changelog entry (2026-08-08T13:15Z cloud tick v2) only.
+2. **2026-08-07T17:55Z profit pulse B**: The OpsJuice database was updated and all 31 Cloudflare workers were reconfigured to use the new sign-in keys, ensuring that data remains accurate and up-to-date.
