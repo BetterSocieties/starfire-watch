@@ -1,3 +1,5 @@
-Here's a plain-English summary of the newest changelog entry in 1 sentence:
+Here are three summaries of the newest changelog entries in 1 plain-English sentence each:
 
-The payment system for the Better Societies report now correctly reads the name entered by the payment receiver and ensures that only paying customers receive the paywall letter with correct information about their payment.
+1. The Better Societies paid report gate now checks the actual name the receiver writes instead of what the store has in its database, and the paywall letter price information was corrected.
+2. The OpsJuice address rule was updated to require both the first name and surname to match the owner, and the Better Societies search was made more efficient.
+3. The OpsJuice database sign-in keys were revoked, and all deployed Cloudflare workers were reconfigured to use the new keys, resolving some issues with verification and other operations.
