@@ -1,3 +1,3 @@
-Here's a summary of the newest changelog entry in 1 plain-English sentence:
+Here's a summary of the last changelog entry in 1 plain-English sentence:
 
-The OpsJuice system fixed several issues, including database key problems, incorrect worker readings, and publishing issues, which are now resolved and the system is stable.
+The system recently went through a series of updates and bug fixes, including changing the database security keys, fixing issues with a worker that was supposed to verify information, and resolving problems with the dashboard not displaying properly on the website.
