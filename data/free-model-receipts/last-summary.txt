@@ -1,5 +1,7 @@
-Here are three summaries of the newest changelog entries in 1 plain-English sentence each:
+Here are the newest log entries in plain English: 
 
-1. The Better Societies paid report gate now checks the actual name the receiver writes instead of what the store has in its database, and the paywall letter price information was corrected.
-2. The OpsJuice address rule was updated to require both the first name and surname to match the owner, and the Better Societies search was made more efficient.
-3. The OpsJuice database sign-in keys were revoked, and all deployed Cloudflare workers were reconfigured to use the new keys, resolving some issues with verification and other operations.
+1.  The Better Societies paid report now reads both the name the customer pays with and the actual name written by the receiver. This was tested with two rehearsal calls and now a customer can no longer be issued the letter that is meant to be read after a payment is live.
+
+2.  The Better Societies paywall letter is now accurate and no longer shows a price that an item is not actually being sold for. This change was made to make sure customers are not misled.
+
+3.  A problem had been found where some letters that were meant for businesses were being given away, and they were not being correctly addressed due to a test mode flag.
