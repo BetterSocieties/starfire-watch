@@ -1,5 +1,5 @@
-Here are the three most recent changelog entries summarized in plain English:
+Here are summaries of the newest changelog entries in plain-English sentences for a non-technical founder:
 
-1. The system was fixed so it no longer tells a customer their payment is credited to a wrong price plan, and it no longer hands a paying customer a paywall letter that they shouldn't be seeing.
-2. A new rule was implemented that requires a surname to identify a business on a mail platform, and another rule was tightened to make searches faster.
-3. The system was fixed so it no longer shows the wrong price plan names when a customer makes a payment, and 10 workers that sign in to a database were updated.
+1. The payment system has been fixed so that it no longer allows paying customers to receive incorrect letters saying they've paid for services they didn't buy.
+
+2. The Better Societies paywall letter now accurately lists the prices of services, avoiding a previous mistake that understated prices by €20,000.
