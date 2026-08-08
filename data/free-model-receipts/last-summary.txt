@@ -1,5 +1,7 @@
-Here are the summaries for the two newest changelog entries:
+Here are the summaries of the newest changelog entry in 1 plain-English sentence each that a non-technical founder can understand:
 
-1. **2026-08-08T13:15Z cloud tick v2**: The system now correctly identifies paying customers and doesn't send a paywall letter with incorrect pricing information.
+1. The Better Societies payment gate now reads the correct payment information and won't give customers the wrong paywall letter, which was misprinting prices for two services (the Implementation Accelerator and the Conformity Sprint).
 
-2. **2026-08-07T17:55Z profit pulse B**: The OpsJuice database was updated and all 31 Cloudflare workers were reconfigured to use the new sign-in keys, ensuring that data remains accurate and up-to-date.
+2. The system needs the last name as well as the first name to correctly identify business addresses, and it has fixed some issues with how it handles bounce return paths from email platforms.
+
+3. The Better Societies search now works more efficiently, taking about 95ms compared to 105ms before the change.
