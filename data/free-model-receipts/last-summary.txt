@@ -1,1 +1,4 @@
-We fixed a bug where paying customers were accidentally blocked by the paywall and corrected several pricing, dashboard, and security tracking errors across our systems.
+Here are the 2 newest changelog entries summarized in 1 plain-English sentence each:
+
+1. The payment system for a paid report now correctly identifies the payment name and sender, preventing a paying customer from receiving the wrong information.
+2. 10 Cloudflare workers, including an auditor, were updated to work with the new sign-in keys after the database revoked the old keys, ensuring they can continue to function correctly.
