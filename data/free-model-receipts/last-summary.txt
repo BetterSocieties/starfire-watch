@@ -1,6 +1,5 @@
-Here are 4 summarizations in plain-English sentences:
+Here are 3 plain-English summaries of the newest changelog entries:
 
-1. Recently, the system fixed a bug where three scheduled notes were incorrectly sent and now the shared message rules can correctly identify internal messages.
-2. The system improved how it handles paid reports to ensure that paying customers receive the correct report information and are not misled about their payment status.
-3. The Better Societies paywall letter prices were corrected to reflect the actual costs of the products being sold, preventing one sale from being understated by EUR 20,000.
-4. The system fixed several issues related to OpsJuice, including requiring a surname in the owner rescue rule, correcting a bounced return path for three Better Societies contacts, and tightening the search allowance for finding customer records.
+1. The system was fixed to stop incorrectly giving people a report when they didn't pay, and to correctly show the wrong prices on some letters.
+2. The owner rescue feature now requires surnames as well as first names to avoid mistakes, and some addresses were corrected to use the business's mailbox instead of the platform's.
+3. The system was updated to correctly track and prevent a consumer from accessing the database without signing in correctly, and 10 bindings were moved to the current key.
