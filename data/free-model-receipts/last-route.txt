@@ -1,1 +1,1 @@
-[llm-router] bulk -> groq/llama-3.1-8b-instant, 2695 tokens, $0
+[llm-router] bulk -> gemini/gemini-flash-lite-latest, 3316 tokens, $0

@@ -1,3 +1,1 @@
-Here are the summarizations of the newest changelog entry in plain English:
-
-1. The Better Societies paid report now reads the correct payment name and key that the receiver writes, so an unknowing paying customer can't get handed the paywall letter.
+The system update fixed multiple bugs across customer communication tools and databases—including correcting payment-tracking mismatches, fixing pricing errors in sales letters, and improving automated check-ins so diagnostics finish running instead of timing out.
