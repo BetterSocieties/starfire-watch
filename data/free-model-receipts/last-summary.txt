@@ -1,5 +1,1 @@
-Here are 3 plain-English summaries of the newest changelog entries:
-
-1. The system was fixed to stop incorrectly giving people a report when they didn't pay, and to correctly show the wrong prices on some letters.
-2. The owner rescue feature now requires surnames as well as first names to avoid mistakes, and some addresses were corrected to use the business's mailbox instead of the platform's.
-3. The system was updated to correctly track and prevent a consumer from accessing the database without signing in correctly, and 10 bindings were moved to the current key.
+We fixed a bug where paying customers were accidentally blocked by the paywall and corrected several pricing, dashboard, and security tracking errors across our systems.
