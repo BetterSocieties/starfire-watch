@@ -1,3 +1,3 @@
-Here is a 1 plain-English sentence summary of the newest changelog entry:
+Here are the summarizations of the newest changelog entry in plain English:
 
-The OpsJuice system fixed issues with incorrect data and formatting in some emails and payment reports, as well as improving its search function and security features.
+1. The Better Societies paid report now reads the correct payment name and key that the receiver writes, so an unknowing paying customer can't get handed the paywall letter.
