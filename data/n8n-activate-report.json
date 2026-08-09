@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-09T11:19:02Z",
-  "total": 1268,
+  "generated_at": "2026-08-09T13:41:30Z",
+  "total": 1269,
   "newly_activated": 0,
-  "already_active": 119,
+  "already_active": 120,
   "failed": 1134,
   "skipped": 15,
   "buckets": {
@@ -7678,13 +7678,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "ZpdykAxMkXQ1wKNk",
-      "name": "shared-revops-quota-attainment-reporting-ai",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "w4E2yWdtjpUBedKl",
       "name": "shared-security-gdpr-continuous-compliance-orchestrator",
       "http_code": "400",
@@ -7939,6 +7932,13 @@
     {
       "id": "ZzORfKNaBwX7aDu2",
       "name": "sgtl-sales-cohort-application-scoring-transformation-fit",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "ZpdykAxMkXQ1wKNk",
+      "name": "shared-revops-quota-attainment-reporting-ai",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
