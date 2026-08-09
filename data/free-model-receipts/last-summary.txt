@@ -1,3 +1,5 @@
-Here's a plain-English summary of the newest changelog entry:
+Here are three changelog entries summarized in 1 plain-English sentence each:
 
-The system now properly decodes addresses, prevents the paid report from being given away for free, and ensures that payment information is accurate when showing customers their fees.
+1. Three scheduled notes that were being thrown away were fixed and will now be stored correctly, and the system will report finished crowded days by name and only fail on the last day.
+2. The system that sends paid reports now checks the real payment name and key instead of using incorrect information, preventing paying customers from receiving the wrong paywall letter.
+3. The Better Societies paywall letter now displays accurate prices for the Implementation Accelerator and Conformity Sprint, instead of incorrect prices, and an issue where paid reports were being given away incorrectly was also fixed.
