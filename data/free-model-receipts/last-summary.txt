@@ -1,4 +1,12 @@
-Here are the 2 newest changelog entries summarized in 1 plain-English sentence each:
+Here are the summaries for each log entry in 1 plain-English sentence:
 
-1. The payment system for a paid report now correctly identifies the payment name and sender, preventing a paying customer from receiving the wrong information.
-2. 10 Cloudflare workers, including an auditor, were updated to work with the new sign-in keys after the database revoked the old keys, ensuring they can continue to function correctly.
+1. Fixed an issue where Adrien's dashboard was not being updated correctly due to a version mismatch.
+2. Corrected an OpsJuice issue where the cap unpin date was not being set correctly, and also fixed issues with the Echo Studio consulting page and automated forms.
+3. Resolved an issue where scheduled notes were being stopped unnecessarily, and now the mail allowance gate reports finished days correctly.
+4. Fixed two Better Societies issues: the paid report gate now reads the correct payment name and the paywall letter now shows the correct prices.
+5. Identified an issue where the Better Societies paid report was being given away unintentionally and added the surname requirement to the OpsJuice address rule.
+6. Improved the Better Societies contact list by removing 3 bounce return paths and proving the live record is correct.
+7. Fixed a cloud infrastructure issue where a percent escape was not being decoded on both routes, and also fixed the scraped-address reader and OpsJuice rows.
+8. Resolved an issue with OpsJuice where it was sending count incorrectly and was also not verifying sign-in keys correctly.
+9. Improved the OpsJuice database by updating its sign-in keys and revoking the old ones, ensuring all 31 workers can access the database correctly.
+10. Verified that all 10 OpsJuice bindings are now using the current key after the update.
