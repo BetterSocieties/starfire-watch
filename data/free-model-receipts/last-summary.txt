@@ -1,6 +1,6 @@
-Here are the 4 newest changelog entries summarized in 1 plain-English sentence each:
+Here are 4 summarizations in plain-English sentences:
 
-1. The system now allows 3 previously deleted scheduled notes to be displayed, after fixing a flaw in the note display rules.
-2. The paid report gate for the Better Societies system now displays the correct payment information for customers, preventing them from receiving incorrect information.
-3. A payment receipt letter for the Better Societies system was rewritten to accurately display prices on the page, correcting an error of up to EUR 20,000 per sale.
-4. The system now requires the surname of the address owner to be included in the rule that identifies and saves the business's own addresses, which will prevent incorrect addresses from being saved.
+1. Recently, the system fixed a bug where three scheduled notes were incorrectly sent and now the shared message rules can correctly identify internal messages.
+2. The system improved how it handles paid reports to ensure that paying customers receive the correct report information and are not misled about their payment status.
+3. The Better Societies paywall letter prices were corrected to reflect the actual costs of the products being sold, preventing one sale from being understated by EUR 20,000.
+4. The system fixed several issues related to OpsJuice, including requiring a surname in the owner rescue rule, correcting a bounced return path for three Better Societies contacts, and tightening the search allowance for finding customer records.
