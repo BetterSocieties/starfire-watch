@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-09T15:19:03Z",
+  "generated_at": "2026-08-09T17:22:33Z",
   "total": 1269,
   "newly_activated": 0,
-  "already_active": 120,
-  "failed": 1134,
+  "already_active": 117,
+  "failed": 1137,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1134
+    "other": 1137
   },
   "failures": [
     {
@@ -2374,6 +2374,13 @@
     {
       "id": "fF7B71B4jEWT8LT7",
       "name": "opsjuice-cs-community-hub-slack-forum",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "EokPk6dnApMQIWfp",
+      "name": "BRAIN-004 LinkedIn received messages to vault inbox",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -6257,6 +6264,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "RwOmTNKZBFOKoYMi",
+      "name": "ONESHOT-ddl-code-node-v2",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "Mw6v6WPfZI2sgCX8",
       "name": "BS-Growth-Funnel-Weekly",
       "http_code": "400",
@@ -7043,6 +7057,13 @@
     {
       "id": "vPglcdzzFDjJn9VE",
       "name": "opsjuice-cs-customer-advisory-board-orchestrator",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "YyIab5Udy7rDD6d8",
+      "name": "BRAIN-003 Gmail received emails to vault inbox",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
