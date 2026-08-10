@@ -1,1 +1,17 @@
-The recent updates made to the system have improved the accuracy of address matching, reduced unnecessary letters and emails, and fixed bugs that were causing issues with customer data and payment processing.
+Here are the summaries of the newest changelog entries in plain-English sentences:
+
+1. The OpsJuice cold letter (marketing email) now stops sending if it's been rejected twice, uses previously given answers, and works within a set time limit, making it more efficient and effective.
+
+2. The Better Societies paid report now accurately reads the customer's payment information, and the paywall letter (email sent to the buyer) now accurately displays the correct prices for services.
+
+3. The Better Societies payment report was previously being sent to non-paying customers due to a testing flag, this has now been corrected so only paying customers receive the report.
+
+4. The standing-check runner now keeps track of its progress and restarts where it left off, making it more efficient and accurate.
+
+5. The scraped-address reader now correctly handles percent escapes on both email and mailto routes, and the OpsJuice rows have been repaired and read back in.
+
+6. The Better Societies search allowance has been tightened, making it more efficient and accurate.
+
+7. The shared rule for OpsJuice's sending count has been corrected, improving the accuracy of send counts and email bounces.
+
+8. The OpsJuice database update did not result in any issues, and 10 Cloudflare workers that were previously blind to the database were found and signed in.
