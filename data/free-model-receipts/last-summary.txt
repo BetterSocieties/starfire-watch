@@ -1,3 +1,3 @@
-Here is a plain-English summary of the newest changelog entry (August 10th, 08:10:00 PM, cloud tick v2, BS-PAID-REPORT-GATE-READS-A-NAME-NOBODY-WRITES and BS-PAYWALL-LETTER-NAMES-TWO-RUNGS-THAT-DO-NOT-EXIST):
+Here's a summary of the newest changelog entry:
 
-"The automation that sends follow-up emails to customers now works more efficiently and accurately, stopping when they say no twice and remembering past answers, resulting in 5 more emails being sent successfully in 38 seconds."
+The Better Societies cold letter system has been improved to stop sending letters when a route says no twice, it now keeps track of previous answers, and is limited by a clock; follow-up letters now include version numbers and only tell the truth about the business; the system now checks the payment status to prevent sending paywall letters to customers who haven't paid.
