@@ -1,3 +1,19 @@
-Here's a 1 plain-English sentence summary of the newest changelog entry:
+Here are the summaries of the newest changelog entries in plain-English sentences for a non-technical founder:
 
-The system's checks now record and track their progress, and a check runner can now stop and pick up where it left off when interrupted, also making improvements to Better Societies' data.
+1. **Better Societies paid report**: The system now correctly reads the payment name and key that the receiver writes, preventing fake paid reports from being sent.
+
+2. **Better Societies paywall letter**: The paywall letter's prices were corrected so it no longer underestimates the cost of services.
+
+3. **Payment reporting issue**: The payment reporting issue when in test mode was fixed so that it no longer gives away reports.
+
+4. **Standing-check runner**: The running list of checks was fixed to correctly keep track of answers and only retry failed checks.
+
+5. **Better Societies buyer filtering**: The system can now read EU establishment evidence even if it's undecided, helping to filter out addresses that may not deliver emails.
+
+6. **Address resolver**: The system now requires a business's surname when resolving their email address, to reduce misidentification of businesses.
+
+7. **Mail bounce handling**: The system now correctly handles bounces for Better Societies contacts, reducing the number of incorrectly attributed addresses.
+
+8. **Better Societies search time**: The search time for Better Societies was improved, reducing the time it takes to search for businesses by 10-20ms.
+
+9. **Cloudflare worker check**: A cloud worker was found to be incorrectly signed into the OpsJuice database, and a sweep was run to correct this.
