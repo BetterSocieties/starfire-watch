@@ -1,19 +1,14 @@
-Here are the summaries of the newest changelog entries in plain-English sentences for a non-technical founder:
+Here are 6 simple changelog summaries in one plain-English sentence per entry using digits for numbers:
 
-1. **Better Societies paid report**: The system now correctly reads the payment name and key that the receiver writes, preventing fake paid reports from being sent.
+1. The OpsJuice cold letter now stops asking unnecessary questions, remembers its answers, and works within a certain timeframe, greatly improving its response time.
+2. The OpsJuice follow-up letters now tell strangers only what they can stand behind, record which version was sent, and retire when they reach a certain customer milestone.
+3. The OpsJuice cold letter now records which version was sent and can be judged on its effectiveness, and its wording was adjusted to name the right industry or no industry at all.
+4. There was a problem with Adrien's dashboard, but it has been fixed, allowing 1017 cards to serve without issues.
+5. The OpsJuice cap was corrected, and follow-up letters now tell strangers only what they can stand behind, and the Echo Studio consulting page is now accessible.
+6. The better Societies paid report gate now reads the payment name and the key the receiver really writes, preventing incorrect letters from being sent to paying customers.
 
-2. **Better Societies paywall letter**: The paywall letter's prices were corrected so it no longer underestimates the cost of services.
-
-3. **Payment reporting issue**: The payment reporting issue when in test mode was fixed so that it no longer gives away reports.
-
-4. **Standing-check runner**: The running list of checks was fixed to correctly keep track of answers and only retry failed checks.
-
-5. **Better Societies buyer filtering**: The system can now read EU establishment evidence even if it's undecided, helping to filter out addresses that may not deliver emails.
-
-6. **Address resolver**: The system now requires a business's surname when resolving their email address, to reduce misidentification of businesses.
-
-7. **Mail bounce handling**: The system now correctly handles bounces for Better Societies contacts, reducing the number of incorrectly attributed addresses.
-
-8. **Better Societies search time**: The search time for Better Societies was improved, reducing the time it takes to search for businesses by 10-20ms.
-
-9. **Cloudflare worker check**: A cloud worker was found to be incorrectly signed into the OpsJuice database, and a sweep was run to correct this.
+7. The standing-check runner now correctly saves its progress when interrupted and can reach the end of its list, and it reported that Better Societies buyer depth is at 0.9 days.
+8. The Better Societies contact addresses are now correctly checked, and 3 of them were found to be using the mail platform's own bounce return path.
+9. The Better Societies search allowance has been tightened, greatly improving the performance of the Better Societies search, and several OpsJuice addresses were corrected.
+10. The scraped-address reader now correctly decodes percent escapes on both routes, and several OpsJuice addresses were read and gated correctly.
+11. The OpsJuice database updated its sign-in keys, and a consumer was accidentally found to be blind; all Cloudflare workers were then swept, and 10 workers were found to sign in to the database.
