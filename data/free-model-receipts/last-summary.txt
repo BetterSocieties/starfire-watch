@@ -1,3 +1,3 @@
-Here is a plain-English summary of the latest changes in 1 sentence:
+Here's a 1 plain-English sentence summary of the newest changelog entry:
 
-The system has made several improvements, including fixing issues with cold letters, paywalls, and reporting, as well as upgrading checks and addresses, and generally increasing efficiency and reliability.
+The system's checks now record and track their progress, and a check runner can now stop and pick up where it left off when interrupted, also making improvements to Better Societies' data.
