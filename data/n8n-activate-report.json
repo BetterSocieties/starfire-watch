@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-10T14:11:34Z",
+  "generated_at": "2026-08-10T15:49:04Z",
   "total": 1269,
   "newly_activated": 0,
   "already_active": 117,
@@ -2276,7 +2276,7 @@
     {
       "id": "DLHEnKGjX7IuND8x",
       "name": "industry-law",
-      "http_code": "400",
+      "http_code": "000",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
@@ -4978,7 +4978,7 @@
     {
       "id": "nSeq3MMC6wHA2HjW",
       "name": "bs-finance-grant-restricted-fund-tracking",
-      "http_code": "400",
+      "http_code": "000",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
