@@ -1,3 +1,3 @@
-Here's a non-technical founder-friendly summary of the newest entry:
+Here's a plain-English summary of the newest changelog entry:
 
-The team made several key improvements to reduce errors and improve the efficiency of automated tasks, including limiting cold letters, correctly pricing services, correctly identifying EU businesses, and updating various automated processes to work more smoothly.
+The cloud server has improved its ability to send letters to businesses by optimizing how it checks addresses, reducing the chances of accidentally sending letters to the wrong people, and making sure that businesses receive accurate information about their payments and fees.
