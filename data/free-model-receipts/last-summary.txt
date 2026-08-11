@@ -1,3 +1,14 @@
-Here's a plain-English summary of the newest changelog entry:
+Here are the four newest changelog entries summarized in plain-English sentences:
 
-The cloud server has improved its ability to send letters to businesses by optimizing how it checks addresses, reducing the chances of accidentally sending letters to the wrong people, and making sure that businesses receive accurate information about their payments and fees.
+1. The system was updated so that if a user says no twice, the process stops and doesn't waste money sending more letters.
+2. The system now records which letter version was sent and can accurately measure the impact of changes to the letters.
+3. The system was fixed so that it properly tracks the version of letters sent, and a new hourly process was added to check the live letters and prevent them from making incorrect claims about the customer experience.
+4. The system was updated so that it only sends the correct information about the business, and a new process was added to check for and fix any incorrect information about the business.
+5. The system was updated so that a scheduled task doesn't get stuck if it tries to send a customer message, and a new process was added to report on finished days and prevent any errors from occurring.
+6. The system was updated to properly track payments from customers and prevent them from receiving incorrect paywall letters, and a new process was added to check for accurate information about the payment.
+7. The system was updated to prevent customers from being sent a incorrect paywall letter that makes unsubstantiated claims about the business.
+8. The system was updated to prevent the paywall letter from sending incorrect information about the EUR value of business engagement services.
+
+If I only choose number one from the newest batch, here's the revised plain-English sentence:
+
+1. The system was updated so that it stops sending letters after two refusals, which saves time and money.
