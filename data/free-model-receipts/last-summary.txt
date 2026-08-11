@@ -1,10 +1,1 @@
-Here's a summary of the two newest changes in plain English:
-
-1. The cloud's "standing-check" feature now banks each result as it arrives, which fixed a problem where it would restart a list of checks every hour instead of continuing where it left off. 
-2. The cloud also improved its search for businesses, finding and processing 16 addresses it had missed previously, and it was able to correctly identify only 2 of those addresses as legitimate buyers. 
-
-However, to be more complete, the first summary is actually for the 2023-08-07T09:00Z cloud infrastructure pulse entry. 
-
-As for the correct newest entry, here's another  attempt at a summary for the newest entry at 2026-08-09T17:29Z cloud-tick-v2:
-
-1. The "standing-check" runner now keeps track of its progress and stops when it reaches a check that it failed, instead of starting over from the top every hour, and it was able to complete a check on the Better Societies buyer depth.
+We fixed several system bugs—including incorrect payment tracking, mislabeled pricing on paywall letters, and broken automated checks—while improving how background tasks save their progress and handle data.
