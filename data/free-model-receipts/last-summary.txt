@@ -1,8 +1,10 @@
-Here are the newest changelog entries summarized in plain-English sentences for a non-technical founder to understand:
+Here's a summary of the two newest changes in plain English:
 
-1. The system now stops sending follow-up letters to strangers when it can't verify the information it's sending, and it keeps track of which version of the letter was sent.
-2. A part of the system that was reading data from a database was fixed, which should cause less errors to occur and more accurate data to be shown on the dashboard.
-3. A problem where the system was telling potential buyers incorrect information is now fixed, and the system will only send accurate information.
-4. The system can now read data that was previously unknown and should be able to find more accurate information to help potential buyers.
-5. A section of the system that deals with sending emails was updated to prevent sending emails to strangers and to keep track of which version of the letter was sent.
-6. A part of the system was updated to handle a specific type of address, and it should now be easier to find accurate information on the system.
+1. The cloud's "standing-check" feature now banks each result as it arrives, which fixed a problem where it would restart a list of checks every hour instead of continuing where it left off. 
+2. The cloud also improved its search for businesses, finding and processing 16 addresses it had missed previously, and it was able to correctly identify only 2 of those addresses as legitimate buyers. 
+
+However, to be more complete, the first summary is actually for the 2023-08-07T09:00Z cloud infrastructure pulse entry. 
+
+As for the correct newest entry, here's another  attempt at a summary for the newest entry at 2026-08-09T17:29Z cloud-tick-v2:
+
+1. The "standing-check" runner now keeps track of its progress and stops when it reaches a check that it failed, instead of starting over from the top every hour, and it was able to complete a check on the Better Societies buyer depth.
