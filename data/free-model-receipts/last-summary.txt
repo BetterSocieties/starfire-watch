@@ -1,3 +1,23 @@
-Here's a summary of the latest changelog entry in a plain-English sentence for a non-technical founder:
+Here's a list of summaries for the newest changelog entries, rewritten in plain-English sentences for a non-technical founder to understand:
 
-The team has continued updating the company's automated systems to improve their efficiency and accuracy, with significant improvements in how they handle customer contact and payment tracking, as well as reducing errors and increasing the speed of processing.
+1. "The system is now smarter and more efficient, allowing it to stop asking unnecessary questions and use past answers to speed up its work."
+
+2. "The follow-up letters sent to people now contain more accurate information and record when they were sent, which will help measure the effectiveness of future changes."
+
+3. "The cold letter (the initial message) now records which version was sent and has been rewritten to contain more accurate information about the business's products and services."
+
+4. "The system has fixed a problem that prevented it from updating a dashboard, which should make it easier to track and analyze data."
+
+5. "The system has fixed a problem with the Better Societies paywall letter, which previously contained incorrect information about prices and products."
+
+6. "The system was fixed to switch off a reporting feature that was always enabled, and this has now been switched off."
+
+7. "The system can now bank its work and restart where it left off if it's interrupted, allowing it to complete tasks more efficiently."
+
+8. "The system has improved its ability to find and verify the registered office of companies, which should help with sourcing and delivering messages."
+
+9. "The system has fixed a problem with addresses stored on it, and now correctly identifies valid and invalid addresses."
+
+10. "The system has improved its counting and sending of messages through OpsJuice, which should lead to better results and more accurate data."
+
+11. "The system has fixed a problem that prevented it from sweeping for and revoking old sign-in keys to a database, which has now been completed."
