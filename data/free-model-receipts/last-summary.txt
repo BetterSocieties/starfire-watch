@@ -1,3 +1,3 @@
-Here's a summary of the newest changelog entry in a plain-English sentence a non-technical founder can understand:
+Here is a non-technical summary of the "2026-08-10" entry:
 
-"The system is now able to correctly identify which businesses can receive letters and which can't, and it can now read and report accurate information about payments made to businesses, preventing errors and inconsistencies in customer communications."
+The OpsJuice cold letter system has been improved to only ask for information it needs, remember previous answers, and stop asking questions when it gets a certain number of negative responses, which has significantly sped up the process.
