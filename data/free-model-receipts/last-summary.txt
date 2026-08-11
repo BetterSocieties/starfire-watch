@@ -1,14 +1,11 @@
-Here are 6 simple changelog summaries in one plain-English sentence per entry using digits for numbers:
+Here's a plain-English summary of the newest changelog entries in 1 sentence each:
 
-1. The OpsJuice cold letter now stops asking unnecessary questions, remembers its answers, and works within a certain timeframe, greatly improving its response time.
-2. The OpsJuice follow-up letters now tell strangers only what they can stand behind, record which version was sent, and retire when they reach a certain customer milestone.
-3. The OpsJuice cold letter now records which version was sent and can be judged on its effectiveness, and its wording was adjusted to name the right industry or no industry at all.
-4. There was a problem with Adrien's dashboard, but it has been fixed, allowing 1017 cards to serve without issues.
-5. The OpsJuice cap was corrected, and follow-up letters now tell strangers only what they can stand behind, and the Echo Studio consulting page is now accessible.
-6. The better Societies paid report gate now reads the payment name and the key the receiver really writes, preventing incorrect letters from being sent to paying customers.
+1. "The system now records its own version when sending letters to prevent errors when rewriting them and can also judge whether a rewrite is necessary."
 
-7. The standing-check runner now correctly saves its progress when interrupted and can reach the end of its list, and it reported that Better Societies buyer depth is at 0.9 days.
-8. The Better Societies contact addresses are now correctly checked, and 3 of them were found to be using the mail platform's own bounce return path.
-9. The Better Societies search allowance has been tightened, greatly improving the performance of the Better Societies search, and several OpsJuice addresses were corrected.
-10. The scraped-address reader now correctly decodes percent escapes on both routes, and several OpsJuice addresses were read and gated correctly.
-11. The OpsJuice database updated its sign-in keys, and a consumer was accidentally found to be blind; all Cloudflare workers were then swept, and 10 workers were found to sign in to the database.
+2. "The Better Societies paywall letter now shows the correct prices for its services rather than outdated information."
+
+3. "A bug was fixed that caused the system to keep restarting the same checks over and over, and a new feature was added that allows the system to detect when a company is likely to make a purchase."
+
+4. "The system can now correctly detect and remove incorrect email addresses from its records, and a gate was added to prevent hand-written copy from being accepted if not in line with the system's rules."
+
+5. "A database cleanup was performed to remove old sign-in keys and find new ones that were not yet detected."
