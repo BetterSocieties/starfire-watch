@@ -1,3 +1,8 @@
-Here's a non-technical summary of the newest changelog entry in 1 sentence:
+Here are the newest changelog entries summarized in plain-English sentences for a non-technical founder to understand:
 
-The system has been improved by stopping unnecessary cold letters, correcting errors in payment reports and paywall letters, and enhancing the ability to read and handle addresses and payment information from other systems.
+1. The system now stops sending follow-up letters to strangers when it can't verify the information it's sending, and it keeps track of which version of the letter was sent.
+2. A part of the system that was reading data from a database was fixed, which should cause less errors to occur and more accurate data to be shown on the dashboard.
+3. A problem where the system was telling potential buyers incorrect information is now fixed, and the system will only send accurate information.
+4. The system can now read data that was previously unknown and should be able to find more accurate information to help potential buyers.
+5. A section of the system that deals with sending emails was updated to prevent sending emails to strangers and to keep track of which version of the letter was sent.
+6. A part of the system was updated to handle a specific type of address, and it should now be easier to find accurate information on the system.
