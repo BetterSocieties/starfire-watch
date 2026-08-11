@@ -1,11 +1,3 @@
-Here's a plain-English summary of the newest changelog entries in 1 sentence each:
+Here's a non-technical summary of the newest changelog entry in 1 sentence:
 
-1. "The system now records its own version when sending letters to prevent errors when rewriting them and can also judge whether a rewrite is necessary."
-
-2. "The Better Societies paywall letter now shows the correct prices for its services rather than outdated information."
-
-3. "A bug was fixed that caused the system to keep restarting the same checks over and over, and a new feature was added that allows the system to detect when a company is likely to make a purchase."
-
-4. "The system can now correctly detect and remove incorrect email addresses from its records, and a gate was added to prevent hand-written copy from being accepted if not in line with the system's rules."
-
-5. "A database cleanup was performed to remove old sign-in keys and find new ones that were not yet detected."
+The system has been improved by stopping unnecessary cold letters, correcting errors in payment reports and paywall letters, and enhancing the ability to read and handle addresses and payment information from other systems.
