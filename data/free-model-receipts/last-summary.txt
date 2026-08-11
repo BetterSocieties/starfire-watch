@@ -1,3 +1,21 @@
-Here is a non-technical summary of the "2026-08-10" entry:
+Here are some rewritten changelog entries in 1 plain-English sentence per update:
 
-The OpsJuice cold letter system has been improved to only ask for information it needs, remember previous answers, and stop asking questions when it gets a certain number of negative responses, which has significantly sped up the process.
+1. The OpsJuice cold letter system has been improved to stop asking too many questions, remember previous answers, and work within a set budget, which allowed successful checks to increase from 7 out of 13 to 12 out of 12.
+
+2. The OpsJuice follow-up letters now only claim what the business can prove, and their responses are tracked and recorded, allowing for future measurement of the effectiveness of rewritten letters.
+
+3. The OpsJuice cold letter and its variants now reference the actual industry of the business, rather than simply labeling the business as "a shop."
+
+4. A problem with Adrien's dashboard has been fixed, allowing it to be corrected by comparing the code versions of feeds, rather than relying on file timestamps.
+
+5. The limit date for OpsJuice letter capping has been adjusted, and hourly checks are now being run to ensure consistency between the automated system and the human dashboard.
+
+6. The OpsJuice paid report gate now reads the correct payment information, rather than relying on a phone number that is not contained in payment rows.
+
+7. The Better Societies paywall letter has been rewritten to accurately reflect the prices of services, removing incorrect information about "Diagnostic Engagement" and "Full Conformity."
+
+8. The OpsJuice paid report is now being given away to all subscribers due to a misconfigured flag, although work is being done to address this issue.
+
+9. The standing-check runner now correctly bank answers as they arrive, restarts from where it left off, and does not get stuck in an infinite loop.
+
+10. European companies are now being read in batches and processed to find addresses and evidence of their business, including a report on the better societies buyer depth.
