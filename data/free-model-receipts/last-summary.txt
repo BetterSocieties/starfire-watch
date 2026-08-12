@@ -1,5 +1,3 @@
-Here are the two newest changelog entries summarized in one plain-English sentence each:
+Here's a summary of the newest changelog entry in plain-English sentences:
 
-1. The system now stops asking follow-up questions after two failed attempts, remembers previous answers, and works within a clock, leading to a 5-fold increase in successful due checks.
-
-2. The system now records and checks the versions of certain automated emails to ensure they are correct and can be accurately measured and revised.
+The system now correctly names the correct industry for a business in its letter and does not call it a general term like "shop", improving the accuracy of its messages.
