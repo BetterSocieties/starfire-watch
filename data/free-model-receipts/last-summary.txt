@@ -1,1 +1,3 @@
-The system update fixes critical errors in automated emails and payment tracking for Better Societies and OpsJuice, correcting incorrect pricing, saving progress on system health checks, and ensuring outbound messages only use verified data.
+Here's a summary of the last changelog entry in one plain-English sentence:
+
+The Better Societies buyer depth was found to be 0.9 days, and the system was modified to correctly settle EU establishment status for businesses, resolve 105,000 ms of time consumed by searches, and fix various other issues.
