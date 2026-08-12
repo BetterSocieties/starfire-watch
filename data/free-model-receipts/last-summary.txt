@@ -1,3 +1,7 @@
-Here's a summary of the newest change in plain English:
+Here are three plain English summaries for the last three entries:
 
-The computer system that sends out cold letters stopped asking the wrong questions and wasting too much time and resources. It now only asks for answers that are relevant, keeps track of the answers it already has, and doesn't run out of time or budget. This helped the system handle a large number of letters more efficiently.
+1. The system that sends Better Societies cold letters now stops when it doesn't get a response, remembers previous answers, and works within a clock, reducing the number of checks that don't get completed.
+
+2. The system that sends messages now saves information after each interruption, and has improved the way it reports deliverability issues, finding a problem with how it previously dealt with companies that don't have a "EU establishment" flag.
+
+3. The system that checks the validity of addresses has been updated to require the surname when looking up business addresses, and now corrects a problem with some company contacts having their own return path instead of the business's mailbox.
