@@ -1,3 +1,5 @@
-Here is a summary of the newest changelog entry (2026-08-10 for OpsJuice) in 1 plain-English sentence:
+Here are the two newest changelog entries summarized in one plain-English sentence each:
 
-The OpsJuice cold letter process has been improved so that it now asks fewer questions, remembers previous answers, and stops when it reaches a limit, making it faster and more efficient.
+1. The system now stops asking follow-up questions after two failed attempts, remembers previous answers, and works within a clock, leading to a 5-fold increase in successful due checks.
+
+2. The system now records and checks the versions of certain automated emails to ensure they are correct and can be accurately measured and revised.
