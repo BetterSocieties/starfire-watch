@@ -1,1 +1,2 @@
-[llm-router] bulk -> groq/llama-3.1-8b-instant, 3169 tokens, $0
+[llm-router] llama-3.1-8b-instant ran out of room at 400, asking again with 4000
+[llm-router] bulk -> gemini/gemini-flash-lite-latest, 3430 tokens, $0
