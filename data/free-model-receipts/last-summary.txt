@@ -1,3 +1,9 @@
-Here's a summary of the newest changelog entry in plain-English sentences:
+Here are four simplified summaries in plain English:
 
-The system now correctly names the correct industry for a business in its letter and does not call it a general term like "shop", improving the accuracy of its messages.
+1. The system now prevents cold emails from being sent to people about reports or things the company can't defend, improves the timing of when they send these emails, and makes sure they don't use outdated information.
+
+2. The "Better Societies" system now accurately reflects the prices customers pay for different services and doesn't claim a payment is made when it hasn't been.
+
+3. The system now properly filters out companies from receiving messages even if they haven't confirmed their address.
+
+4. The system now ensures that companies aren't mistakenly sent emails or payment requests, and it correctly identifies the people and companies receiving these communications.
