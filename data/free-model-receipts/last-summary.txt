@@ -1,3 +1,3 @@
-Here's a summary of the last changelog entry in one plain-English sentence:
+Here's a summary of the newest change in plain English:
 
-The Better Societies buyer depth was found to be 0.9 days, and the system was modified to correctly settle EU establishment status for businesses, resolve 105,000 ms of time consumed by searches, and fix various other issues.
+The computer system that sends out cold letters stopped asking the wrong questions and wasting too much time and resources. It now only asks for answers that are relevant, keeps track of the answers it already has, and doesn't run out of time or budget. This helped the system handle a large number of letters more efficiently.
