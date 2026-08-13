@@ -1,1 +1,1 @@
-The profit pulse system fixed a bug where cold email pauses lacked an owner by creating a script to manage them, improved prospect name detection to stop misidentifying words like "Grow" as names, and resolved API routing and token generation issues.
+We fixed a bug where cold email sending was accidentally left paused and costing revenue, improved name-detection to stop misidentifying words like "Grow" as people, updated token generation security, and confirmed that capacity limits caused recent reservation errors rather than code bugs.
