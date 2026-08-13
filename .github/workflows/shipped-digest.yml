@@ -1,11 +1,24 @@
-# Cloud shipped-digest cron: replaces the Mac launchd com.starfire.shipped-digest
-# job. Runs every 30 minutes and posts new starfire-core commits to Slack via
-# the n8n webhook. Fully cloud, no Mac dependency.
+# Cloud shipped-digest cron. SCHEDULE DISABLED 2026-08-13, manual dispatch only.
+#
+# Why it is off. It read 45 minutes of starfire-core commit subjects and posted
+# them, twice an hour. Its skip list covers "state:", "archive:", "cloud-tick:"
+# and "heartbeat" but not "cascade free-host:", which is the subject the Mac job
+# com.starfire.agent-host-free wrote every 300 seconds after asking a free model
+# to classify three businesses that do not exist. That produced 408 of the 533
+# commits in starfire-core in the 24 hours to 2026-08-13T10:21Z, and every one
+# of them survived the filter, so Adrien got the same sentence dozens of times a
+# day. The Mac job is now gone, which removes the input.
+#
+# It stays off for a second reason that killing the input does not fix. A commit
+# subject is not a report. This job cannot say why a thing was done, what it is
+# worth, or where to look, because it never had those facts, and it lives in
+# this repo where it cannot import the quality gates that do: ea_message.py,
+# os_link.py and check-adrien-facing-links.py all live in starfire-core. It is
+# replaced by scripts/hourly-brief.py in starfire-core, which this job will then
+# simply call. Until that exists, nothing sends.
 name: shipped-digest
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: "17,47 * * * *"
 jobs:
   digest:
     runs-on: ubuntu-latest
