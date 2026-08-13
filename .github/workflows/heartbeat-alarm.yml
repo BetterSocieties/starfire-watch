@@ -1,11 +1,25 @@
-# Cloud-tick heartbeat freshness alarm. Runs on GitHub infra (no Mac). If the
-# hourly cloud tick stops pushing heartbeats to starfire-core, Slack Adrien via
-# the same n8n webhook shipped-digest uses. A missing heartbeat IS the alarm.
+# Cloud-tick heartbeat freshness alarm. SCHEDULE DISABLED 2026-08-13, manual only.
+#
+# It watches agent/cloud-tick-heartbeat.log in starfire-core and Slacks Adrien
+# when the newest line is more than 150 minutes old. That was the right idea
+# attached to the wrong thing. The line it was reading was written every 300
+# seconds by com.starfire.agent-host-free and by com.starfire.model-failover-
+# watchdog, both of which only ever asked a free model to classify three
+# invented businesses, or asked a local model to echo one fixed string back.
+# A heartbeat that stays fresh because a job is faithfully doing nothing is not
+# a liveness signal, it is a green light wired to itself.
+#
+# Both of those jobs were removed on 2026-08-13, so nothing writes that file any
+# more and this alarm would fire every two hours to report the absence of work
+# that was deliberately stopped. Twelve true but useless messages a day is the
+# same failure as the digest it shares a webhook with.
+#
+# It comes back on the day scripts/hourly-brief.py starts running, pointed at
+# that brief's own timestamp, because then a missing heartbeat means the hourly
+# revenue routine stopped, which is worth waking someone for.
 name: heartbeat-alarm
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: "25 */2 * * *"
 jobs:
   check:
     runs-on: ubuntu-latest
