@@ -1,7 +1,1 @@
-Here are three plain English summaries for the last three entries:
-
-1. The system that sends Better Societies cold letters now stops when it doesn't get a response, remembers previous answers, and works within a clock, reducing the number of checks that don't get completed.
-
-2. The system that sends messages now saves information after each interruption, and has improved the way it reports deliverability issues, finding a problem with how it previously dealt with companies that don't have a "EU establishment" flag.
-
-3. The system that checks the validity of addresses has been updated to require the surname when looking up business addresses, and now corrects a problem with some company contacts having their own return path instead of the business's mailbox.
+Profit Pulse B fixed an unowned cold lane pause by giving it a script to automatically check bounce rates, added a verified database of 37,734 first names to stop treating company names like "Grow" as people, and verified that previous reservation cuts—not system errors—caused recent delivery refusals.
