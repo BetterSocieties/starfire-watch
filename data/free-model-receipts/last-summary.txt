@@ -1,1 +1,1 @@
-On August 13, 2026, the team updated profit pulse B to automatically enforce the OpsJuice cold lane pause using strict bounce-rate checks, stopped treating common first names like "Grow" as people by referencing a list of 37,734 valid names, and fixed security token handling while extending the OpsJuice cap unpin date to August 18, 2026.
+We fixed 4 critical bugs where background safety checks were blind to most of our task board data, and added a new rule that prevents any future checks from being built without testing their data visibility first.
