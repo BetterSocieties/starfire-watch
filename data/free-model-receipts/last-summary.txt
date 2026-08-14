@@ -1,1 +1,1 @@
-We fixed 4 critical bugs where background safety checks were blind to most of our task board data, and added a new rule that prevents any future checks from being built without testing their data visibility first.
+We fixed 4 critical system checks that were blind to most of our work data, successfully cleaned up 9 broken automations, and added a permanent safeguard to ensure future tools never miss data again.
