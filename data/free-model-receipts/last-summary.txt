@@ -1,1 +1,1 @@
-We fixed 4 critical system checks that were blind to most of our work data, successfully cleaned up 9 broken automations, and added a permanent safeguard to ensure future tools never miss data again.
+We fixed 4 critical bugs where our automated safety checks were blind to most of our task data, and we added a new mandatory guardrail to ensure all future system tools read all task formats correctly.
