@@ -1,1 +1,1 @@
-The profit pulse system fixed a bug where cold email pauses lacked an owner, stopped mistaking website menu words for human first names, and resolved API reservation cuts that were causing route refusals.
+On August 13, 2026, the team updated profit pulse B to automatically enforce the OpsJuice cold lane pause using strict bounce-rate checks, stopped treating common first names like "Grow" as people by referencing a list of 37,734 valid names, and fixed security token handling while extending the OpsJuice cap unpin date to August 18, 2026.
