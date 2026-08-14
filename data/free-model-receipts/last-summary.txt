@@ -1,1 +1,1 @@
-We fixed 4 critical bugs where background automation tools were blind to most of our task data, and added a strict check to prevent them from missing data in the future.
+We fixed several backend monitoring tools that were completely blind to most of our task rows and automation IDs, and we added a new safety check to prevent them from missing data in the future.
