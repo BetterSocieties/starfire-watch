@@ -1,1 +1,1 @@
-We fixed several major bugs where internal safety checks were completely blind to most of our task data, and added a strict new rule to ensure future checks never miss data again.
+We fixed several internal checks that were previously blind to most of our task data, which immediately uncovered 9 missing automations and prevented future blind spots from being added.
