@@ -1,1 +1,1 @@
-We fixed 4 major reporting and monitoring blind spots—including one that miscounted remaining contacts and another that hid missing automations and broken payment checks—and added strict automated checks to ensure all tools read every type of task board row correctly in the future.
+An update fixed several internal tools and filters so they now correctly read all task formats, catching 9 missing automations, correcting inaccurate contact counts, and preventing future blind spots.
