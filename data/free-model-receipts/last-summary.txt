@@ -1,1 +1,1 @@
-We fixed 4 critical bugs where our automated safety checks were blind to most of our task data, and we added a new mandatory guardrail to ensure all future system tools read all task formats correctly.
+We fixed 4 critical bugs where our automated background checks were blind to most of our task data, found and cleaned up 9 broken automations, and added a safeguard to prevent any future tools from missing task information.
