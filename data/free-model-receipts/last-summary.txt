@@ -1,1 +1,1 @@
-We fixed 4 major blind spots where internal quality checks were missing tasks, added a new safety gate to prevent tools from ignoring task formats in the future, and cleaned up 9 broken automations that were referenced on the board.
+We fixed several major bugs where internal safety checks were completely blind to most of our task data, and added a strict new rule to ensure future checks never miss data again.
