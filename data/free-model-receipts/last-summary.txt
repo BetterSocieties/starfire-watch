@@ -1,1 +1,1 @@
-We fixed several internal checks that were previously blind to most of our task data, which immediately uncovered 9 missing automations and prevented future blind spots from being added.
+We fixed 4 critical bugs where background automation tools were completely blind to hundreds of task rows—missing things like closed tasks, open blockers, duplicate names, and broken automation IDs—and put in a permanent safeguard to prevent them from ever going blind again.
