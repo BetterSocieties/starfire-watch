@@ -1,1 +1,1 @@
-We fixed 4 critical bugs where background automation tools were completely blind to hundreds of task rows—missing things like closed tasks, open blockers, duplicate names, and broken automation IDs—and put in a permanent safeguard to prevent them from ever going blind again.
+We fixed 4 major reporting and monitoring blind spots—including one that miscounted remaining contacts and another that hid missing automations and broken payment checks—and added strict automated checks to ensure all tools read every type of task board row correctly in the future.
