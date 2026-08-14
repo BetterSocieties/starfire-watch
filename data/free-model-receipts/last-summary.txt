@@ -1,1 +1,1 @@
-We fixed critical bugs where internal quality checks and system gates were completely blind to most task rows and automations, and we added automated safety checks to ensure tools can no longer quietly miss data in the future.
+We fixed several critical bugs where our automated system checks were ignoring most of our task data, which immediately exposed 9 broken automations and ensured future checks cannot silently miss data anymore.
