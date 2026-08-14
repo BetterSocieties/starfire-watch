@@ -1,1 +1,1 @@
-We fixed several backend monitoring tools that were completely blind to most of our task rows and automation IDs, and we added a new safety check to prevent them from missing data in the future.
+We fixed 4 major blind spots where internal quality checks were missing tasks, added a new safety gate to prevent tools from ignoring task formats in the future, and cleaned up 9 broken automations that were referenced on the board.
