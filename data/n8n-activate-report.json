@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-13T23:29:38Z",
-  "total": 1270,
-  "newly_activated": 0,
+  "generated_at": "2026-08-14T03:19:13Z",
+  "total": 1271,
+  "newly_activated": 1,
   "already_active": 118,
   "failed": 1137,
   "skipped": 15,
@@ -2071,13 +2071,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "gwN90hPeHkernHph",
-      "name": "echo-collective-ops-portfolio-metrics-consolidation",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "fmexBSxNX6EEQxmy",
       "name": "echo-collective-ops-vendor-consolidation",
       "http_code": "400",
@@ -3618,6 +3611,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "gwN90hPeHkernHph",
+      "name": "echo-collective-ops-portfolio-metrics-consolidation",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "IW107zqUbF3dtqr7",
       "name": "echo-collective-portfolio-acquisition-target-scanning",
       "http_code": "400",
@@ -4362,13 +4362,6 @@
     {
       "id": "loX8G02XCGqzWlnQ",
       "name": "sgtl-product-community-behavior-analytics-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "MffQEfAr4Gp6kW7V",
-      "name": "sgtl-product-daily-coaching-app-widget",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5139,13 +5132,6 @@
     {
       "id": "rZesKjF6amdPgCCm",
       "name": "echo-collective-capital-allocation-signals",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "SwirR89VEmlfqazl",
-      "name": "echo-collective-contract-lifecycle",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5991,6 +5977,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "MffQEfAr4Gp6kW7V",
+      "name": "sgtl-product-daily-coaching-app-widget",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "SvUCV1SHvQ6rDrlV",
       "name": "sgtl-sales-course-annual-tier-vs-monthly-testing",
       "http_code": "400",
@@ -6544,13 +6537,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "ZOBbaBLED1nHaf8y",
-      "name": "bs-accelerator-icp-score",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "xjN6qbUtqn9lWpmV",
       "name": "bs-education-eu-ai-act-training-programs-orchestrator",
       "http_code": "400",
@@ -6721,6 +6707,13 @@
     {
       "id": "Z6MSVQ1GtuhMww62",
       "name": "echo-collective-brand-oversight-audit",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "SwirR89VEmlfqazl",
+      "name": "echo-collective-contract-lifecycle",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7855,6 +7848,13 @@
     {
       "id": "zGDCbPRORYRInGAn",
       "name": "yc-startup-in-a-box",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "ZOBbaBLED1nHaf8y",
+      "name": "bs-accelerator-icp-score",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
