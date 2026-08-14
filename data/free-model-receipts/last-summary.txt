@@ -1,1 +1,1 @@
-We fixed several critical bugs where our automated system checks were ignoring most of our task data, which immediately exposed 9 broken automations and ensured future checks cannot silently miss data anymore.
+We fixed 4 critical bugs where our automated safety and routing tools were missing most of our task data, and added a permanent system check to ensure all future tools read our data correctly.
