@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-14T03:19:13Z",
-  "total": 1271,
-  "newly_activated": 1,
-  "already_active": 118,
+  "generated_at": "2026-08-14T06:08:51Z",
+  "total": 1272,
+  "newly_activated": 0,
+  "already_active": 120,
   "failed": 1137,
   "skipped": 15,
   "buckets": {
@@ -3926,13 +3926,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "mdzwCRRKR1gFTPu5",
-      "name": "ONESHOT-add-stripe-link-col",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "M6NEX9Ch8qj5lIsJ",
       "name": "opsjuice-finance-fpa-driver-based-budget-forecast",
       "http_code": "400",
@@ -5501,6 +5494,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "mdzwCRRKR1gFTPu5",
+      "name": "ONESHOT-add-stripe-link-col",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "o3O1G5LjQRYZZTKc",
       "name": "opsjuice-finance-expense-classifier",
       "http_code": "400",
@@ -6124,13 +6124,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "sWBNiZpOWde37j5u",
-      "name": "shared-revops-data-hygiene-crm-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "rqo56tCrlxCFUMPq",
       "name": "shared-security-observability-led-detection-orchestrator",
       "http_code": "400",
@@ -6623,13 +6616,6 @@
     {
       "id": "VYy3fxgTPzEo0NbC",
       "name": "bs-movement-youtube-channel-ops",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "znpZj6WUbIyvY30R",
-      "name": "bs-product-eu-ai-act-service-roadmap-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7685,6 +7671,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "sWBNiZpOWde37j5u",
+      "name": "shared-revops-data-hygiene-crm-orchestrator",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "w4E2yWdtjpUBedKl",
       "name": "shared-security-gdpr-continuous-compliance-orchestrator",
       "http_code": "400",
@@ -7869,6 +7862,13 @@
     {
       "id": "zuXd3arb3wcEroey",
       "name": "bs-movement-annual-report-publication",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "znpZj6WUbIyvY30R",
+      "name": "bs-product-eu-ai-act-service-roadmap-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
