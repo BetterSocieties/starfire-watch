@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-15T21:07:59Z",
-  "total": 1272,
+  "generated_at": "2026-08-15T23:05:17Z",
+  "total": 1273,
   "newly_activated": 0,
-  "already_active": 120,
+  "already_active": 121,
   "failed": 1137,
   "skipped": 15,
   "buckets": {
@@ -5984,13 +5984,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "SvUCV1SHvQ6rDrlV",
-      "name": "sgtl-sales-course-annual-tier-vs-monthly-testing",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "Rts955xCOiHfBCzn",
       "name": "sgtl-sales-course-checkout-abandoned-cart",
       "http_code": "400",
@@ -7272,13 +7265,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "zNBgCAUWv2ohvRov",
-      "name": "opsjuice-product-langgraph-agent-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "Uh72UDOFtG3g2ibY",
       "name": "opsjuice-product-npv-value-hypothesis-orchestrator",
       "http_code": "400",
@@ -7540,6 +7526,13 @@
     {
       "id": "vk8gq7KcW6WXROSH",
       "name": "sgtl-ops-course-content-refresh-annual",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "SvUCV1SHvQ6rDrlV",
+      "name": "sgtl-sales-course-annual-tier-vs-monthly-testing",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7918,6 +7911,13 @@
     {
       "id": "zoYeTbYlIaN6pPHE",
       "name": "opsjuice-ops-error-recovery-runbook",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "zNBgCAUWv2ohvRov",
+      "name": "opsjuice-product-langgraph-agent-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
