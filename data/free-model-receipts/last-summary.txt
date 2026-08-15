@@ -1,1 +1,1 @@
-OpsJuice launched a new landing page offering Google Business Profile services for 1,500 dollars a month with transparent, non-guaranteed claims, while internal updates fixed a server routing test bug and prevented a bad email filtering change that would have increased bounce rates.
+We launched a new landing page offering Google Business Profile services for 1,500 a month, while fixing several internal routing, testing, and outreach tools.
