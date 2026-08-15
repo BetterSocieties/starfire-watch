@@ -1,1 +1,1 @@
-An update fixed several bugs where system tools were missing data by reading only some types of task rows, while also removing an address type that was wrongly treated as a person and cleaning up 9 missing automated workflows.
+An update fixed multiple reporting bugs and tracking blind spots across the system, including correcting inflated contact counts, enabling checks to properly read task rows and automation IDs, and adding safety gates to prevent future monitoring blind spots.
