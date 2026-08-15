@@ -1,1 +1,1 @@
-OpsJuice launched a new 1,500-dollar Google Business Profile service page with fixed pricing, while the system's underlying routing and automated tests were fixed to protect customer usage limits and properly verify host connections.
+OpsJuice launched a Google Business Profile service page priced at 1,500 a month that rejects empty SEO guarantees, fixed its AI routing to protect customer report allowances, fixed a cloud self-test bug that was causing false connection failures, and blocked a bad email sorting change that would have spiked bounce rates.
