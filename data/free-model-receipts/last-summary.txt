@@ -1,1 +1,1 @@
-An update fixed multiple reporting bugs and tracking blind spots across the system, including correcting inflated contact counts, enabling checks to properly read task rows and automation IDs, and adding safety gates to prevent future monitoring blind spots.
+We fixed 4 major reporting and automation blind spots across our systems, including correcting mismatched contact counts, making our task board readers check all row formats, and cleaning up 9 broken or missing automation links.
