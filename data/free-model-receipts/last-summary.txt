@@ -1,1 +1,1 @@
-We fixed several data and reporting bugs, including stopping anonymous office addresses from being mistaken for people, correcting dashboard visitor counts, and updating our internal tools to properly read and validate all task board formats so phantom automations and missing records are caught automatically.
+An update fixed several bugs where system tools were missing data by reading only some types of task rows, while also removing an address type that was wrongly treated as a person and cleaning up 9 missing automated workflows.
