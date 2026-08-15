@@ -1,1 +1,1 @@
-An update fixed several internal tools and filters so they now correctly read all task formats, catching 9 missing automations, correcting inaccurate contact counts, and preventing future blind spots.
+An update fixed multiple data visibility bugs—such as stopping address records from being mistaken for people and fixing reports that were miscounting contacts—while also adding automated checks to ensure all task-tracking tools properly read all types of rows, which uncovered 9 broken automations that have now been investigated and resolved.
