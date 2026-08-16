@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-15T23:05:17Z",
-  "total": 1273,
+  "generated_at": "2026-08-16T02:15:01Z",
+  "total": 1274,
   "newly_activated": 0,
-  "already_active": 121,
+  "already_active": 122,
   "failed": 1137,
   "skipped": 15,
   "buckets": {
@@ -5949,13 +5949,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "sUJLtNYMXwzew7ok",
-      "name": "sgtl-ops-coaching-scheduler-cal-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "PVgVZNaaYnuZYBJh",
       "name": "sgtl-product-course-completion-cert-generator",
       "http_code": "400",
@@ -7524,6 +7517,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "sUJLtNYMXwzew7ok",
+      "name": "sgtl-ops-coaching-scheduler-cal-orchestrator",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "vk8gq7KcW6WXROSH",
       "name": "sgtl-ops-course-content-refresh-annual",
       "http_code": "400",
@@ -7818,13 +7818,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "zMQndZpoDfs0UWfi",
-      "name": "sop-product-cohort-guest-speaker-booking",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "vPH5dtt4eq0HaqLe",
       "name": "sop-sales-enablement-cohort-info-session-orchestrator",
       "http_code": "400",
@@ -7967,6 +7960,13 @@
     {
       "id": "ZPtWuiy47zzAUr0m",
       "name": "shared-security-recovery-time-actual-monitor",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "zMQndZpoDfs0UWfi",
+      "name": "sop-product-cohort-guest-speaker-booking",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
