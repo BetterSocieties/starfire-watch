@@ -1,1 +1,1 @@
-We launched a 1,500 dollar-per-month Google Business Profile service on OpsJuice, fixed a cloud self-test bug that had been failing since August 13, and blocked a cold outreach change that would have significantly worsened bounce rates.
+We launched a new sales page for Google Business Profile optimization priced at 1,500 per month, fixed a system test failure that was breaking cloud deployments, and blocked a change that would have heavily increased bounce rates for cold outreach.
