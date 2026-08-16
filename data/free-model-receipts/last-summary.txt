@@ -1,1 +1,1 @@
-OpsJuice launched a new 1500-dollar Google Business Profile service page with strict anti-bounce safeguards and fixed a recurring cloud routing self-test error.
+OpsJuice launched a new Google Business Profile service page priced at 1500 a month with strict anti-bounce safeguards, while fixing internal system errors that had been breaking tests and routing AI calls through a shared controller.
