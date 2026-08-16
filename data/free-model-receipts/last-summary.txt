@@ -1,1 +1,1 @@
-We launched a new LinkedIn outreach kit and Google Business Profile service for OpsJuice, fixed a bug that was breaking our self-tests, and blocked a change that would have hurt email bounce rates.
+OpsJuice launched a Google Business Profile service page priced at 1,500 a month with strict anti-bounce safeguards, while fixing cloud routing bugs and blocking an ineffective address-filtering change.
