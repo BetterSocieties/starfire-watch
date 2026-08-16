@@ -1,1 +1,1 @@
-We launched a new LinkedIn outreach kit and a 1,500-per-month Google Business Profile service page on OpsJuice, fixed a routing bug that was breaking our self-tests, and blocked a bad cold email change that would have spiked our bounce rate.
+We launched a new sales page for Google Business Profile optimization, fixed a critical routing bug that was breaking our automated tests in the cloud, and stopped a proposed outreach change that would have significantly worsened our email bounce rates.
