@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-16T15:09:06Z",
-  "total": 1274,
-  "newly_activated": 0,
+  "generated_at": "2026-08-16T17:12:38Z",
+  "total": 1277,
+  "newly_activated": 3,
   "already_active": 122,
   "failed": 1137,
   "skipped": 15,
@@ -2078,13 +2078,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "gwN90hPeHkernHph",
-      "name": "echo-collective-ops-portfolio-metrics-consolidation",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "fmexBSxNX6EEQxmy",
       "name": "echo-collective-ops-vendor-consolidation",
       "http_code": "400",
@@ -3618,6 +3611,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "gwN90hPeHkernHph",
+      "name": "echo-collective-ops-portfolio-metrics-consolidation",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "IW107zqUbF3dtqr7",
       "name": "echo-collective-portfolio-acquisition-target-scanning",
       "http_code": "400",
@@ -3921,13 +3921,6 @@
     {
       "id": "JcTVOoG59Jm8pMfm",
       "name": "opsjuice-call-post-payment-annie-24-7-answering-service",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "mdzwCRRKR1gFTPu5",
-      "name": "ONESHOT-add-stripe-link-col",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -4577,13 +4570,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "MDRjZHSuhiUVwUPu",
-      "name": "sop-marketing-city-showcase-content-cadence",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "Ln501JWDORGlRN50",
       "name": "sop-marketing-partner-outreach-drafts",
       "http_code": "400",
@@ -5123,13 +5109,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "SUijV5ugWUqWDUXR",
-      "name": "crm-build",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "rZesKjF6amdPgCCm",
       "name": "echo-collective-capital-allocation-signals",
       "http_code": "400",
@@ -5496,6 +5475,13 @@
     {
       "id": "NGODQVk2mY6mkxap",
       "name": "opsjuice-cs-churn-save-playbook",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "mdzwCRRKR1gFTPu5",
+      "name": "ONESHOT-add-stripe-link-col",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -5914,13 +5900,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "sSWM1EBJ9Ndm4cjT",
-      "name": "sgtl-content-script-generation",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "QFp3Sy7Y8YpPSKPS",
       "name": "sgtl-cs-cohort-graduate-outcomes-tracking",
       "http_code": "400",
@@ -6182,6 +6161,13 @@
     {
       "id": "R1tRgwumBQokq9j9",
       "name": "sop-marketing-city-guide-microsite",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "MDRjZHSuhiUVwUPu",
+      "name": "sop-marketing-city-showcase-content-cadence",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -6621,13 +6607,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "zLOjC0TPputGPKB8",
-      "name": "bs-summit-hybrid-attendee-orchestration",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "VuPwZnIkU4HKRuBv",
       "name": "bs-summit-satellite-city-viewing-parties",
       "http_code": "400",
@@ -6651,6 +6630,13 @@
     {
       "id": "XKucTyjrMId9eLt5",
       "name": "canonical-resources",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "SUijV5ugWUqWDUXR",
+      "name": "crm-build",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -6812,13 +6798,6 @@
     {
       "id": "Ylk8aHv87wVkVfYd",
       "name": "echo-studio-cs-onboarding-90-day-plan",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "zldwV7I6jy88XruM",
-      "name": "echo-studio-cs-post-engagement-retrospective-referral",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7307,13 +7286,6 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
-      "id": "zltNTkCZL6ACsy0j",
-      "name": "opsjuice-sales-discovery-call-prep-ai",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
       "id": "szSa4dQtX5ueLSfZ",
       "name": "opsjuice-sales-enablement-battlecards-orchestrator",
       "http_code": "400",
@@ -7421,6 +7393,13 @@
     {
       "id": "vTOWXt7H8VXr8FsI",
       "name": "sgtl-audience-warm-lead-handoff",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "sSWM1EBJ9Ndm4cjT",
+      "name": "sgtl-content-script-generation",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -7867,6 +7846,20 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "zLOjC0TPputGPKB8",
+      "name": "bs-summit-hybrid-attendee-orchestration",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "zldwV7I6jy88XruM",
+      "name": "echo-studio-cs-post-engagement-retrospective-referral",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "zUbcGtFDtMXOVHth",
       "name": "echo-studio-marketing-founder-podcast-guest-tour",
       "http_code": "400",
@@ -7918,6 +7911,13 @@
     {
       "id": "zQtYK0M7Y1nwNyuD",
       "name": "opsjuice-product-launch-orchestrator",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "zltNTkCZL6ACsy0j",
+      "name": "opsjuice-sales-discovery-call-prep-ai",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
