@@ -1,1 +1,1 @@
-The system update fixed a broken customer questionnaire flow, restored retry logic for database reads on cold email lanes, forced 4 scripts to use the secure credential vault, and logged unresolved permission and payment-tracking issues.
+The system update fixed the customer qualifier flow to match the live page, restored database read retries so slow moments don't silently drop runs, routed 4 scripts through the official security vault, and filed findings for unmonitored write steps and pending mailbox re-authorizations.
