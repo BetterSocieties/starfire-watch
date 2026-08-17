@@ -1,1 +1,1 @@
-We updated our automated testing for the sales qualifier to match the current page, fixed database read-retries so cold email campaigns don't silently fail, routed 4 scripts through the official secure vault, and flagged a few unmonitored write steps and pending mailbox authorizations.
+The system update fixed the customer qualifier flow to match the live page, restored database read retries for cold automations, routed remaining legacy scripts through the secure vault reader, and logged findings on unmonitored writes and mailbox permissions.
