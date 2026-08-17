@@ -1,1 +1,1 @@
-The system update fixed the customer qualification form to match the live page, restored database read-retries to prevent silent sending failures on cold workflows, routed all secret database key requests through the approved security vault, and logged unresolved permission and payment-tracking issues.
+An infrastructure update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations, routed all secret-vault requests through the official reader, and filed two new monitoring findings.
