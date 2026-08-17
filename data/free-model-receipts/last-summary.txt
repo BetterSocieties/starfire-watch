@@ -1,1 +1,1 @@
-We updated our infrastructure to fix customer qualifier bottlenecks, stopped database read-retries from silently dropping automation runs, routed 4 scripts through the secure vault reader, and logged new findings regarding unmonitored writes and mailbox re-authorization.
+The system update fixed a broken customer questionnaire flow, restored retry logic for database reads on cold email lanes, forced 4 scripts to use the secure credential vault, and logged unresolved permission and payment-tracking issues.
