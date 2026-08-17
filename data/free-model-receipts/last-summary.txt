@@ -1,1 +1,1 @@
-We updated our infrastructure to fix broken customer qualifier paths, ensure database reads correctly handle temporary slowdowns without failing silently, route all secret-fetching scripts through a single secure vault, and log several unmonitored write steps and permission issues.
+We fixed 3 infrastructure issues: we updated our sales qualifier to match the live page's current steps, restored retry protections for database reads so slow moments don't silently drop messages, and forced 4 stray scripts to use our approved security vault.
