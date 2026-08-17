@@ -1,1 +1,1 @@
-An update fixed the customer qualifier flow to match the live page, restored database read-retries to prevent silent failures, routed secret vault requests through the standard reader, and logged new system findings regarding unmonitored writes and mailbox permissions.
+The system update fixed the customer qualifier flow to match the live page, restored database read-retries to prevent silent sending failures on cold paths, routed script database requests through the sanctioned vault, and filed findings for unmonitored write steps and expired mailbox permissions.

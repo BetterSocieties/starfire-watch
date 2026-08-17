@@ -1,1 +1,1 @@
-[llm-router] bulk -> gemini/gemini-flash-lite-latest, 1190 tokens, $0
+[llm-router] bulk -> gemini/gemini-flash-lite-latest, 1195 tokens, $0
