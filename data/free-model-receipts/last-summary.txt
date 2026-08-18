@@ -1,1 +1,1 @@
-An update fixed automated testing for the intake form, restored retry protection for slow database reads, routed recent scripts through the secure vault reader, and logged ongoing permission and error-handling issues.
+We fixed the automated customer qualifier to match the live website, restored database read retries so slow moments do not silently drop messages, routed leftover scripts through our secure credential vault, and logged active write and permission warnings.
