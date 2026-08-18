@@ -1,1 +1,1 @@
-The system update fixed a broken customer questionnaire flow, restored retry protections for database reads to prevent silent failures on cold lanes, routed remaining scripts through the secure vault reader, and logged existing permission and logging issues.
+The system update fixed a broken customer questionnaire flow, restored retry logic for database reads on cold email lanes, forced 4 scripts to use the secure credential vault, and logged 2 unaddressed system error findings.
