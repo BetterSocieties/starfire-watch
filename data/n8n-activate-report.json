@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18T09:21:33Z",
+  "generated_at": "2026-08-18T11:14:36Z",
   "total": 1278,
   "newly_activated": 0,
   "already_active": 126,
@@ -4523,7 +4523,7 @@
     {
       "id": "kY517LJ5rWxi7cy1",
       "name": "sop-cs-post-cohort-alumni-cadence-year1",
-      "http_code": "400",
+      "http_code": "000",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
