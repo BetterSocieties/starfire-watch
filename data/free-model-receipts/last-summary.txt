@@ -1,1 +1,1 @@
-We updated our automated testing and database scripts to correctly check the current customer sign-up steps, prevent background tasks from stopping on minor connection blips, and route all secret database key requests through a single secure vault.
+The system updated the customer qualifier flow to match the live page, fixed database read retries for cold outreach automations, routed remaining legacy scripts through the sanctioned vault reader, and logged findings regarding unmonitored write steps and pending mailbox re-authorization.
