@@ -1,1 +1,1 @@
-We updated our automated tests to match our live web pages, fixed database connection retries so background tasks don't silently fail, and routed 4 scripts through our secure vault to protect sensitive database keys.
+The system update fixed a broken customer questionnaire flow, restored retry protections for database reads to prevent silent failures on cold lanes, routed remaining scripts through the secure vault reader, and logged existing permission and logging issues.
