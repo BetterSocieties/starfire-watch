@@ -1,1 +1,1 @@
-We updated our infrastructure to fix customer qualifier bottlenecks, restored automatic read-retries for cold-outreach automations, routed remaining legacy scripts through our secure vault reader, and logged pending permission and error-handling findings.
+The system update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations so silent failures are caught, routed 4 scripts through the official secure vault reader, and logged findings on unmonitored write steps and expired mailbox permissions.
