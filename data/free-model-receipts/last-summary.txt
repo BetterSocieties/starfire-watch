@@ -1,1 +1,1 @@
-An infrastructure update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations, routed all secret-vault requests through the official reader, and filed two new monitoring findings.
+We fixed the customer qualifier form to match its actual steps, restored database retry safeguards for cold outreach automations, routed scripts through the official secure vault, and flagged a few unmonitored payment and email permissions for review.
