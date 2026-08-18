@@ -1,1 +1,1 @@
-An update fixed the customer qualifier flow to match the live page, restored database read retries for cold outreach automations, routed remaining scripts through the secure vault reader, and logged ongoing payment and mailbox permission issues.
+We updated our automated testing and database scripts to correctly check the current customer sign-up steps, prevent background tasks from stopping on minor connection blips, and route all secret database key requests through a single secure vault.
