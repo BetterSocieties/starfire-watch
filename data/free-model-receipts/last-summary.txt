@@ -1,1 +1,1 @@
-The system update fixed the customer qualifier flow to match the live page, restored database read-retries to prevent silent failures on cold email campaigns, routed remaining scripts through the official security vault, and logged pending permission and error-handling issues.
+An update fixed automated testing for the intake form, restored retry protection for slow database reads, routed recent scripts through the secure vault reader, and logged ongoing permission and error-handling issues.
