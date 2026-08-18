@@ -1,1 +1,1 @@
-An update fixed the visitor questionnaire to match the current live page, restored database read-retries for cold automated paths, routed remaining scripts through the secure credential vault, and logged pending permission and unmonitored write issues.
+The system update fixed a broken customer questionnaire flow, restored database read retries for cold automations, routed 4 scripts through the official secret vault, and logged active warnings regarding unmonitored writes and mailbox permissions.
