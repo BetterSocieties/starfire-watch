@@ -1,1 +1,1 @@
-The system updated the customer qualification flow to match the live page, fixed database read-retries for cold automated lanes, routed scripts through the proper vault reader, and logged findings for unmonitored writes and mailbox permissions.
+An update fixed the visitor questionnaire to match the current live page, restored database read-retries for cold automated paths, routed remaining scripts through the secure credential vault, and logged pending permission and unmonitored write issues.
