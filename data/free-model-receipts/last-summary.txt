@@ -1,1 +1,1 @@
-The system updated the customer qualifier flow to match the live page, fixed database read retries for cold outreach automations, routed remaining legacy scripts through the sanctioned vault reader, and logged findings regarding unmonitored write steps and pending mailbox re-authorization.
+The update fixes the sales qualifier workflow to match the live page, restores database read-retries for cold automated emails, routes remaining secret-vault requests through the standard reader, and logs writing and permission issues without disrupting operations.
