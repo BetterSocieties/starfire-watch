@@ -1,1 +1,1 @@
-We updated our system to fix an OpsJuice qualifier bug that was blocking users, restored a read-retry safety check for cold email lanes, routed 4 scripts through our secure vault reader to protect database keys, and filed 2 open findings regarding write-step error handling and mailbox permissions.
+We updated our customer qualification flow, fixed database read retries for cold outreach, routed 4 scripts through our secure vault reader, and logged 2 operational findings about unmonitored writes and mailbox permissions.
