@@ -1,1 +1,1 @@
-We fixed the automated customer qualifier to match the live website, restored database read retries so slow moments do not silently drop messages, routed leftover scripts through our secure credential vault, and logged active write and permission warnings.
+We updated our automated tests to match our live web pages, fixed database connection retries so background tasks don't silently fail, and routed 4 scripts through our secure vault to protect sensitive database keys.
