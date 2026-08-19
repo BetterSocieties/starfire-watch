@@ -1,1 +1,1 @@
-We fixed automated testing for our signup flow, stopped database read errors from silently dropping messages in 7 cold outreach lanes, routed 4 scripts securely through our official password vault, and filed 2 new monitoring alerts.
+We fixed 3 infrastructure issues: our customer qualifier now matches our live page, our automated check-ins no longer fail silently on slow database reads, and 4 internal scripts were updated to securely access the database through our approved vault.
