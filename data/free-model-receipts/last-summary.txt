@@ -1,1 +1,1 @@
-We fixed automated customer sign-up forms, restored database retry safeguards, routed secret-key requests through the secure vault, and flagged unmonitored payment and email issues.
+We fixed the customer qualifier form, restored database retries for cold outreach automations, routed all scripts through the secure vault reader, and logged pending payment and mailbox authorization issues.
