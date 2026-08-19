@@ -1,1 +1,1 @@
-The system update fixes the sales qualification walk to match the live website, restores database retry logic for cold outreach steps, routes secret-vault requests through the standard reader, and logs writing and permission findings.
+We fixed the automated customer qualifier to match the live website, restored database read retries for cold outreach, routed 4 scripts through the official secure vault, and logged several permission and silent failure issues for review.
