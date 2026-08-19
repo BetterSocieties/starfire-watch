@@ -1,1 +1,1 @@
-An update fixed automated customer qualifier tests to match the live website, restored database read-retries to prevent silent failures in cold automation lanes, forced 4 outlier scripts to use the secure secret vault, and logged active warnings regarding silent write steps and mailbox permissions.
+The system update fixes the sales qualification walk to match the live website, restores database retry logic for cold outreach steps, routes secret-vault requests through the standard reader, and logs writing and permission findings.
