@@ -1,1 +1,1 @@
-The system updated the automated customer qualifier to match the live page's steps, fixed a database read-retry issue so background automations no longer fail silently, routed 4 scripts through the official security vault, and logged 2 open configuration warnings about unmonitored write steps and expired mailbox permissions.
+The system update fixed a broken customer questionnaire flow, restored database read retries for cold outreach automations, routed remaining scripts through the approved security vault, and logged pending permission and error-handling issues.
