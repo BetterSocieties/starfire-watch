@@ -1,1 +1,1 @@
-We fixed 3 infrastructure issues: our customer qualifier now matches our live page, our automated check-ins no longer fail silently on slow database reads, and 4 internal scripts were updated to securely access the database through our approved vault.
+The update fixes a frozen customer questionnaire so it matches the live page, restores database read retries for cold outreach automations, forces scripts to use the secure credential vault, and logs ongoing issues with unmonitored writes and mailbox permissions.
