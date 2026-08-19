@@ -1,1 +1,1 @@
-The system update fixed a broken customer questionnaire flow, restored database read retries for cold outreach automations, routed remaining scripts through the approved security vault, and logged pending permission and error-handling issues.
+We fixed 3 infrastructure issues: we updated our qualifier test to match the live page so it stops timing out, restored database retry safeguards for cold outreach to prevent silent sending failures, and routed remaining backend scripts through our secure vault reader to properly protect sensitive keys.
