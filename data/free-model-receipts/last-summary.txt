@@ -1,1 +1,1 @@
-An infrastructure update fixed the customer qualifier flow to match the live page, restored database read-retries to prevent silent sending failures on cold lanes, routed remaining scripts through the official secure vault, and logged active write and permission warnings.
+The system update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations, routed scripts through the secure vault reader, and logged pending write and permission issues.
