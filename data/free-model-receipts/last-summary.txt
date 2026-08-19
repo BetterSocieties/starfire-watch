@@ -1,1 +1,1 @@
-The system update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations so they do not fail silently, routed remaining secret-vault access through the proper security reader, and logged new findings regarding silent write steps and pending mailbox authorizations.
+The system update fixed the customer qualifier flow to match the live page, restored database read retries for cold outreach automations, routed secret vault access through the proper security reader, and flagged write-step and mailbox permission errors.
