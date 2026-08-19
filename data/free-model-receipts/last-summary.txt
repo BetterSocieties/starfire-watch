@@ -1,1 +1,1 @@
-The update fixes a frozen customer questionnaire so it matches the live page, restores database read retries for cold outreach automations, forces scripts to use the secure credential vault, and logs ongoing issues with unmonitored writes and mailbox permissions.
+We updated our infrastructure to fix customer qualification steps, ensure database read errors no longer silently fail, route all secret database key requests through a single secure vault, and document remaining error-handling and permission issues.
