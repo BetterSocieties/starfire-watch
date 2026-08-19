@@ -1,1 +1,1 @@
-We fixed the customer qualifier form, restored database retries for cold outreach automations, routed all scripts through the secure vault reader, and logged pending payment and mailbox authorization issues.
+We updated our qualifier form to match its actual live steps, fixed database read retries on cold paths so slow moments don't silently drop runs, routed 4 scripts through our secure vault reader to block expired keys, and filed 2 findings regarding unmonitored write steps and expired mailbox permissions.
