@@ -1,1 +1,1 @@
-An update fixed the visitor screening tool to match the current live page, restored database read retries for cold automations so silent failures are prevented, routed all scripts through the standard secure vault reader, and logged new operational findings regarding unmonitored write steps and pending mailbox re-authorizations.
+We fixed automated testing for our signup flow, stopped database read errors from silently dropping messages in 7 cold outreach lanes, routed 4 scripts securely through our official password vault, and filed 2 new monitoring alerts.
