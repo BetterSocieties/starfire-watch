@@ -1,1 +1,1 @@
-We updated our infrastructure to fix customer qualification steps, ensure database read errors no longer silently fail, route all secret database key requests through a single secure vault, and document remaining error-handling and permission issues.
+The system updated the automated customer qualifier to match the live page's 3-step form, restored read-retry protections to prevent silent failures in 7 database lanes, routed 4 stray scripts through the official security vault, and filed 2 open findings regarding unmonitored write steps and expired mailbox permissions.
