@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-08-20T05:25:49Z",
+  "generated_at": "2026-08-20T07:34:21Z",
   "total": 1278,
   "newly_activated": 0,
-  "already_active": 126,
-  "failed": 1137,
+  "already_active": 127,
+  "failed": 1136,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1137
+    "other": 1136
   },
   "failures": [
     {
@@ -4635,13 +4635,6 @@
     {
       "id": "mcIiHRhPiT1qwgeu",
       "name": "opsjuice-product-data-model-versioning",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "mdKimNalNuuCqRtv",
-      "name": "sop-ops-cohort-hotel-block-booking-orchestrator",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
