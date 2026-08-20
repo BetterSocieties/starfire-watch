@@ -1,1 +1,1 @@
-An update was released that fixes the automated visitor qualifier to match the live page, restores resilience against temporary database slowdowns for cold email sequences, routes 4 scripts through the authorized security vault, and logs several operational findings without escalation.
+We fixed our automated customer qualifier, restored error-recovery for database reads in cold-outreach workflows, routed 4 scripts through our secure vault reader, and logged 2 new operational findings.
