@@ -1,1 +1,1 @@
-We fixed 32 public pages—including lead magnets, city hubs, and EU AI Act tools—so they now display correctly when shared on social media, include direct payment paths, and point to valid preview images across all our domains.
+We fixed social sharing previews, broken image links, and payment paths across 32 pages on our live sites, while also correcting domain and hosting records.
