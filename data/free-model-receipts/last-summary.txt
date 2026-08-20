@@ -1,1 +1,1 @@
-We fixed our automated customer qualifier, restored error-recovery for database reads in cold-outreach workflows, routed 4 scripts through our secure vault reader, and logged 2 new operational findings.
+We fixed 32 public pages—including lead magnets, city hubs, and EU AI Act tools—so they now display correctly when shared on social media, include direct payment paths, and point to valid preview images across all our domains.
