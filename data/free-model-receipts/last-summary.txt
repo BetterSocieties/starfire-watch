@@ -1,1 +1,1 @@
-The system update fixed the customer qualifier flow to match the live page, restored database read-retries for cold automations, routed scripts through the secure vault reader, and logged ongoing payment and permission warnings.
+We updated our system to fix broken automated customer signup flows, stopped database read errors from silently dropping outbound messages, routed secret-key requests through a single secure vault to prevent security bypasses, and filed 2 new operational findings for unmonitored payment and reply processes.
