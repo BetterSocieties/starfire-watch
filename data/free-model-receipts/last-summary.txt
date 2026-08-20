@@ -1,1 +1,1 @@
-We updated our automated testing to match the live questionnaire, fixed a database read-retry bug to prevent silent workflow failures, routed 4 scripts securely through our official vault reader, and logged 2 ongoing operational warnings about unmonitored payment and email permissions.
+The system update fixed a broken customer questionnaire flow, restored retry protection for database reads on cold email campaigns, routed all scripts through the standard security vault, and logged pending permission and error-handling issues.
