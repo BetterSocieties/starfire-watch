@@ -1,1 +1,1 @@
-The system update fixed a broken customer questionnaire flow, restored retry protection for database reads on cold email campaigns, routed all scripts through the standard security vault, and logged pending permission and error-handling issues.
+We updated our infrastructure to fix broken customer qualifier tests, restore database read retries for cold automations, route security scripts through the proper vault, and flag unmonitored payment and reply processes.
