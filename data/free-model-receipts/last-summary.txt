@@ -1,1 +1,1 @@
-The system update fixes a qualifier tool to match the live page's steps, restores database read-retries for cold automated lanes, routes 4 scripts through the authorized vault reader, and files 2 unaddressed findings regarding payment tracking and mailbox permissions.
+The system update fixed a broken customer questionnaire flow, restored database read retries for cold automations, routed remaining scripts through the official security vault, and logged unresolved permission and payment tracking issues.
