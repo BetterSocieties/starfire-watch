@@ -1,1 +1,1 @@
-We fixed social sharing previews, broken image links, and payment paths across 32 pages on our live sites, while also correcting domain and hosting records.
+We fixed 32 public pages—adding direct checkout paths to 22 of them, correcting broken social preview images on 8 pages, resolving duplicate hosting and search engine canonical link issues for a 10-page cluster, and updating domain registrar records across 2 different providers.
