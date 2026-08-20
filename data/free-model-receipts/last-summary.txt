@@ -1,1 +1,1 @@
-An update fixed automated customer sign-up tests, restored error recovery for cold database lookups, routed 4 scripts through the official secure vault, and flagged 2 unmonitored write steps and an authorization issue.
+We fixed the automated customer qualifier to match the live website, restored database read retries for cold automations so they don't silently fail, forced remaining scripts to use the secure secret vault, and logged active write and permission warnings.
