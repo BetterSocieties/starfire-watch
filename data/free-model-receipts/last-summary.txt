@@ -1,1 +1,1 @@
-Running 2 required data scripts in the correct order fixed a filtering bug and successfully added 4 newly confirmed contacts to the active mailing pool.
+An update to profit pulse A fixed a two-step script sequence so that contacts are now properly processed and verified, adding 4 new addresses to the sending pool.
