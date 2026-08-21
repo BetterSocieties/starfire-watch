@@ -1,1 +1,1 @@
-Running 2 existing scripts in the correct order fixed a configuration bug, allowing the system to successfully process 4 more contacts for the email pool.
+An update to the profit pulse system fixed a two-script processing order issue, allowing 4 more contacts to qualify and bringing the total reachable named people to 144.
