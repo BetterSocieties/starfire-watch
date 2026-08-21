@@ -1,1 +1,1 @@
-By running 2 required scripts in the correct order, the system fixed a bug that was blocking email delivery, successfully adding 4 new contacts to the pool and increasing the number of reachable named people to 144.
+By running 2 required scripts in the correct order, the system fixed a bug that was blocking valid email contacts, successfully unlocking 4 new contacts to reach a total of 144 reachable people.
