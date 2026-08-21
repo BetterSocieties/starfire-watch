@@ -1,1 +1,1 @@
-By running 2 required scripts in the correct order, the system fixed a bug that was blocking contact records from qualifying, successfully adding 4 more people to the sending pool.
+An update fixed a two-script email processing order issue so that the system correctly reconfirmed published addresses and successfully added 4 new people to the outreach pool without bypassing any rules.
