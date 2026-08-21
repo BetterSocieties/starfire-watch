@@ -1,1 +1,1 @@
-Running 2 specific scripts in the correct order fixed a delivery rule block and successfully added 4 newly confirmed contacts to the active mailing pool.
+By running two scripts in the correct order, the system fixed a bug that was blocking valid email addresses from being used, successfully adding 4 new contacts to the outreach pool out of 305 checked.
