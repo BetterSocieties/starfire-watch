@@ -1,1 +1,1 @@
-An update to the Profit Pulse tool fixed a missing step between 2 scripts, allowing the system to properly process and add 4 new contacts to the outreach pool.
+An update to profit pulse A fixed a two-script execution order issue that was preventing contacts from qualifying for the email pool, successfully adding 4 new addresses while keeping all data safety rules strict.
