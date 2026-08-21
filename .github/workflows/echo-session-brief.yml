@@ -49,8 +49,18 @@ jobs:
       - name: Fire the brief for any Echo booking inside the next 26 hours
         working-directory: core
         env:
-          STARFIRE_VAULT_URL: ${{ secrets.STARFIRE_VAULT_URL }}
-          STARFIRE_VAULT_BEARER: ${{ secrets.STARFIRE_VAULT_BEARER }}
+          # THE SECRET NAMES WERE WRONG AND THIS JOB HAD NEVER ONCE WORKED. Fixed
+          # 2026-08-21 after reading all 7 runs since the job was created: every one
+          # failed, and the log of run 32429431385 prints both of these as EMPTY,
+          # followed by exit=2 and "the credential store did not answer". This repo has
+          # no secret called STARFIRE_VAULT_BEARER and none called STARFIRE_VAULT_URL.
+          # The bearer it really holds is VAULT_BEARER, proved rather than assumed: the
+          # sibling job sync-pod-key-to-vault reads secrets.VAULT_BEARER, exits 1 the
+          # moment it is empty, and its one run succeeded on 2026-07-19. The URL is not
+          # a secret at all, which is why that same sibling writes the host inline, and
+          # canon says so in as many words, so it is set here rather than referenced.
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           mkdir -p agent
           rc=0; python3 scripts/echo-session-brief.py --hours-ahead 26 --write --notify \
