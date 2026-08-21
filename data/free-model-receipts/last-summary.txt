@@ -1,1 +1,1 @@
-By running 2 required scripts in the correct order, the system fixed a bug that was blocking contacts from being processed, successfully adding 4 new valid addresses to the pool.
+We fixed a bug where a required second script wasn't running, which now successfully adds 4 new valid contacts to the sending pool by properly combining name and email confirmation data.
