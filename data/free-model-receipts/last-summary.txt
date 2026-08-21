@@ -1,1 +1,1 @@
-We fixed a bug where a required second script wasn't running, which now successfully adds 4 new valid contacts to the sending pool by properly combining name and email confirmation data.
+Running two scripts in the correct order fixed a bug that was blocking contact information from reaching the email pool, successfully adding 4 new reachable contacts out of 305 reviewed.
