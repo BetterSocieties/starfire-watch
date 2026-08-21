@@ -1,1 +1,1 @@
-An update to the profit pulse system fixed a two-script processing order issue, allowing 4 more contacts to qualify and bringing the total reachable named people to 144.
+By running 2 required scripts in the correct order, the system fixed a bug that was blocking valid contacts from being used, successfully adding 4 new contacts to the outreach pool.
