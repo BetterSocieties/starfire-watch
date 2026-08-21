@@ -1,1 +1,1 @@
-We fixed 32 public pages—adding direct checkout paths to 22 of them, correcting broken social preview images on 8 pages, resolving duplicate hosting and search engine canonical link issues for a 10-page cluster, and updating domain registrar records across 2 different providers.
+We fixed sharing previews and payment links for 32 live pages, corrected broken image links on 8 pages, updated duplicate domain setups across 2 registrars, and documented the canonical rules for future fixes.
