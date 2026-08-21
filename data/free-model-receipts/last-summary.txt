@@ -1,1 +1,1 @@
-By running 2 required scripts in the correct order, the system fixed a bug that was blocking valid contacts from being used, successfully adding 4 new contacts to the outreach pool.
+An update to the Profit Pulse tool fixed a missing step between 2 scripts, allowing the system to properly process and add 4 new contacts to the outreach pool.
