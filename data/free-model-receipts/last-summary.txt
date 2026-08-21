@@ -1,1 +1,1 @@
-An update fixed a two-script email processing order issue so that the system correctly reconfirmed published addresses and successfully added 4 new people to the outreach pool without bypassing any rules.
+By running 2 required scripts in the correct order, the system fixed a bug that was blocking email delivery, successfully adding 4 new contacts to the pool and increasing the number of reachable named people to 144.
