@@ -1,1 +1,1 @@
-By running 2 required scripts in the correct order, the system fixed a bug that was blocking valid contacts from entering the mailing pool, successfully adding 4 new addresses while keeping all safety rules intact.
+By running 2 required scripts in the correct order, the system fixed a bug that was blocking contacts from being processed, successfully adding 4 new valid addresses to the pool.
