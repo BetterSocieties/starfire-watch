@@ -1,1 +1,1 @@
-An update to profit pulse A fixed a two-script execution order issue that was preventing contacts from qualifying for the email pool, successfully adding 4 new addresses while keeping all data safety rules strict.
+Running 2 specific scripts in the correct order fixed a delivery rule block and successfully added 4 newly confirmed contacts to the active mailing pool.
