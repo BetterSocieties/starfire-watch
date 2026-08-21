@@ -1,1 +1,1 @@
-Running two scripts in the correct order fixed a bug that was blocking contact information from reaching the email pool, successfully adding 4 new reachable contacts out of 305 reviewed.
+An update to profit pulse A fixed a two-step script sequence so that contacts are now properly verified and raised into the mailing pool, successfully adding 4 new addresses while keeping safety rules strict.
