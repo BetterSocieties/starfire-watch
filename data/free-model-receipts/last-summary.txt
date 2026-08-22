@@ -1,1 +1,1 @@
-On August 22, 2026, a bug was fixed that prevented inbound leads without a company name from being incorrectly assigned a fake one, and a new automated check was added to ensure this does not happen again.
+We fixed a bug where inbound leads without a company name were incorrectly assigned a fake one, while safely updating our payment webhook and adding a new automated check to prevent it from happening again.
