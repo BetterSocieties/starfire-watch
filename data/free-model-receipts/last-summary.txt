@@ -1,1 +1,1 @@
-Running 2 specific scripts in the correct order fixed a filtering bug that previously blocked 4 valid contacts from joining the outreach pool, while confirming that this particular data source yields too few results to scale effectively.
+An update to profit pulse A fixed a two-script process so that running them in the correct order successfully added 4 previously stuck contacts to the mailing pool.
