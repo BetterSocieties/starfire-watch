@@ -1,1 +1,1 @@
-Returning users who filled out forms a second time no longer experience server errors because lead handling was updated to safely update existing records without wiping out previous information.
+The system was updated to fix database errors that occurred when users submitted lead forms a second time, preventing their existing data from being accidentally overwritten or duplicated.
