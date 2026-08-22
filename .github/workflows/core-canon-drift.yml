@@ -45,7 +45,7 @@ jobs:
           python-version: "3.12"
 
       # Run every gate even if an earlier one fails, so one red gate does not hide the
-      # others hide. Each records its own exit code; the last step decides the job.
+      # others. Each records its own exit code; the last step decides the job.
       - name: No superseded directive is still live anywhere in the repo
         id: directives
         if: always()
