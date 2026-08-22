@@ -1,1 +1,1 @@
-Returning users submitting forms or calculators a second time no longer experience server errors or accidentally have their existing data wiped out by empty fields.
+We fixed database errors and data-loss bugs when returning users submitted forms, improved lead tracking accuracy, and successfully rebuilt our free builder feature.
