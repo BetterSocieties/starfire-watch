@@ -1,1 +1,1 @@
-We fixed a bug where inbound leads without a company name were incorrectly assigned a fake one, while safely updating our payment webhook and adding a new automated check to prevent it from happening again.
+We fixed an issue where returning users submitting the scorecard or calculator a second time received a 500 server error, and updated the system to properly update existing records without erasing their previously saved company names or details.
