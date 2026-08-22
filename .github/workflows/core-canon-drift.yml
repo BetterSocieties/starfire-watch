@@ -45,7 +45,7 @@ jobs:
           python-version: "3.12"
 
       # Run every gate even if an earlier one fails, so one red gate does not hide the
-      # other three. Each records its own exit code; the last step decides the job.
+      # others hide. Each records its own exit code; the last step decides the job.
       - name: No superseded directive is still live anywhere in the repo
         id: directives
         if: always()
@@ -82,6 +82,20 @@ jobs:
           rc=0; python3 scripts/check-handoff-content-id.py > agent/canon-drift-contentid.log 2>&1 || rc=$?
           echo "exit=$rc"; exit $rc
 
+      # Added 2026-08-23. Until now this gate existed ONLY in starfire-core's local
+      # pre-commit hook, which means it never fired for a cloud session: a runner has no
+      # core.hooksPath, so a retracted claim committed from the cloud walked straight in.
+      # The worktree scan is the right form here; --staged needs an index this job never
+      # creates. Pure file reads, no network.
+      - name: No withdrawn claim is asserted anywhere in the canon
+        id: withdrawn
+        if: always()
+        working-directory: core
+        run: |
+          mkdir -p agent
+          rc=0; python3 scripts/check-withdrawn-claims.py > agent/canon-drift-withdrawn.log 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
       - name: Push the detail back to the private repository
         if: always()
         working-directory: core
@@ -106,6 +120,7 @@ jobs:
             echo "| brand-tokens | ${{ steps.brand.outcome }} |"
             echo "| adrien-facing-links | ${{ steps.links.outcome }} |"
             echo "| handoff-content-id | ${{ steps.contentid.outcome }} |"
+            echo "| withdrawn-claims | ${{ steps.withdrawn.outcome }} |"
             echo ""
             echo "Detail is in starfire-core at agent/canon-drift-*.log, deliberately not here."
           } >> "$GITHUB_STEP_SUMMARY"
