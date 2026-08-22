@@ -1,1 +1,1 @@
-An update to the Profit Pulse tool fixed a missing sequential script so that email addresses are properly confirmed and can now successfully reach 9 named people instead of 6.
+Running two required scripts in the correct order fixed a configuration issue that was blocking contacts, successfully adding 4 more valid people to the outreach pool.
