@@ -1,1 +1,1 @@
-The system was updated to fix database errors that occurred when users submitted lead forms a second time, preventing their existing data from being accidentally overwritten or duplicated.
+We fixed a deployment bug that was accidentally erasing workflow settings and added a new automated check to prevent it from happening again, while also discovering that our data storage volume was much higher than previously reported.
