@@ -1,1 +1,1 @@
-We fixed a sequence bug where running two data-processing scripts in the correct order unlocked 4 previously stuck contacts, allowing our outreach system to reach 9 named people out of 144 valid recipients.
+An update to profit pulse A fixed a two-step script sequence so that contacts are now properly processed and verified, successfully adding 4 more valid people to the mailing pool.
