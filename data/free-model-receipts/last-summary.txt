@@ -1,1 +1,1 @@
-An update to the Profit Pulse tool fixed a missing step in the script sequence so that contacts are now properly verified and successfully added to the mailing pool.
+Running 2 necessary scripts in the correct sequence unlocked 4 new contacts for the mailing pool by successfully confirming their email addresses.
