@@ -1,1 +1,1 @@
-An update to the Profit Pulse tool fixed a missing step between two scripts, allowing the system to properly process and add 4 new contacts to the mailing pool.
+An update to the Profit Pulse tool fixed a missing sequential script so that email addresses are properly confirmed and can now successfully reach 9 named people instead of 6.
