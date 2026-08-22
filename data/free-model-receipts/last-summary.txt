@@ -1,1 +1,1 @@
-Fixing a two-step script execution bug allowed the system to properly process and add 4 new contacts to the outreach pool by correctly combining name and address verification data.
+On August 22, 2026, a bug was fixed that prevented inbound leads without a company name from being incorrectly assigned a fake one, and a new automated check was added to ensure this does not happen again.
