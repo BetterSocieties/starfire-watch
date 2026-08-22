@@ -1,1 +1,1 @@
-An update to profit pulse A fixed a two-step script sequence so that contacts are now properly processed and verified, successfully adding 4 more valid people to the mailing pool.
+An update to the Profit Pulse tool fixed a missing step between two scripts, allowing the system to properly process and add 4 new contacts to the mailing pool.
