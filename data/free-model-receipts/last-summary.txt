@@ -1,1 +1,1 @@
-We fixed a false alarm in our job-monitoring system, stopped task cards from incorrectly starting with punctuation marks, and noted that our AI coding assistant struggled to edit complex files without making mistakes.
+Despite a system report stating it was unnecessary, a safety check ran and exposed 12 bypass methods that let problematic claims slip through, which have now been fixed and permanently tested against.
