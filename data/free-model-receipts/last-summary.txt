@@ -1,1 +1,1 @@
-Returning users who filled out the scorecard or calculator a second time no longer experience server errors, and submitting forms now correctly updates existing records without accidentally erasing company names or other previously saved data.
+Returning users submitting forms or calculators a second time no longer experience server errors or accidentally have their existing data wiped out by empty fields.
