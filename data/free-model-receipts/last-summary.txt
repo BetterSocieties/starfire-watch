@@ -1,1 +1,1 @@
-Despite a system report stating it was unnecessary, a safety check ran and exposed 12 bypass methods that let problematic claims slip through, which have now been fixed and permanently tested against.
+Despite a system verdict saying they were unnecessary, 3 fresh-context judges ran anyway and found that the replacement text-matching gate failed 12 out of 18 tested bypass methods, so all 12 vulnerabilities have now been permanently blocked with self-tests and documentation explicitly clarifying that the gate only catches known literal strings rather than reading for meaning.
