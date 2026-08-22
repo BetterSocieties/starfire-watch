@@ -1,1 +1,1 @@
-Running two required scripts in the correct order fixed a configuration issue that was blocking contacts, successfully adding 4 more valid people to the outreach pool.
+Running 2 specific scripts in the correct order fixed a filtering bug that previously blocked 4 valid contacts from joining the outreach pool, while confirming that this particular data source yields too few results to scale effectively.
