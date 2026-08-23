@@ -1,1 +1,1 @@
-We shipped a live background removal feature for product images that includes a strict automated safety check for disallowed content and requires a manual age attestation before saving.
+We successfully shipped automated background removal for product images alongside a mandatory safety gate that verifies image transparency, runs automated nudity checks, and requires manual adult age verification before any file can be saved.
