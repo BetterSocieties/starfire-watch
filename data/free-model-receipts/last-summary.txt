@@ -1,1 +1,1 @@
-Despite the system mistakenly skipping a panel of judges, we tested 12 ways to bypass the replacement text filter, fixed all 12 vulnerabilities, and updated the documentation to clarify that the filter only catches exact string matches rather than understanding meaning.
+We fixed a bug where the website falsely claimed a result email had been sent when it actually failed, and we added an automated check to ensure this never happens again.
