@@ -1,1 +1,1 @@
-We successfully shipped the automated background removal and quality check feature for product images, which includes separate safeguards for content filtering and explicit human adult verification before any file is saved.
+We shipped automated background removal for product images complete with safety checks, requiring a manual human confirmation for adult content and an automated nudity filter before any image can be saved.
