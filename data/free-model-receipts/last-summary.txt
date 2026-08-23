@@ -1,1 +1,1 @@
-We launched a background removal tool for product images that automatically checks for prohibited content, tests its own transparency output, and requires manual age verification before saving anything.
+We successfully shipped a new automated image background removal tool that includes strict safety checks—using AI to screen for nudity and requiring explicit human sign-off for adult verification before saving—while successfully creating a new cloud storage bucket and verifying that the final transparent images are processed correctly.
