@@ -1,1 +1,1 @@
-We successfully shipped a new automated image background removal tool that includes strict safety checks—using AI to screen for nudity and requiring explicit human sign-off for adult verification before saving—while successfully creating a new cloud storage bucket and verifying that the final transparent images are processed correctly.
+We shipped a live background removal feature for product images that includes a strict automated safety check for disallowed content and requires a manual age attestation before saving.
