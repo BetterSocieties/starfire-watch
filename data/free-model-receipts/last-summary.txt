@@ -1,1 +1,1 @@
-We successfully shipped automated background removal for product images along with a strict safety gate that requires explicit human adult-verification before saving, automatically checks for nudity, and rigorously verifies that transparency was actually applied to the file.
+We shipped a background-removal tool for product images featuring a strict safety gate that automatically blocks prohibited nudity via a detection tool, requires a manual human sign-off to verify adult content, and verifies that transparency was successfully added before saving the file.
