@@ -1,1 +1,1 @@
-To prevent future accidental deletions of platform alarms, the deleted dead man switch was replaced with a repository-based hourly watcher script that correctly handles weekend silences and checks both primary data sources.
+The system's weekend data check showed no changes because background data collection is paused on weekends, and a discrepancy in the measurement tool's reporting numbers was fixed.
