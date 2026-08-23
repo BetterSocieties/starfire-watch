@@ -1,1 +1,1 @@
-A new code-based monitoring script was added to the repository to safely replace the deleted dead man's switch workflow and prevent accidental alarm outages over weekends.
+To prevent future accidental deletions of platform alarms, the deleted dead man switch was replaced with a repository-based hourly watcher script that correctly handles weekend silences and checks both primary data sources.
