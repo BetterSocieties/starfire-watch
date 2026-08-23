@@ -1,1 +1,1 @@
-We fixed several deployment scripts that were accidentally overwriting live workflow changes with older versions and added safety checks to prevent similar data loss in the future.
+We replaced the deleted external dead man's switch for our outreach emails with a new, resilient hourly check stored directly in our code repository that correctly accounts for weekday-only sending schedules.
