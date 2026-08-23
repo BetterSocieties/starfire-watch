@@ -1,1 +1,1 @@
-We successfully shipped automated background removal for product images along with a strict safety gate that checks for disallowed content and requires manual adult attestation before saving.
+We launched a background removal tool for product images that automatically checks for prohibited content, tests its own transparency output, and requires manual age verification before saving anything.
