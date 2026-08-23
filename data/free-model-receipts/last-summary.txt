@@ -1,1 +1,1 @@
-We shipped automated background removal for product images complete with safety checks, requiring a manual human confirmation for adult content and an automated nudity filter before any image can be saved.
+We shipped automated background removal for product images alongside a mandatory safety gate that checks for disallowed content, requires a human age confirmation, and verifies transparency before saving.
