@@ -1,1 +1,1 @@
-We fixed a bug where the website falsely claimed a result email had been sent when it actually failed, and we added an automated check to ensure this never happens again.
+We fixed several deployment scripts that were accidentally overwriting live workflow changes with older versions and added safety checks to prevent similar data loss in the future.
