@@ -1,1 +1,1 @@
-We successfully shipped automated background removal for product images featuring an integrated quality gate that checks for disallowed content, ensures true transparency, and requires explicit human confirmation of adult subjects before anything is saved.
+We shipped a live background removal feature for product images that includes a strict automated safety check for disallowed content and requires a manual adult confirmation before saving anything.
