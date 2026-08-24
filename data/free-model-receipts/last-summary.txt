@@ -1,1 +1,1 @@
-We shipped a verified background removal tool for product images that includes a strict safety check for disallowed content and requires a manual adult verification check before anything can be saved.
+We shipped automated background removal for product images complete with a verification gate that requires explicit human confirmation of adult age and blocks disallowed content using automated detection.
