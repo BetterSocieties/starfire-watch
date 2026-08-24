@@ -1,1 +1,1 @@
-We launched a fully tested background-removal tool for products that includes strict safety checks—such as automated nudity screening and a mandatory manual adult-verification sign-off—to ensure no unexamined or inappropriate images can ever get saved or published.
+We shipped a product background-removal tool equipped with a mandatory manual adult verification check, automated nudity screening, and rigorous output validation to ensure transparency before saving assets.
