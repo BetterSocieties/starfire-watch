@@ -1,1 +1,1 @@
-We successfully launched automated background removal and a safety quality gate for product images that separates automated nudity checks from a mandatory manual adult verification to prevent compliance failures.
+We shipped an automated background removal tool for product images that uses AI to screen for disallowed content and requires manual adult age verification before saving anything.
