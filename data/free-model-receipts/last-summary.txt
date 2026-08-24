@@ -1,1 +1,1 @@
-We successfully launched an automated image background removal and safety-checking feature for products that uses AI to detect inappropriate content, requires a manual adult-verification sign-off before saving, and rigorously verifies that the image transparency was actually applied.
+We shipped automated background removal for product images complete with a verification gate that blocks inappropriate content and ensures transparency works correctly before saving anything.
