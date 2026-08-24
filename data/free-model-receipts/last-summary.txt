@@ -1,1 +1,1 @@
-We shipped automated background removal for product images complete with a verification gate that requires explicit human confirmation of adult age and blocks disallowed content using automated detection.
+We launched a fully tested background-removal tool for products that includes strict safety checks—such as automated nudity screening and a mandatory manual adult-verification sign-off—to ensure no unexamined or inappropriate images can ever get saved or published.
