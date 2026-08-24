@@ -1,1 +1,1 @@
-We shipped an automated background removal and quality check system for product images that uses AI for nudity screening, requires a mandatory manual age attestation before processing, and rigorously verifies transparency to prevent shipping faulty images.
+We shipped a background-removal feature for product images that includes a strict safety check to block inappropriate content and requires a manual adult verification check before saving.
