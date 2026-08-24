@@ -1,1 +1,1 @@
-We successfully shipped automated background removal for product images complete with a safety check for disallowed content and a mandatory manual age confirmation to protect against compliance risks.
+We successfully shipped automated background removal for product images featuring an integrated safety check that blocks prohibited content and requires manual adult age verification before saving.
