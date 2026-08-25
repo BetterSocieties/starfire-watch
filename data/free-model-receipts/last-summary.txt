@@ -1,1 +1,1 @@
-We shipped a new product background-removal tool equipped with a strict safety gate that automatically blocks prohibited explicit content and requires manual adult age verification before any asset can be saved.
+We successfully shipped automated background removal for product images featuring an integrated quality gate that checks for disallowed content, verifies image transparency, and requires explicit human confirmation for adult safety before saving.
