@@ -1,1 +1,1 @@
-We shipped a background-removal tool for product images that automatically checks for nudity and requires a manual adult verification check before saving any files.
+We shipped an automated background removal and quality check system for product images that uses strict safety rules and manual adult verification before saving anything.
