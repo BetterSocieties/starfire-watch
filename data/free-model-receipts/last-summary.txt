@@ -1,1 +1,1 @@
-The team shipped automated background removal for product images backed by safety checks, including a mandatory manual adult confirmation and an automated nudity filter, and successfully verified the entire live processing pipeline.
+We shipped an automated background removal tool for product images that includes a strict safety check for disallowed content and requires manual adult age verification before saving anything.
