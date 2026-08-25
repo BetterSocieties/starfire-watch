@@ -1,1 +1,1 @@
-We successfully shipped the automated background removal tool for product images along with a strict quality and safety gate that requires manual age verification, blocks inappropriate content using automated scanning, and verifies transparency before saving.
+We shipped an automated background removal tool for product images that includes a strict quality check, an automated scan for disallowed content using a third-party detector, and a mandatory manual age verification to prevent unsafe uploads.
