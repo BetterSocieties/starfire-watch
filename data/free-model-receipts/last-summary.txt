@@ -1,1 +1,1 @@
-We shipped an automated background removal tool for product images that includes a strict quality check, an automated scan for disallowed content using a third-party detector, and a mandatory manual age verification to prevent unsafe uploads.
+The team shipped automated background removal for product images backed by safety checks, including a mandatory manual adult confirmation and an automated nudity filter, and successfully verified the entire live processing pipeline.
