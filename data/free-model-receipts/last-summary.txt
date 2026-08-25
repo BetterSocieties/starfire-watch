@@ -1,1 +1,1 @@
-We successfully shipped an automated image background removal tool featuring a safety gate that uses AI to check for nudity and requires manual adult verification before saving any files.
+We shipped a new product background-removal tool equipped with a strict safety gate that automatically blocks prohibited explicit content and requires manual adult age verification before any asset can be saved.
