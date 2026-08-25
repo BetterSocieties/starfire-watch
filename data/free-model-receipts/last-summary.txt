@@ -1,1 +1,1 @@
-We launched an automated background removal tool for product images that includes a strict quality check, automated nudity detection, and a mandatory manual age confirmation before any asset can be saved.
+The system now automatically removes image backgrounds and runs safety checks, requiring a manual adult confirmation before saving any product images to the cloud storage.
