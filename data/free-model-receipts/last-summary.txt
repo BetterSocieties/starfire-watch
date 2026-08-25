@@ -1,1 +1,1 @@
-We successfully launched an automated image processing pipeline that removes backgrounds and enforces safety checks, including automated nudity detection and mandatory human age verification, before storing products.
+We built and successfully tested an automated tool that removes image backgrounds, adds mandatory safety checks for nudity and adult content confirmation before saving, and sets up cloud storage for these product assets.
