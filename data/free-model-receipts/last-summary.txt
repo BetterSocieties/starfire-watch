@@ -1,1 +1,1 @@
-We built and successfully tested a background removal tool for product images that includes a strict safety check for nudity and requires a manual adult age confirmation before anything can be saved.
+We launched a background removal tool for product images that automatically checks for nudity and requires a human confirmation that the subject is an adult before saving.
