@@ -1,1 +1,1 @@
-We shipped a background removal tool for product images that automatically checks for nudity using AI and requires a human to manually confirm adult content before saving anything.
+We shipped an automated background removal tool for product images that includes a strict safety check for nudity and requires a manual age confirmation before any image can be saved.
