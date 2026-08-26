@@ -1,1 +1,1 @@
-We shipped a product image background removal feature featuring a verified transparency check, automated nudity screening, and a mandatory manual adult verification check before anything can be saved.
+We shipped a live background-removal tool for product images that automatically checks for nudity, requires manual age verification before processing, and rigorously tests its own transparency and safety outputs to prevent errors.
