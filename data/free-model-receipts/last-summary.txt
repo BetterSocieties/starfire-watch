@@ -1,1 +1,1 @@
-We shipped a fully tested background-removal tool for products that separates safety checks from adult verification and ensures every processed image actually contains transparency before saving.
+We shipped a fully tested background removal tool for product images that automatically checks for nudity using an AI detector, requires a manual human confirmation of adult content for safety, and rigorously verifies that transparency was successfully applied before saving anything.
