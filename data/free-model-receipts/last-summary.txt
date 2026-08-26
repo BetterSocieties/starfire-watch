@@ -1,1 +1,1 @@
-We shipped an automated background-removal tool for product images that includes a strict safety check for prohibited content and requires a manual age attestation before any file can be saved.
+The system now automatically removes image backgrounds and checks them for nudity, while requiring manual age verification to prevent legal risks before saving any product assets.
