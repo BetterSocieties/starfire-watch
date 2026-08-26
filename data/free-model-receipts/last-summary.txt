@@ -1,1 +1,1 @@
-We successfully shipped an automated image background removal tool with integrated safety checks, including nudity detection and a mandatory human age attestation before any files can be saved.
+We shipped a fully tested background-removal tool for products that separates safety checks from adult verification and ensures every processed image actually contains transparency before saving.
