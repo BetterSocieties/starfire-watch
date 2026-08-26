@@ -1,1 +1,1 @@
-We built and live-tested an automated background removal tool for product images that includes a strict safety check for prohibited content and requires human sign-off for adult subjects before saving anything.
+We successfully shipped the automated background removal tool for product images with a strict safety gate that requires explicit human confirmation for age verification, blocks disallowed content using automated nudity detection, and verifies transparency before saving.
