@@ -1,1 +1,1 @@
-We shipped an automated background removal and quality check tool for product images that uses AI to block inappropriate content, requires manual age verification for legal safety, and sets up a dedicated storage bucket for the assets.
+We shipped a product image background removal feature featuring a verified transparency check, automated nudity screening, and a mandatory manual adult verification check before anything can be saved.
