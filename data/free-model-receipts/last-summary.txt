@@ -1,1 +1,1 @@
-We shipped a live background-removal tool for product images that automatically checks for nudity, requires manual age verification before processing, and rigorously tests its own transparency and safety outputs to prevent errors.
+We successfully shipped an automated image background removal tool with integrated safety checks, including nudity detection and a mandatory human age attestation before any files can be saved.
