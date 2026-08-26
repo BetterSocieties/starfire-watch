@@ -1,1 +1,1 @@
-We successfully shipped automated background removal for product images featuring built-in safety checks that require manual adult verification, block inappropriate content, and verify transparency before saving.
+We built and live-tested an automated background removal tool for product images that includes a strict safety check for prohibited content and requires human sign-off for adult subjects before saving anything.
