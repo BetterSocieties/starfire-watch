@@ -1,1 +1,1 @@
-We shipped an automated background removal tool for product images that includes a strict quality gate, requiring an explicit adult verification attestation and safety checks before any asset can be saved.
+We built and tested a reliable background removal tool for product images that includes a strict safety check for prohibited content and requires manual adult age verification before any file can be saved.
