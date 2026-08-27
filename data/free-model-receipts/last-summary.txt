@@ -1,1 +1,1 @@
-The system now automatically removes image backgrounds and checks them for nudity, while requiring manual age verification to prevent legal risks before saving any product assets.
+The system was updated to strictly enforce time limits on data processing runs so they stop before being automatically cut off, successfully discovering and saving 2 new buyers during testing.
