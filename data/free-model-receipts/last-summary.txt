@@ -1,1 +1,1 @@
-System maintenance checks that monitor revenue and active senders now run on a guaranteed schedule, ensuring vital safety tests are no longer blocked by slow-running processes.
+We removed 2 unused scripts that handled sensitive setup, successfully blocked an AI assistant from accidentally leaking credentials into its logs, and noted that 15 developer keys were exposed and require manual rotation.
