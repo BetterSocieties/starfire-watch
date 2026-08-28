@@ -1,1 +1,1 @@
-We removed 2 unused scripts that handled sensitive setup, successfully blocked an AI assistant from accidentally leaking credentials into its logs, and noted that 15 developer keys were exposed and require manual rotation.
+School of Play expanded to 4 pages with working payment buttons, several infrastructure and deployment tools were fixed, and background session sizes were reduced by 82%.

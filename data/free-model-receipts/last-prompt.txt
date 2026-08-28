@@ -1,41 +1,41 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-08-28T00:0x-00:3xZ three-role-loop-20260828T0008Z
+## 2026-08-28T12:21-13:27Z infra-pulse-20260828T1221Z
 
-- Retired `scripts/wire-oj-daily-digest-email.py`, which was armed to substitute a database
-  key, a payment key, a mail key and a vault token straight into the JavaScript of 3 Code
-  steps. Read live first: its target kQUpdpQ5HNMspmBp answers HTTP 404, the live
-  OJ-Daily-Digest is Qa9grW2aGmww1v10 (HTTP 200, active, 12 steps) and carries none of the
-  3 steps it builds, and scan-n8n-inline-secrets reads the pod at 0 steps holding a
-  payment, mail, model or database key across 1279 automations. So it was superseded as
-  well as unsafe, and it was the one way that clean pod stopped being clean. Copy at
-  evidence/infra/retire-digest-wire-script-2026-08-28. Row
-  A-DIGEST-WIRE-SCRIPT-WOULD-PUT-FOUR-SECRETS-BACK-ONTO-A-CLEAN-POD closed done.
-- Retired `scripts/repair-bs-outreach-sprint-controls.py`. Batch 6 froze it saying "register
-  it the day the automation is back"; that day is not coming. b8mVky5n2EsKvOkB answers 404
-  and so does KIwHTMMiZ6GggNDR, the id canon named as its successor on 2026-07-02, a month
-  before this repair was written. It was a one-time repair already carried out on the laptop
-  instance localhost:5678, which a cloud gate cannot read, and every control it restores is
-  live and already registered on OLS9DHyDUOx6vCM2 (Safety Gate, live cap, breaker) and
-  qCpWsxJLYg3XfkXr (Schedule Weekdays 09:00 and 14:00 UTC, Capacity Gate).
-- Both changes were verified by RUNNING the gate twice, which is what the code path owes
-  instead of a clean-context judge: self-test PASS exit 0 and the full live run PASS exit 0
-  on the real case, and the retired name put back on the frozen list exit 1 on the inverted
-  case. A gate that exits 0 both ways watches nothing.
-- Frozen list 9 down to 7. verify-claim 2 packages 0 INVALID. Commits 4dc99aac, 97b1bdab.
-- Read and recorded rather than acted on: the OpsJuice scheduled cold send is alive again,
-  xNWE0BuyBOePIBbU execution 92386 success 2026-08-27T16:30:00Z to 16:43:16Z against error
-  at that slot on 08-24, 08-25 and 08-26; and deploy-event-write-idempotent writes 30 live
-  Code steps across 25 ACTIVE automations that no gate watches, which makes it the biggest
-  name left on the frozen list.
-- THE FREE AGENTIC LANE LEAKED THE LIVE N8N API KEY. The free model ran an ordinary
-  `env | grep -i n8n` inside its own worktree, the child had inherited the whole
-  environment, and the key went into the committed transcript and into the model's context,
-  so it reached the provider. Fifteen credentials were reachable by that one command,
-  including STARFIRE_VAULT_BEARER, GH_TOKEN and the AWS pair, though only the n8n key was
-  printed. Closed in two independent layers, each proven real and inverted: free-agent.sh
-  now withholds every credential-shaped variable by name AND by value shape, keeping
-  OPENROUTER_API_KEY and git's config plumbing whose keys are config names rather than
-  credentials; and scripts/redact-free-lane-transcript.py sits in the pipe to the receipt.
-  No credential reached a committed file, 0 across the working tree by shape. Rotation of
-  the disclosed key is a live platform action and is filed as its own row, which this fire
-  carried as far as it goes from the cloud: the public API cannot rotate its own key
+Infrastructure-only fire. 6 board rows worked to their ceiling, 4 new rows filed, and one
+live money defect found and corrected on a customer-facing page.
+
+- **schoolofplay.org went from 1 page to 4** (row c3a5b2c6): home, apply, about, contact,
+  plus a sitemap the site never had. `/apply` carries the 3 LIVE Stripe deposit buttons and
+  the `sop-discovery-call` booking embed. One writer, `scripts/sop-build-site.py`, which
+  edits index.html in place only for the nav, the dashes and the deposit figures so the live
+  waitlist form is never rewritten. All 4 pages and the sitemap answer 200 and
+  POST /api/waitlist answers 400, not 405, so the server side code survived.
+- **THE MONEY DEFECT.** The page advertised deposits of JPY 300,000 / 400,000 / 500,000
+  while the 3 live payment links charge JPY 100,000 / 100,000 / 200,000, read from
+  acct_1TRkZTAVdrFDHPJ7, all 3 active. The page now quotes the button everywhere. Decision
+  and what would reverse it: STATE/AUTONOMY-DECISIONS.md 2026-08-28. The page also claimed
+  the payment links were not live yet; they have been for weeks.
+- **The publish guard was crying wolf on every site that has server side code**
+  (row THE-PUBLISH-GUARD-CALLS-A-PAGES-FUNCTION-STALE...). It asked the live site for its
+  Pages function SOURCE, which Cloudflare never serves, so `deploy-cf-pages.sh` published
+  twice and exited 1 on deploys that were perfectly fine. Fixed, both halves of its DONE-TEST
+  run live. A SECOND defect in the same file, found on the same publish: the email
+  obfuscation folding missed a mailto carrying a subject and a body, and the anchor form of
+  the obfuscation. After both fixes school-of-play publishes at exit 0.
+- **The 9 unresolvable cold emails, decided** (row 4e9d7c13): option 3, they stay in the
+  follow-up population and stay outside every rate reading, the word is `unproven`. Written
+  up in AUTONOMY-DECISIONS. The gate's allowance of 9 was forgiving a population its own
+  query can no longer reach while letting 9 fresh ones through; set to 0.
+- **Background sessions now launch on a 5KB context, not 27KB** (row e30ef262): CLAUDE-BG.md,
+  `scripts/spawn-bg-session.sh` (per-session worktree, relative symlink, refuses rather than
+  falling back), and a pre-commit gate. 81.9 percent cut.
+- **Echo Studio errors and omissions incident log** (row 9a4e6c8b): the source was never a
+  missing portal form, it is `echo_engagements.revision_requests`. Record half proven live
+  by id; the alert half is refused because no client record exists to link to, and the
+  script exits 5 rather than pretending Adrien was told.
+- **Echo Studio LinkedIn draft skill** (row 5e0c2a4f): drafts on the free lane, and the brand
+  audit is a GATE, so a failing draft is never written. Proven live by id, then cleaned up.
+- **USPTO has no keyless machine route any more and TESS is retired** (row 5af63e9d): every
+  route probed live answers 401 or 403. `scripts/br-trademark-watch.py` refuses with exit 3
+  and names the free registration URL rather than scraping.
+- Row 5e1c9a71 was tagged hands=cloud while its own body says the cloud cannot do it. Retagged
