@@ -1,41 +1,41 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-08-28T19:05-19:45Z three-role-loop-20260828T1905Z
+## 2026-08-29T04:06-04:30Z three-role-loop-20260829T0406Z
 
-Cloud fire. One row worked to done, ISSUE-2654, and it is the row that was stopping every
-other cloud fire from taking any row at all.
+Cloud fire. One row worked, ISSUE-2129, and what it actually fixed is the reason the board
+kept handing finished work to fires.
 
-- **A cloud fire could rank the board and could not claim anything on it.** The 18:34Z fire
-  fixed `scripts/prioritize.py` so a machine with no gh can still READ the tracker, and left
-  the identical defect standing in `scripts/claim-issue.py`, which the three-role procedure
-  makes every cloud fire run twice: step 2 to claim before any work, step 6 to close with
-  evidence. Read live 19:14Z, `which gh` empty and a claim died
-  `FileNotFoundError: [Errno 2] No such file or directory: 'gh'` inside `read_card`. The
-  procedure says never work an unclaimed row, so the honest reading is that every cloud fire
-  since the tracker migration was blocked at step 2 and only did not notice.
-- **The write cannot come from inside a python process either**, re-measured this fire:
-  api.github.com answers HTTP 403 to a script with and without GITHUB_TOKEN, while git push
-  and the session's own GitHub tools both work. So `--card-json` takes the card the fire
-  already fetched, runs the SAME decision code the gh path runs, and prints the comment for
-  the fire to post rather than posting it. Nothing about the gh path changed and
-  `--self-test` still exits 0.
-- **The gate is `scripts/check-the-claim-works-without-gh.py`** and it decides real claims
-  rather than grepping for an option: 10 assertions with the card handed in and PATH set to
-  /nonexistent, exit 0; `--inverted` withholds the card, all 10 fail on the new error that
-  names `--card-json`, exit 1. Proven on the live card too: this fire WON 2654 exit 0 and a
-  session calling itself `some-other-fire` was told LOST exit 3, off the real thread read
-  with the session's GitHub tools.
-- **The free lane built it and could not be shipped as written.** `scripts/free-agent.sh` on
-  nemotron-3-ultra-550b-a55b returned the whole change in one pass
-  (`evidence/free-agent/claimer-without-gh-20260828T1925Z/`). Three defects, all fixed by the
-  fire: it deleted 12 blocks of the incident-history comments this repo keeps on purpose, it
-  added a `_CARD_JSON` global that is assigned and never read, and its `--inverted` run
-  withheld nothing. It re-ran the held-card case the positive run already covers and returned
-  1 because that case correctly failed, which is precisely the always-passes check the
-  procedure warns about.
-- **`free-agent.sh` refused to run at all until it was fixed**, and that is worth its own
-  line because it sends mechanical work back to the paid model silently.
-  `cloud-fire-setup.sh` installs opencode under `$HOME/.npm-global`, nothing puts that on
-  PATH, and the script believed the lane was uninstalled. It now looks where the setup
-  actually put it. Measured: `command -v opencode` empty with a fire's real PATH, and
-  `/root/.npm-global/bin/opencode` after the fix.
-- **Skipped and why:** the ranked top row was ISSUE-1623
+- **The board offered six rows as startable that something had already rolled forward.** This
+  fire ranked the board and walked DOWN eight ranks before finding a row it could carry.
+  Rank 8 was ISSUE-2129, whose reading had been done in full 19 hours earlier and rolled
+  forward to 2026-09-04. That roll-forward went into `TASKS.md`, frozen since 2026-08-21 and
+  read by nothing, so the card still said `not_before=2026-08-28T09:00Z` and `prioritize.py`
+  offered it correctly off a wrong value. Measured across all 458 open cards: 422 carry a
+  legacy id, 147 have a frozen-file twin, 31 state a `not_before` on both sides, and 6 of
+  those 31 disagree, EVERY ONE with the record later than the card. That one-directional
+  signature is what rules out the opposite reading, that the frozen file is simply stale.
+  Three of the six were in this fire's own top 8.
+- **Repaired on the tracker and read back by id**, 6 of 6, `updated_at` 04:16:01Z to 04:16:47Z:
+  2221, 2185, 2129, 2086, 1693, 118. Each new value is the roll-forward already recorded for
+  that row and none was chosen by this fire. `waiting_count` went 54 to 59 and all six now
+  sit in the ranker's waiting set instead of being offered. Independently confirmed: a
+  snapshot paged fresh from the live tracker at 04:21:51Z by a different session carries all
+  six corrected values.
+- **The repair had to go on the header line, not where a backfill would put it.**
+  `scripts/backfill-not-before.py` writes this field into the card's yaml block. All six
+  already stated it on the bracket header, and `issues_to_rows.with_carried` says in its own
+  docstring that "the line wins where the two disagree", so a yaml write would have been
+  silently ignored and the fire would have believed it had fixed something.
+- **The gate is `scripts/check-no-open-card-carries-a-stale-not-before.py`**, registered in
+  `ops/fire-checks.json` at 6 hours. Proven both ways on the REAL board rather than a
+  fixture: the snapshot as it stood drifted gives checked 151, findings 7 of which 6 are
+  stale, exit 1; the byte-identical file with only the six values repaired gives checked 151,
+  findings 1, stale 0. `checked` identical on both arms, so they compared the same rows and
+  differ only in the drift. Self test 17 checks, 0 failed.
+- **A rule the answer key missed, found by checking rather than by building to spec.** The
+  second finding kind fires only on `status=done`, never `done-partial`: a done-partial row
+  stays open on purpose, so counting it would sit the check red forever on a correct state.
+  Card 883 PF-014 is that case. The task file this fire wrote said to expect 6 findings; the
+  true answer is 7, and 883 is the one that must not be among them.
+- **Card 466 was deliberately NOT closed**, though the frozen file records it done on
+  2026-08-21. Its done-test needs a live proof the auditor could not find, so closing it on
+  the frozen file's word is the exact move this row argues against. Raised on the card; the

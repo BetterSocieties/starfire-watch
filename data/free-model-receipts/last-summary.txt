@@ -1,1 +1,1 @@
-Automated cloud workers can now successfully claim and process tasks even when GitHub command-line tools are missing, and a critical setup bug preventing free-tier workers from running has also been fixed.
+We fixed 6 tasks whose start dates were outdated because of a mismatch with frozen backup files, and added an automated check to prevent this drift from happening again.
