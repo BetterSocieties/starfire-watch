@@ -1,41 +1,41 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-08-28T12:21-13:27Z infra-pulse-20260828T1221Z
+## 2026-08-28T19:05-19:45Z three-role-loop-20260828T1905Z
 
-Infrastructure-only fire. 6 board rows worked to their ceiling, 4 new rows filed, and one
-live money defect found and corrected on a customer-facing page.
+Cloud fire. One row worked to done, ISSUE-2654, and it is the row that was stopping every
+other cloud fire from taking any row at all.
 
-- **schoolofplay.org went from 1 page to 4** (row c3a5b2c6): home, apply, about, contact,
-  plus a sitemap the site never had. `/apply` carries the 3 LIVE Stripe deposit buttons and
-  the `sop-discovery-call` booking embed. One writer, `scripts/sop-build-site.py`, which
-  edits index.html in place only for the nav, the dashes and the deposit figures so the live
-  waitlist form is never rewritten. All 4 pages and the sitemap answer 200 and
-  POST /api/waitlist answers 400, not 405, so the server side code survived.
-- **THE MONEY DEFECT.** The page advertised deposits of JPY 300,000 / 400,000 / 500,000
-  while the 3 live payment links charge JPY 100,000 / 100,000 / 200,000, read from
-  acct_1TRkZTAVdrFDHPJ7, all 3 active. The page now quotes the button everywhere. Decision
-  and what would reverse it: STATE/AUTONOMY-DECISIONS.md 2026-08-28. The page also claimed
-  the payment links were not live yet; they have been for weeks.
-- **The publish guard was crying wolf on every site that has server side code**
-  (row THE-PUBLISH-GUARD-CALLS-A-PAGES-FUNCTION-STALE...). It asked the live site for its
-  Pages function SOURCE, which Cloudflare never serves, so `deploy-cf-pages.sh` published
-  twice and exited 1 on deploys that were perfectly fine. Fixed, both halves of its DONE-TEST
-  run live. A SECOND defect in the same file, found on the same publish: the email
-  obfuscation folding missed a mailto carrying a subject and a body, and the anchor form of
-  the obfuscation. After both fixes school-of-play publishes at exit 0.
-- **The 9 unresolvable cold emails, decided** (row 4e9d7c13): option 3, they stay in the
-  follow-up population and stay outside every rate reading, the word is `unproven`. Written
-  up in AUTONOMY-DECISIONS. The gate's allowance of 9 was forgiving a population its own
-  query can no longer reach while letting 9 fresh ones through; set to 0.
-- **Background sessions now launch on a 5KB context, not 27KB** (row e30ef262): CLAUDE-BG.md,
-  `scripts/spawn-bg-session.sh` (per-session worktree, relative symlink, refuses rather than
-  falling back), and a pre-commit gate. 81.9 percent cut.
-- **Echo Studio errors and omissions incident log** (row 9a4e6c8b): the source was never a
-  missing portal form, it is `echo_engagements.revision_requests`. Record half proven live
-  by id; the alert half is refused because no client record exists to link to, and the
-  script exits 5 rather than pretending Adrien was told.
-- **Echo Studio LinkedIn draft skill** (row 5e0c2a4f): drafts on the free lane, and the brand
-  audit is a GATE, so a failing draft is never written. Proven live by id, then cleaned up.
-- **USPTO has no keyless machine route any more and TESS is retired** (row 5af63e9d): every
-  route probed live answers 401 or 403. `scripts/br-trademark-watch.py` refuses with exit 3
-  and names the free registration URL rather than scraping.
-- Row 5e1c9a71 was tagged hands=cloud while its own body says the cloud cannot do it. Retagged
+- **A cloud fire could rank the board and could not claim anything on it.** The 18:34Z fire
+  fixed `scripts/prioritize.py` so a machine with no gh can still READ the tracker, and left
+  the identical defect standing in `scripts/claim-issue.py`, which the three-role procedure
+  makes every cloud fire run twice: step 2 to claim before any work, step 6 to close with
+  evidence. Read live 19:14Z, `which gh` empty and a claim died
+  `FileNotFoundError: [Errno 2] No such file or directory: 'gh'` inside `read_card`. The
+  procedure says never work an unclaimed row, so the honest reading is that every cloud fire
+  since the tracker migration was blocked at step 2 and only did not notice.
+- **The write cannot come from inside a python process either**, re-measured this fire:
+  api.github.com answers HTTP 403 to a script with and without GITHUB_TOKEN, while git push
+  and the session's own GitHub tools both work. So `--card-json` takes the card the fire
+  already fetched, runs the SAME decision code the gh path runs, and prints the comment for
+  the fire to post rather than posting it. Nothing about the gh path changed and
+  `--self-test` still exits 0.
+- **The gate is `scripts/check-the-claim-works-without-gh.py`** and it decides real claims
+  rather than grepping for an option: 10 assertions with the card handed in and PATH set to
+  /nonexistent, exit 0; `--inverted` withholds the card, all 10 fail on the new error that
+  names `--card-json`, exit 1. Proven on the live card too: this fire WON 2654 exit 0 and a
+  session calling itself `some-other-fire` was told LOST exit 3, off the real thread read
+  with the session's GitHub tools.
+- **The free lane built it and could not be shipped as written.** `scripts/free-agent.sh` on
+  nemotron-3-ultra-550b-a55b returned the whole change in one pass
+  (`evidence/free-agent/claimer-without-gh-20260828T1925Z/`). Three defects, all fixed by the
+  fire: it deleted 12 blocks of the incident-history comments this repo keeps on purpose, it
+  added a `_CARD_JSON` global that is assigned and never read, and its `--inverted` run
+  withheld nothing. It re-ran the held-card case the positive run already covers and returned
+  1 because that case correctly failed, which is precisely the always-passes check the
+  procedure warns about.
+- **`free-agent.sh` refused to run at all until it was fixed**, and that is worth its own
+  line because it sends mechanical work back to the paid model silently.
+  `cloud-fire-setup.sh` installs opencode under `$HOME/.npm-global`, nothing puts that on
+  PATH, and the script believed the lane was uninstalled. It now looks where the setup
+  actually put it. Measured: `command -v opencode` empty with a fire's real PATH, and
+  `/root/.npm-global/bin/opencode` after the fix.
+- **Skipped and why:** the ranked top row was ISSUE-1623

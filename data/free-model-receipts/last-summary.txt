@@ -1,1 +1,1 @@
-School of Play expanded to 4 pages with working payment buttons, several infrastructure and deployment tools were fixed, and background session sizes were reduced by 82%.
+Automated cloud workers can now successfully claim and process tasks even when GitHub command-line tools are missing, and a critical setup bug preventing free-tier workers from running has also been fixed.
