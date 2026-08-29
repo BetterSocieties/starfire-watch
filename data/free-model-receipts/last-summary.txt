@@ -1,1 +1,1 @@
-Closing a task now automatically updates the system's internal task list so that background automated processes do not accidentally try to work on already-finished items twice.
+Closing a task now automatically updates the system's board tracking file so automated processes stop trying to work on already-finished items.
