@@ -1,1 +1,1 @@
-We fixed 6 tasks whose start dates were outdated because of a mismatch with frozen backup files, and added an automated check to prevent this drift from happening again.
+Closing a task now automatically updates the system's internal task list so that automated processes never mistakenly try to work on already-finished items again.
