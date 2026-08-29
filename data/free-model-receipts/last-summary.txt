@@ -1,1 +1,1 @@
-Closing a task now automatically updates the system's internal task list so that automated processes never mistakenly try to work on already-finished items again.
+Closing a task now automatically updates the system's internal task list so that background automated processes do not accidentally try to work on already-finished items twice.
