@@ -1,1 +1,1 @@
-An investigation confirmed that the follow-up queue is growing rather than stalling over the weekend, but new sending limits mean that 19 contacts will age out past the 45-day limit before they can be reached.
+An investigation into a growing followup queue confirmed that weekend inactivity was normal and verified that newly deployed fixes will begin running on the upcoming Monday, though simulations show that 19 contacts will age out past the 45-day limit due to strict sending caps.
