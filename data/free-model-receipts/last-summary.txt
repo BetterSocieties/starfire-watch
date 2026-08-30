@@ -1,1 +1,1 @@
-Closing a task now automatically updates the system's board tracking file so automated processes stop trying to work on already-finished items.
+Closing a task now automatically updates the internal board tracker so the system stops accidentally trying to process already-finished work.
