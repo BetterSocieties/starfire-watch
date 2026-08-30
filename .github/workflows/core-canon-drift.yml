@@ -96,13 +96,38 @@ jobs:
           rc=0; python3 scripts/check-withdrawn-claims.py > agent/canon-drift-withdrawn.log 2>&1 || rc=$?
           echo "exit=$rc"; exit $rc
 
+      # Added 2026-08-30, card 3043. Until now the ONLY thing that said a gate had gone
+      # red was a failure notice mailed to an inbox no person reads, and the guard sat
+      # red from 2026-08-24 to 2026-08-29 on one real finding with nobody seeing it. A
+      # guard that fails silently is worse than no guard, because everything downstream
+      # keeps behaving as though the canon is still being checked. So the guard files its
+      # own card. No new credential and no new channel: scripts/file_card.py posts to the
+      # tracker when it can reach it and keeps the composed card in
+      # STATE/cards-to-file.json when it cannot, and every cloud fire is already told to
+      # drain that file onto the board. It is remembered, so an unchanged red is reported
+      # once rather than every night, and going green clears the memory. This step must
+      # stay ABOVE the push step, because what it writes is what the push carries back.
+      - name: Put a red gate on the board
+        if: always()
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          python3 scripts/canon-drift-report-a-red-gate.py \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --gate "directives=${{ steps.directives.outcome }}" \
+            --gate "brand=${{ steps.brand.outcome }}" \
+            --gate "links=${{ steps.links.outcome }}" \
+            --gate "contentid=${{ steps.contentid.outcome }}" \
+            --gate "withdrawn=${{ steps.withdrawn.outcome }}"
+
       - name: Push the detail back to the private repository
         if: always()
         working-directory: core
         run: |
           git config user.name "starfire-canon-drift"
           git config user.email "info@bettersocieties.world"
-          git add agent/canon-drift-*.log || true
+          git add agent/canon-drift-* STATE/cards-to-file.json || true
           if git diff --cached --quiet; then echo "no change in gate detail"; exit 0; fi
           git commit -m "canon-drift: gate detail from public runner ${{ github.run_id }}"
           for i in 1 2 3 4 5; do
