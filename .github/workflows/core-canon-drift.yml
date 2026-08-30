@@ -115,7 +115,7 @@ jobs:
       # drain that file onto the board. It is remembered, so an unchanged red is reported
       # once rather than every night, and going green clears the memory. This step must
       # stay ABOVE the push step, because what it writes is what the push carries back.
-      - name: Put a red gate on the board
+      - name: Tell the board what the gates said
         if: always()
         working-directory: core
         env:
