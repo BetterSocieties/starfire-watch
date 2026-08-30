@@ -1,1 +1,1 @@
-We fixed lead capture for the EUR 1,000 funnel, proved recent database row losses are a mystery with no audit trail by adding a new tracking script, confirmed email bounces are a live issue waiting for new tests next week, updated the live dashboard, and refreshed the stale task board.
+An investigation confirmed that the follow-up queue is growing rather than stalling over the weekend, but new sending limits mean that 19 contacts will age out past the 45-day limit before they can be reached.
