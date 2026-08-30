@@ -20,6 +20,14 @@ on:
   schedule:
     - cron: "10 5 * * *"   # 05:10 UTC daily, ahead of learning-daily at 05:30
   workflow_dispatch: {}
+  # Run when the guard itself changes, and only then. Added 2026-08-30 on card 3043:
+  # a guard whose only trigger is a nightly schedule cannot be proved working after it
+  # is edited, so a change to it waits a day to find out it is broken. The path filter
+  # is what keeps this quiet: this repository takes several report commits a day and
+  # none of them should start a canon check.
+  push:
+    paths:
+      - ".github/workflows/core-canon-drift.yml"
 
 permissions:
   contents: read
