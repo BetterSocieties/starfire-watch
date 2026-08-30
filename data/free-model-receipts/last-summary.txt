@@ -1,1 +1,1 @@
-The system fixed lead-tracking for the 1,000 euro funnel, verified data retention after investigating missing rows, and updated the stale dashboard and board snapshot.
+We fixed lead capture for the EUR 1,000 funnel, proved recent database row losses are a mystery with no audit trail by adding a new tracking script, confirmed email bounces are a live issue waiting for new tests next week, updated the live dashboard, and refreshed the stale task board.
