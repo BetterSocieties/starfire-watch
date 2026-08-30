@@ -1,1 +1,1 @@
-Closing a task now automatically updates the internal board tracker so the system stops accidentally trying to process already-finished work.
+The system fixed lead-tracking for the 1,000 euro funnel, verified data retention after investigating missing rows, and updated the stale dashboard and board snapshot.

@@ -1,37 +1,30 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-08-29T09:07-09:30Z three-role-loop-20260829T0907Z
+## 2026-08-30T03:30-04:40Z profit-pulse-B-20260830T0330Z
 
-Cloud fire. One row worked and closed, ISSUE-2714, rank 1 of the board.
+Cloud fire, profit lane. Two rows closed, one advanced, one failing standing check cleared.
 
-- **Closing a card no longer leaves the board lying about it.** `STATE/board-snapshot.json`
-  is the only instrument step 2 of the cloud procedure has, because `prioritize.py` cannot
-  reach the tracker from a cloud fire, and it went stale the instant a fire closed a card:
-  two fires inside one hour on 2026-08-29 were each handed already-closed rows at the top of
-  their ranking. Re-paging the board is not the alternative, that was measured at nothing
-  written in 30 minutes, twice. So `scripts/claim-issue.py --close` and
-  `scripts/backfill-not-before.py --apply` now patch the snapshot themselves through the new
-  `scripts/board_snapshot.py`, on the marked lines `BOARD-SNAPSHOT-PATCH`, on both the gh
-  route and the `--card-json` route cloud fires use.
-- **The first version of the patch reformatted the whole file**, one word changed and 10784
-  lines deleted, because it wrote back with no indent while the snapshot is written with
-  `indent=1`. The writer now reads the shape it found off the file's own second line. The
-  same edit is a 3 line diff.
-- **Verified by execution, twice each way, not by a verdict.**
-  `scripts/check-the-close-patches-the-board-snapshot.py` exit 0 and `--inverted` exit 1,
-  where the inverted run closes the card through a copy of `claim-issue.py` with the marked
-  lines stripped and the snapshot stays `OPEN`. `board_snapshot.py --self-test` exit 0 with
-  17 ok, `claim-issue.py --self-test` exit 0 with 31 ok, and the two neighbouring board gates
-  `check-the-claim-works-without-gh.py` and `check-the-board-reads-without-gh.py` both still
-  exit 0 with their inverted runs still failing.
-- **Proven on the real board.** This fire's own close of 2714 moved that row in the committed
-  file from `OPEN` to `state="CLOSED", closed_at="2026-08-29T09:23:16Z"`, count still 464, and
-  the card itself closed on the tracker at 09:23:22Z with its assignee cleared. One commit,
-  `e6f664fe`, carries both.
-- **Build lane:** `scripts/grade-and-route.py` graded the task `free-agent`, and
-  `scripts/free-agent.sh` built it on `nvidia/nemotron-3-ultra-550b-a55b:free` in 10 minutes.
-  Receipt `evidence/free-agent/board-snapshot-patch-on-close/`. This fire reviewed the patch
-  and fixed three defects in it by hand: a 627 line stripped copy left behind in `scripts/`,
-  a comment at column 0 inside a function body, and the reformatting above.
-- **Noted and NOT this row.** `scripts/check-no-open-card-carries-a-stale-not-before.py`
-  exits 1 on 3 pre-existing findings (card 466 `4d7a1c93` and two others, open on the tracker
-  carrying a recorded `closed_at`). It imports none of the files this fire touched.
+- **Card 2729 closed: the Better Societies EUR 1,000 funnel now holds a lead and the letter
+  can find it.** A submission posted to `bs-qualify-lead`, the endpoint the live `/comply`
+  form posts to, answered HTTP 200 with `submission_id 582881fe-17a3-43a3-90d9-2fb040526a2a`
+  and wrote `bs_lead` row `a8d9a887-6048-419c-a687-0a25bf9c6c6a`. On engine run `98005`,
+  `Fetch Paywall Lead` returned statusCode 200 and exactly that 1 row. The card also recorded
+  2 pay button presses as reader demand; read live, all 3 presses the store has ever held are
+  our own probes and say so in their own payload.
+- **Card 3031 closed: the door's rows do survive the hour, and the fix is an instrument, not a
+  repair.** Three arms written inside 15 seconds, one straight to the table and two through
+  the door, were all read back by id 62, 62 and 55 minutes later, with 20 of 20 answer rows.
+  The loss of 11 rows on the earlier run is real and now unexplainable: the table has no audit
+  trail, and every candidate was ruled out by reading it, including all 1,281 workflows on the
+  platform. Shipped `scripts/check-the-funnel-keeps-the-leads-it-captures.py`, registered every
+  fire, which remembers each lead row and names any that goes missing, because the reason this
+  cost a card is that nothing had ever written down the rows existed.
+- **Card 3005 advanced, deliberately not claimed.** Its falsification fails: 14 of its 16
+  bounces are on letters sent after the 2026-08-02 queue rewrite, 232 sent for 14 bounced,
+  so the undelivered rate is a live fault rather than history. The free address clean is
+  already idempotent, re-running it wrote 517 verdicts and changed nothing. Its done test
+  needs letters sent after the clean and 0 have gone out since the tier guard closed on
+  2026-08-29, so the earliest reading with any denominator is after Monday 2026-09-01.
+- **The dashboard publish check was red and is green.** A change had been waiting 61 minutes;
+  publishing it brought the live site level with the repository.
+- **The board snapshot was 112 minutes stale and refused to rank.** Refreshed from the live
+  tracker, 636 open cards with whole bodies, which every other lane's fire now ranks against.
