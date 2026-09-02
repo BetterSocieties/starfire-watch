@@ -1,0 +1,156 @@
+# Daily probe of the two secrets every scheduled job here depends on. Card #3362.
+# Posts to Slack only when one fails or expires within 7 days; a green day is silent.
+name: Token Probe
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - id: probe_pats
+        name: Probe GH_PAT
+        env:
+          TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          echo "StatusCode probe..."
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H "User-Agent: starfire-token-probe" https://api.github.com/repos/BetterSocieties/starfire-core)
+          echo "gh_pat_code=$CODE" >> $GITHUB_OUTPUT
+          
+          echo "Authorization header probe..."
+          EXPIRY=$(curl -sI -H "Authorization: Bearer $TOKEN" -H "User-Agent: starfire-token-probe" https://api.github.com/repos/BetterSocieties/starfire-core | grep -i "github-authentication-token-expiration" | cut -d':' -f2- | tr -d '\r' | xargs || true)
+          EXPIRY="${EXPIRY:0:10}"  # header reads like "2026-10-02 19:29:30 UTC"; the date is enough
+          if [ -z "$EXPIRY" ]; then
+            echo "expiry_state=none" >> $GITHUB_OUTPUT
+          else
+            # Validate format (YYYY-MM-DD)
+            if [[ "$EXPIRY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s)
+              NOW_EPOCH=$(date +%s)
+              DELTA=$(( EXPIRY_EPOCH - NOW_EPOCH ))
+              if [ $DELTA -le $((7 * 86400)) ] && [ $DELTA -ge 0 ]; then
+                echo "expiry_state=soon" >> $GITHUB_OUTPUT
+              else
+                echo "expiry_state=ok" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "expiry_state=bad_format" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - id: probe_core
+        name: Probe CORE_READ_TOKEN
+        if: always()
+        env:
+          TOKEN: ${{ secrets.CORE_READ_TOKEN }}
+        run: |
+          echo "StatusCode probe..."
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $TOKEN" -H "User-Agent: starfire-token-probe" https://api.github.com/repos/BetterSocieties/starfire-core)
+          echo "code=$CODE" >> $GITHUB_OUTPUT
+          
+          echo "Authorization header probe..."
+          EXPIRY=$(curl -sI -H "Authorization: Bearer $TOKEN" -H "User-Agent: starfire-token-probe" https://api.github.com/repos/BetterSocieties/starfire-core | grep -i "github-authentication-token-expiration" | cut -d':' -f2- | tr -d '\r' | xargs || true)
+          EXPIRY="${EXPIRY:0:10}"  # header reads like "2026-10-02 19:29:30 UTC"; the date is enough
+          if [ -z "$EXPIRY" ]; then
+            echo "expiry_state=none" >> $GITHUB_OUTPUT
+          else
+            # Validate format (YYYY-MM-DD)
+            if [[ "$EXPIRY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s)
+              NOW_EPOCH=$(date +%s)
+              DELTA=$(( EXPIRY_EPOCH - NOW_EPOCH ))
+              if [ $DELTA -le $((7 * 86400)) ] && [ $DELTA -ge 0 ]; then
+                echo "expiry_state=soon" >> $GITHUB_OUTPUT
+              else
+                echo "expiry_state=ok" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "expiry_state=bad_format" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - id: check_health
+        name: Check Health
+        if: always()
+        run: |
+          PAT_CODE="${{ steps.probe_pats.outputs.gh_pat_code }}"
+          PAT_STATE="${{ steps.probe_pats.outputs.expiry_state }}"
+          CORE_CODE="${{ steps.probe_core.outputs.code }}"
+          CORE_STATE="${{ steps.probe_core.outputs.expiry_state }}"
+
+          PAT_FAIL=false
+          CORE_FAIL=false
+
+          if [ "$PAT_CODE" != "200" ]; then
+            echo "GH_PAT failed with code: $PAT_CODE"
+            PAT_FAIL=true
+          elif [ "$PAT_STATE" = "soon" ] || [ "$PAT_STATE" = "bad_format" ]; then
+            echo "GH_PAT expiry issue: $PAT_STATE"
+            PAT_FAIL=true
+          fi
+
+          if [ "$CORE_CODE" != "200" ]; then
+            echo "CORE_READ_TOKEN failed with code: $CORE_CODE"
+            CORE_FAIL=true
+          elif [ "$CORE_STATE" = "soon" ] || [ "$CORE_STATE" = "bad_format" ]; then
+            echo "CORE_READ_TOKEN expiry issue: $CORE_STATE"
+            CORE_FAIL=true
+          fi
+
+          if [ "$PAT_FAIL" = true ] || [ "$CORE_FAIL" = true ]; then
+            echo "STATUS=FAIL" >> $GITHUB_ENV
+            echo "PAT_CODE=$PAT_CODE" >> $GITHUB_ENV
+            echo "CORE_CODE=$CORE_CODE" >> $GITHUB_ENV
+            echo "PAT_STATE=$PAT_STATE" >> $GITHUB_ENV
+            echo "CORE_STATE=$CORE_STATE" >> $GITHUB_ENV
+            exit 1
+          else
+            echo "STATUS=OK" >> $GITHUB_ENV
+          fi
+
+      - id: report
+        name: Report to Slack
+        if: always()
+        env:
+          STATUS: ${{ env.STATUS }}
+          PAT_CODE: ${{ env.PAT_CODE }}
+          CORE_CODE: ${{ env.CORE_CODE }}
+          PAT_STATE: ${{ env.PAT_STATE }}
+          CORE_STATE: ${{ env.CORE_STATE }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          STATUS="${{ env.STATUS }}"
+          PAT_CODE="${{ env.PAT_CODE }}"
+          CORE_CODE="${{ env.CORE_CODE }}"
+          PAT_STATE="${{ env.PAT_STATE }}"
+          CORE_STATE="${{ env.CORE_STATE }}"
+          RUN_URL="${{ env.RUN_URL }}"
+
+          if [ "$STATUS" != "FAIL" ]; then
+            echo "both tokens answered 200 and neither expires within 7 days; nothing posted"
+            exit 0
+          fi
+          if [ "$STATUS" = "FAIL" ]; then
+            if [ "$PAT_STATE" = "soon" ] || [ "$PAT_STATE" = "bad_format" ]; then
+              PAT_DETAIL="$PAT_STATE"
+            else
+              PAT_DETAIL="HTTP $PAT_CODE"
+            fi
+
+            if [ "$CORE_STATE" = "soon" ] || [ "$CORE_STATE" = "bad_format" ]; then
+              CORE_DETAIL="$CORE_STATE"
+            else
+              CORE_DETAIL="HTTP $CORE_CODE"
+            fi
+
+            TEXT="Token probe failed: GH_PAT ($PAT_DETAIL), CORE_READ_TOKEN ($CORE_DETAIL). Run: $RUN_URL"
+          fi
+
+          PAYLOAD="{\"channel\":\"#starfire-done\",\"text\":\"$TEXT\"}"
+          
+          curl -s -X POST \
+             -H "Content-Type: application/json" \
+             -d "$PAYLOAD" \
+             https://n8n.opsjuice.com/webhook/starfire-alert-relay
