@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-09-02T16:56:26Z",
-  "total": 1283,
-  "newly_activated": 2,
+  "generated_at": "2026-09-02T21:25:04Z",
+  "total": 1284,
+  "newly_activated": 0,
   "already_active": 129,
-  "failed": 1137,
+  "failed": 1140,
   "skipped": 15,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1137
+    "other": 1140
   },
   "failures": [
     {
@@ -4346,6 +4346,13 @@
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
     },
     {
+      "id": "LaFfJAWrp37LbIzQ",
+      "name": "OJ-TempMigrate-OutcomeType",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
       "id": "lCApt8PaQnie4bpf",
       "name": "br-marketing-fan-content-repurposing-owned-channels",
       "http_code": "400",
@@ -5069,6 +5076,20 @@
     {
       "id": "nvplqJaYHRnFWuad",
       "name": "echo-studio-ops-consulting-delivery-quality-scorecard",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "nYGIXTa4Ay5UPbwV",
+      "name": "canonical_resources_WEBHOOK_DEPLOY",
+      "http_code": "400",
+      "bucket": "other",
+      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
+    },
+    {
+      "id": "NzS3hbGG9jXW05BX",
+      "name": "TempAlterConstraint",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
