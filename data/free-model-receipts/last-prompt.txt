@@ -1,34 +1,27 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-08-30T16:07-16:3xZ three-role-loop-20260830T1609Z
+## 2026-09-04T06:25-06:40Z daily inbox monitor, 11 items handled, 2 real people answered, 7 rows filed
 
-Cloud fire, conversion lane. One row read to done. The reading inverted the row's own premise:
-the queue it was written to watch is growing, not draining.
+Cloud fire. The published digest was 47 hours stale, so the sweep was run by hand over the last
+two days as the procedure requires, and the staleness itself is now a row rather than a silence.
 
-- **Card 3065 closed: the Better Societies followup queue is 151 due, not the 124 it was on
-  2026-08-28.** Read live off tenant srhpmvfdzllsovluahjf at 16:11Z the same 3 ways the deployed
-  `Find Contacts Due Follow-up` node counts, filter for filter: day3 139, day10 6, day17 6.
-  Nothing is stale, 0 rows past the 45 day ceiling, oldest previous touch 2026-08-05 at 25 days.
-  10 followups have gone since 2026-08-28T13:00Z, every one on the day17 arm in the single
-  13:05:08.76Z batch.
-- **The 2 days of silence are the weekend, not a stall, and that was proved rather than assumed.**
-  The pod's last 10 executions run 2 a weekday at 08:00 and 13:00 UTC through 2026-08-28, its
-  trigger is named `Schedule Weekdays 08:00 and 13:00 UTC`, and it reads active with 22 steps. A
-  fire that read the 0 sends as a fault would have opened a P0 on a healthy engine.
-- **Both fixes that govern this queue were deployed on a Saturday and have never run on a sending
-  weekday.** The one-cap split, which stops each arm applying the whole cap independently and
-  gives openers `floor(cap/4)`, and the earliest-touch reserve, which stops the later touches
-  taking the shared cap to zero the way execution 94308 did. First sending weekday for either is
-  2026-08-31. Deployed and unproven until that run prints.
-- **The answer to the row's question is yes, and the cap binds harder than the row assumed.** Live
-  lane cap is the floor of 10, computed from `bs_send_health` the way the deployed gate computes
-  it: 2 openers, 8 followups, 4 of those reserved for day3. Simulated over the 139 real day3 rows
-  with their real day 0 stamps, oldest first at 4 a weekday from 2026-08-31: 120 served, **19 age
-  out past the 45 day ceiling**, last row reached 2026-10-16. Carried to its own row rather than
-  folded into a card that asked a different question.
-- **Three-role split honoured.** The live reads and the verification are the fire's own, because
-  the directive names verification as never mechanical. The prose went to the free builder through
-  `scripts/llm-router.py --task content` and was judged by a clean-context paid judge with no
-  tools: attempt 1 FAILED on 4 numbered reasons including an invented cap split, attempt 2 PASSED.
-  Manager `scripts/self-correcting-loop.py`, 2 attempts, 2 judge calls, exit 0.
-- Landed at `STATE/readings/bs-followup-queue-2026-08-30.md`. Evidence `evidence/issue-3065/`,
-  `verify-claim.py` 0 invalid.
+- **Two real people answered and both sends read back out of the mailbox.** Grace Alexander had
+  written three times since 27 August about a podcast and had just said she was checking one
+  last time; the reply that was already sitting in drafts in substance went out through the
+  Better Societies door, HTTP 200, message 1a06b1feb3590d5d, and thread 1a043d1edb4cb082 reads
+  back as 4 messages with ours SENT at 06:34:09Z. GoLogin asking to buy a sponsored video was
+  declined, HTTP 200, message 1a06b1f4c2698ac1, thread 1a06acdf239ea6d0 reads back as 2
+  messages. Both used in_reply_to so they landed inside the conversation.
+- **The mailbox can read but can no longer write.** Creating a throwaway folder was refused as
+  an expired sign in at 06:28Z while a search in the same minute answered with 201
+  conversations. Same split failure as 21 August. Recorded in
+  STATE/mailbox-write-capability.json and filed as row 3447.
+- **Supabase reports row level security off on public tables in BOTH live tenants**,
+  opsjuice-prod wwacjhkpuaiijbkqnhsi and open-brain qcmxbmxamrqzqifhyzbj, critical finding
+  rls_disabled_in_public dated 31 August. Not yet reproduced against the live tables, which is
+  said plainly on the row. Filed as row 3446.
+- **The pod ran out of memory twice on 3 September and the host raised it to 4GB by itself**, so
+  the monthly rate is now higher than the 5 dollars the standing facts record and the runway is
+  unknown rather than comfortable. Filed as row 3449. Pod health itself answered HTTP 200.
+- Also filed: the digest that stopped publishing (3450), ten ZeroBounce tickets opened by our
+  own autoresponder answering their ticket robot (3451), Retell's legacy list endpoint
+  deprecation on the OpsJuice org (3452), and ZeroBounce running out of credits (3448).
