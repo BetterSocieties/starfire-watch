@@ -1,27 +1,31 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-09-04T06:25-06:40Z daily inbox monitor, 11 items handled, 2 real people answered, 7 rows filed
+## 2026-09-04 profit-pulse-A 20:13Z, the cold lane is switched on in both of the ways it needs to be
 
-Cloud fire. The published digest was 47 hours stale, so the sweep was run by hand over the last
-two days as the procedure requires, and the staleness itself is now a row rather than a silence.
+Card 3444 closed: the OpsJuice cold lane is RESUMED onto the 70 mailbox-verified named
+addresses. Card 3539 had moved the verdict to `RESTRICTED_TO_VERIFIED` at 19:48Z and correctly
+left `send_paused` alone, so for 25 minutes the gate said the lane may send and the lane was
+paused. `check-the-cold-lane-pause-flag-matches-the-verdict.py` caught it at exit 1 and named
+its own repair. A verdict is not a switch. Applied by the gate on its own verdict, state event
+`0f5cd656`, `send_paused` read back false by hand, both guards exit 0 after. Commit `29df678e`.
 
-- **Two real people answered and both sends read back out of the mailbox.** Grace Alexander had
-  written three times since 27 August about a podcast and had just said she was checking one
-  last time; the reply that was already sitting in drafts in substance went out through the
-  Better Societies door, HTTP 200, message 1a06b1feb3590d5d, and thread 1a043d1edb4cb082 reads
-  back as 4 messages with ours SENT at 06:34:09Z. GoLogin asking to buy a sponsored video was
-  declined, HTTP 200, message 1a06b1f4c2698ac1, thread 1a06acdf239ea6d0 reads back as 2
-  messages. Both used in_reply_to so they landed inside the conversation.
-- **The mailbox can read but can no longer write.** Creating a throwaway folder was refused as
-  an expired sign in at 06:28Z while a search in the same minute answered with 201
-  conversations. Same split failure as 21 August. Recorded in
-  STATE/mailbox-write-capability.json and filed as row 3447.
-- **Supabase reports row level security off on public tables in BOTH live tenants**,
-  opsjuice-prod wwacjhkpuaiijbkqnhsi and open-brain qcmxbmxamrqzqifhyzbj, critical finding
-  rls_disabled_in_public dated 31 August. Not yet reproduced against the live tables, which is
-  said plainly on the row. Filed as row 3446.
-- **The pod ran out of memory twice on 3 September and the host raised it to 4GB by itself**, so
-  the monthly rate is now higher than the 5 dollars the standing facts record and the runway is
-  unknown rather than comfortable. Filed as row 3449. Pod health itself answered HTTP 200.
-- Also filed: the digest that stopped publishing (3450), ten ZeroBounce tickets opened by our
-  own autoresponder answering their ticket robot (3451), Retell's legacy list endpoint
-  deprecation on the OpsJuice org (3452), and ZeroBounce running out of credits (3448).
+Card 3537 closed: the three outcomes leaving the cold sender's no-send branch now name
+themselves, so `lastNodeExecuted` says which one happened without pulling the whole run. The
+first attempt used `typeValidation: strict`, copied from the workflow's own existing switch, and
+strict THROWS on an item missing a referenced field rather than failing to match it. That would
+have failed every run of the branch, including a healthy full sending day. Caught before it
+reached anything scheduled: execution `111681`, error, no item reached any terminal. Commit
+`e62468e3`.
+
+Also repaired, and the most dangerous thing found today: a routine write left the sender itself
+`active: false`, HTTP 200 and no warning. The lane had been un-paused 19 minutes earlier, so it
+was correctly configured to send and physically could not, and a deactivated sender produces no
+failure to alarm on. Nothing in the check registry watches that flag.
+
+Also reverted, not committed: `cloud-fire-setup.sh` overwrites the committed
+`.claude/settings.json` with a blocking gate dispatcher that then refuses the fire's own repo
+writes, which is the machinery removed twice on 1 August for the same reason.
+
+- Corrections made in-fire rather than edited away: a claim that the gate's window had aged out
+  from 84 to 39, when card 3539 had narrowed it (`35764144`).
+- Filed: 3544 the setup script arming a blocking gate against the fire, 3547 nothing watching
+  whether a sender is switched on, 3548 the Monday reading of the first real cold run.
