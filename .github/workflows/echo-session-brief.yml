@@ -65,9 +65,29 @@ jobs:
           mkdir -p agent
           rc=0; python3 scripts/echo-session-brief.py --hours-ahead 26 --write --notify \
             > agent/echo-session-brief-last.log 2>&1 || rc=$?
+          # THE REAL DEFECT, found 2026-09-04: the script's own message is byte-identical
+          # on every run that finds nothing due ("no Echo session starts in the next 26.0
+          # hours..."), so the commit step below always saw "no change in brief log" and
+          # never committed. 37 green runs in 7 days looked exactly like the job silently
+          # dying, because a run that fired correctly and a run that never fired at all
+          # left the same trace: nothing new in git. Read live 2026-09-04: echo_engagements
+          # holds 0 rows (Echo Studio has closed no client yet, confirmed against
+          # ventures/echo-studio/CONFIRMED-CLIENTS.md and CANONICAL-FACTS.md), the account's
+          # two Echo Cal.com event types (6230079, 6061711) are still the live ones, and a
+          # synthetic engagement pushed through --engagement/--write/--notify wrote a real
+          # sessions.jsonb entry and posted to Slack successfully, then was deleted. So the
+          # script is correct and was correctly finding nothing to do; the gap was that
+          # "correctly idle" and "stopped running" were indistinguishable from outside it.
+          # A run id and a UTC timestamp, appended after the script's own output, make every
+          # real run change the file, so the commit step fires every time and a stale log
+          # becomes visible instead of silently looking identical to a fresh one.
+          {
+            echo ""
+            echo "checked_at=$(date -u +%Y-%m-%dT%H:%M:%SZ) run=${{ github.run_id }} exit=$rc"
+          } >> agent/echo-session-brief-last.log
           echo "exit=$rc"
           # Print only the last line, which is either the no-brief message or the slack sent line.
-          tail -1 agent/echo-session-brief-last.log | cut -c1-160
+          tail -2 agent/echo-session-brief-last.log | head -1 | cut -c1-160
           exit $rc
 
       - name: Commit the last log so a fire can see whether this actually ran
