@@ -65,13 +65,26 @@ jobs:
           python3 core/scripts/free-model-worker-prompt.py \
             --changelog core/ops/CHANGELOG.md \
             --out data/free-model-receipts/last-prompt.txt
+          # The router's own stderr is the ONLY evidence of why a free route failed,
+          # and it went to a file that the following cat printed. Under set -e a
+          # router failure skipped that cat, so this job failed 34 times in a row
+          # between 2026-08-30 and 2026-09-04 leaving no reason anywhere a reader
+          # could reach. Capture the exit code, always print the reasoning, then fail.
+          rc=0
           python3 core/scripts/llm-router.py --task bulk --max-tokens 400 \
             --caller free-model-worker \
             --prompt-file data/free-model-receipts/last-prompt.txt \
             2> data/free-model-receipts/last-route.txt \
-            > data/free-model-receipts/last-summary.txt
+            > data/free-model-receipts/last-summary.txt || rc=$?
+          echo "----- router stderr -----"
+          cat data/free-model-receipts/last-route.txt || true
+          echo "----- router stdout -----"
+          cat data/free-model-receipts/last-summary.txt || true
+          if [ "$rc" -ne 0 ]; then
+            echo "the router exited $rc, reasoning above"
+            exit "$rc"
+          fi
           date -u +%Y-%m-%dT%H:%M:%SZ > data/free-model-receipts/last-run.txt
-          cat data/free-model-receipts/last-route.txt data/free-model-receipts/last-summary.txt
       - name: Commit the receipt
         run: |
           git config user.name "starfire-free-model-worker"
