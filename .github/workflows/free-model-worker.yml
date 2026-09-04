@@ -51,6 +51,13 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # Without this the runner has no free lane at all. The router reaches the
+          # free models only through the OmniRoute gateway; nothing answers on a
+          # runner's loopback, so it asks the vault for the hosted address and for
+          # the gateway key, and both lookups need a bearer. Read live on
+          # 2026-09-04 from run 33888654537: "no free lane on this host: nothing is
+          # answering on the OmniRoute address http://127.0.0.1:20128".
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: python3 core/scripts/llm-router.py --self-test
       - name: Prove the prompt builder still holds its own rail
         run: python3 core/scripts/free-model-worker-prompt.py --self-test
@@ -59,6 +66,13 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # Without this the runner has no free lane at all. The router reaches the
+          # free models only through the OmniRoute gateway; nothing answers on a
+          # runner's loopback, so it asks the vault for the hosted address and for
+          # the gateway key, and both lookups need a bearer. Read live on
+          # 2026-09-04 from run 33888654537: "no free lane on this host: nothing is
+          # answering on the OmniRoute address http://127.0.0.1:20128".
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           set -e
           mkdir -p data/free-model-receipts
