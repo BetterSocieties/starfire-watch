@@ -24,6 +24,3 @@ failure to alarm on. Nothing in the check registry watches that flag.
 Also reverted, not committed: `cloud-fire-setup.sh` overwrites the committed
 `.claude/settings.json` with a blocking gate dispatcher that then refuses the fire's own repo
 writes, which is the machinery removed twice on 1 August for the same reason.
-
-- Corrections made in-fire rather than edited away: a claim that the gate's window had aged out
-  from 84 to 39, when card 3539 had narrowed it (`35764144`).
