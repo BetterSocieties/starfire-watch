@@ -1,26 +1,10 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-09-04 profit-pulse-A 20:13Z, the cold lane is switched on in both of the ways it needs to be
+## 2026-09-05 profit pulse B (profit-pulse-b-20260905T1525Z)
 
-Card 3444 closed: the OpsJuice cold lane is RESUMED onto the 70 mailbox-verified named
-addresses. Card 3539 had moved the verdict to `RESTRICTED_TO_VERIFIED` at 19:48Z and correctly
-left `send_paused` alone, so for 25 minutes the gate said the lane may send and the lane was
-paused. `check-the-cold-lane-pause-flag-matches-the-verdict.py` caught it at exit 1 and named
-its own repair. A verdict is not a switch. Applied by the gate on its own verdict, state event
-`0f5cd656`, `send_paused` read back false by hand, both guards exit 0 after. Commit `29df678e`.
+Three rows, each claimed, worked and pushed on its own.
 
-Card 3537 closed: the three outcomes leaving the cold sender's no-send branch now name
-themselves, so `lastNodeExecuted` says which one happened without pulling the whole run. The
-first attempt used `typeValidation: strict`, copied from the workflow's own existing switch, and
-strict THROWS on an item missing a referenced field rather than failing to match it. That would
-have failed every run of the branch, including a healthy full sending day. Caught before it
-reached anything scheduled: execution `111681`, error, no item reached any terminal. Commit
-`e62468e3`.
-
-Also repaired, and the most dangerous thing found today: a routine write left the sender itself
-`active: false`, HTTP 200 and no warning. The lane had been un-paused 19 minutes earlier, so it
-was correctly configured to send and physically could not, and a deactivated sender produces no
-failure to alarm on. Nothing in the check registry watches that flag.
-
-Also reverted, not committed: `cloud-fire-setup.sh` overwrites the committed
-`.claude/settings.json` with a blocking gate dispatcher that then refuses the fire's own repo
-writes, which is the machinery removed twice on 1 August for the same reason.
+- **Card 3604, new, filed and closed.** OJ-Scorecard-Auto answered its webhook before it recorded the letter's lane, so 25 executions sent the results email and 0 stamped a lane. Fixed by canvas position, which is what n8n actually orders branches on, and by moving the opt-in judge to the end of the responder branch so its throw cannot abandon work the reader is owed. Read back off the pod: still active, still 18 steps, the strand check green over 24 active workflows. Commit f2e569b0.
+- **Card 3589, advanced to done-partial and re-dated.** Its premise was false: it waited on a cold window on Saturday 5 September that the deployed schedule cannot produce, because the Schedule Trigger on the OpsJuice cold sender reads 30 9,11,12 * * 1-5 in timezone America/Phoenix, weekdays only, and the executions list held 1 stored run from the Friday. Boxes 2 and 3 answered live: the named half of the bounce rate reads 2.08 in every 100 all time and 1.32 over 30 days, so 21 more clean named sends are needed rather than the 3 quoted this morning. Shipped scripts/check-no-card-waits-on-a-window-the-schedule-will-not-run.py, registered at a 24 hour cadence, which reads a workflow's cron and timezone live off the pod and fails by name on a card asserting a window it will not fire at. Commit bea926d0.
+- **Card 3606, new, filed and closed.** 3 personal mailboxes were sitting on the Better Societies working list, which the account profile forbids. The list was re-derived against the profile and read back at 300 accounts with 3187 in reserve, and the check is green.
+- **Card 3605, filed not worked.** The canvas tidy sweep moved nodes on 454 live automations while asserting in its own header that a reposition cannot change behaviour. n8n's documentation and this repository's own strand check both say the opposite, and that false sentence is also recorded as canon.
+- **Board snapshot rebuilt with whole bodies**, 850 open cards, replacing a copy truncated to 1600 characters that defeated the new guard's scoping.
