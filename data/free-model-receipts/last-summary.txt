@@ -1,1 +1,1 @@
-We fixed three new cards (3604, 3589, 3606) and updated two others (3605, 3605), correcting webhook ordering, schedule‑timing errors, mailbox‑list validation, and automation‑node positioning, and then rebuilt the board snapshot to show all 850 open cards.
+We fixed three workflow issues—a webhook‑ordering bug on Card 3604, a scheduling mistake on Card 3589 that now requires 21 extra sends, and a personal‑mailbox list error on Card 3606—while also correcting a misleading note about node repositioning (Card 3605) and rebuilding the board snapshot to include all 850 open cards.
