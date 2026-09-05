@@ -1,0 +1,92 @@
+# THE LIVE COPY of warm-wave-drain. The one in starfire-core is dispatch only and inert.
+#
+# WHY IT IS HERE. GitHub meters Actions minutes on PRIVATE repositories only, 2,000 a
+# month on this account, billed with a one minute minimum however short the run.
+# starfire-core is private and spends them, so a scheduled job there is refused a machine
+# and fails in about 4 seconds with a message about payments that has nothing to do with
+# what is wrong. This repository is PUBLIC, so its runners are free and unmetered. That is
+# the same reason core-canon-drift, core-learning-daily and core-free-model-tick live here.
+# Read live 2026-09-05: the copy in starfire-core had 0 runs on the runs API, 80 minutes
+# past its first scheduled slot, and 3 separate fires spent time asking why.
+#
+# EVERY 4 HOURS AND NOT HOURLY. The sender asks one shared daily allowance and sends only
+# what that allowance grants, so waking more often buys no extra letters, only cost.
+#
+# CONCURRENT RUNS MUST NOT CANCEL. The sender's double send guard reads the ledger in its
+# own checkout, so 2 runs at once cannot see each other's letters.
+#
+# THE SENDER'S OUTPUT IS KEPT OUT OF THIS LOG ON PURPOSE. This repository's Actions logs
+# are world readable and send-warm-wave.py names every real person it writes to as it
+# writes to them. So the whole output goes to a file inside the PRIVATE checkout and is
+# pushed back there, and this log carries the exit code and a line count and nothing else.
+# core-canon-drift already does the same with its private gate detail.
+#
+# THE VAULT SECRET IS NAMED DIFFERENTLY IN EACH REPOSITORY. starfire-core's copy reads
+# secrets.STARFIRE_VAULT_BEARER. This repository holds it as secrets.VAULT_BEARER, which
+# is what echo-session-brief.yml, free-model-worker.yml and sync-pod-key-to-vault.yml all
+# already use here.
+name: warm-wave-drain
+on:
+  schedule:
+    - cron: "50 */4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: warm-wave-drain
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout starfire-core (the repository the sender lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send whatever the allowance permits
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -o pipefail
+          mkdir -p agent
+          rc=0
+          python3 ventures/opsjuice/warm-wave/send-warm-wave.py --send > agent/warm-wave-drain.log 2>&1 || rc=$?
+          echo "sender exit=$rc"
+          echo "log lines: $(wc -l < agent/warm-wave-drain.log)"
+          exit $rc
+
+      - name: Push the ledger and the log back to the private repository
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-warm-wave-drain"
+          git config user.email "info@bettersocieties.world"
+          git add ventures/opsjuice/warm-wave/sent-ledger.jsonl agent/warm-wave-drain.log || true
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "warm-wave-drain: ledger and log from public runner ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| send-warm-wave | ${{ job.status }} |"
+            echo ""
+            echo "Recipient detail is in starfire-core at agent/warm-wave-drain.log, deliberately not here."
+          } >> "$GITHUB_STEP_SUMMARY"
