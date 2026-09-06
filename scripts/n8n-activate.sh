@@ -171,7 +171,7 @@ changed = []
 for n in d.get('nodes', []):
     t = (n.get('type') or '').lower()
     is_manual = 'manualtrigger' in t
-    is_auto_trigger = ('trigger' in t or t == 'n8n-nodes-base.webhook') and not is_manual
+    is_auto_trigger = ('trigger' in t or t in ('n8n-nodes-base.webhook', 'n8n-nodes-base.cron')) and not is_manual
     if is_auto_trigger and not n.get('disabled', False):
         n['disabled'] = True
         changed.append(n.get('name') or '')
