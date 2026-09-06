@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-06T22:36:01Z",
+  "generated_at": "2026-09-06T22:54:56Z",
   "total": 1284,
   "newly_activated": 0,
   "already_active": 128,
@@ -8078,17 +8078,7 @@
   ],
   "never_activate_guard": {
     "checked": 1,
-    "corrected": 1,
-    "corrections": [
-      {
-        "id": "xNWE0BuyBOePIBbU",
-        "name": "OpsJuice Cold Outreach (Phase 1)",
-        "nodes_redisabled": [
-          "Schedule Trigger (9:30am Phoenix weekdays)"
-        ],
-        "put_http_code": "200",
-        "corrected_at": "2026-09-06T22:36:01Z"
-      }
-    ]
+    "corrected": 0,
+    "corrections": []
   }
 }
