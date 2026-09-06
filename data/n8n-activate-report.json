@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-06T22:54:56Z",
+  "generated_at": "2026-09-06T23:25:32Z",
   "total": 1284,
   "newly_activated": 0,
-  "already_active": 128,
+  "already_active": 127,
   "failed": 1140,
   "skipped": 15,
-  "never_activate_policy": 1,
+  "never_activate_policy": 2,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
@@ -7996,6 +7996,11 @@
   ],
   "skipped_detail": [
     {
+      "id": "0fgWEQgSDZUMy9fB",
+      "name": "OJ-Followup-Engine",
+      "reason": "policy: never-activate, see config/never-activate.txt"
+    },
+    {
       "id": "2zJcRi6fx7IToe0I",
       "name": "BRAIN-009 Daily inbox routing 11pm",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
@@ -8077,7 +8082,7 @@
     }
   ],
   "never_activate_guard": {
-    "checked": 1,
+    "checked": 2,
     "corrected": 0,
     "corrections": []
   }
