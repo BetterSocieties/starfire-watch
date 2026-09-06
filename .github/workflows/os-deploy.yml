@@ -37,10 +37,20 @@ jobs:
           N8N_POD_API_KEY: ${{ secrets.N8N_API_KEY }}
           STRIPE_SK_OJ: ${{ secrets.STRIPE_SK_OJ }}
           STRIPE_SK_BS: ${{ secrets.STRIPE_SK_BS }}
+          # oj-funnel-state.py's own local-config-file sources, with an env
+          # fallback since this runner has no ~/starfire/config/ at all.
+          OPSJUICE_STRIPE_SECRET_KEY: ${{ secrets.OPSJUICE_STRIPE_SECRET_KEY }}
+          CAL_API_API_KEY: ${{ secrets.CAL_API_API_KEY }}
+          # oj-funnel-state.py's own vault re-exec (scripts/vault-get.py) reads
+          # OJ_SUPABASE_SECRET_KEY, OPSJUICE_RESEND_API_KEY and
+          # RETELL_API_KEY_API_KEY straight from the vault at run time; this is
+          # only the bearer that lets it sign in, never a secret value itself.
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           for g in gen-northstar-json gen-funnel-live-json gen-roadmap-json \
                    gen-attention-json gen-tasks-board-json gen-expenses-json \
-                   gen-os-progress gen-os-loops gen-gates-json gen-library-json; do
+                   gen-os-progress gen-os-loops gen-gates-json gen-library-json \
+                   gen-oj-funnel-json; do
             python3 "scripts/$g.py" || echo "WARN $g failed, keeping committed feed"
           done
 
@@ -53,6 +63,8 @@ jobs:
           cp ../../cf-pages/starfire/northstar.json ../../cf-pages/starfire/gates.json \
              ../../cf-pages/starfire/loops.json dist/ 2>/dev/null || true
           cp ../../cf-pages/starfire/walkthrough.json dist/ 2>/dev/null || true
+          cp ../../cf-pages/starfire/oj-funnel.json ../../cf-pages/starfire/oj-funnel.html \
+             dist/ 2>/dev/null || true
 
       - name: Deploy to Cloudflare Pages
         working-directory: apps/starfire-os
