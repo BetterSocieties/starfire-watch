@@ -16,3 +16,5 @@
 # record in a commit that says why, the same way this comment says why the line was added.
 
 xNWE0BuyBOePIBbU  OpsJuice Cold Outreach (Phase 1). Cold sending is paused pending review of the new HTML templates (starfire-core PR 3729, ops/proofs/oj-cold-engine-deactivated-2026-09-06.md). This job's own /activate sweep undid a plain deactivation of this workflow on 2026-09-06 18:40:09Z, and a separate PUT re-enabled its schedule trigger again at 20:13:55Z the same day; added 2026-09-06 after the second incident.
+
+0fgWEQgSDZUMy9fB  OJ-Followup-Engine. Sending is deliberately stopped across OpsJuice until Adrien has reviewed the new HTML templates that another agent has just wired into this workflow, the same hold that already covers xNWE0BuyBOePIBbU. Found live at 23:18:32Z on 2026-09-06/07 with its schedule trigger, manual trigger and webhook trigger all enabled while 353 follow-ups sat overdue behind it; the schedule and webhook triggers were disabled by hand at 23:19:18Z, manual left enabled so it can still be run deliberately. Added 2026-09-07. Reversing this is Adrien's decision, made on the record in a commit that says why, the same as the entry above.
