@@ -1,0 +1,18 @@
+# Workflows listed here (one id per line, non-# lines only) must never be turned active by
+# scripts/n8n-activate.sh, and this job must also force their automatic trigger nodes (any
+# trigger type that is not the manual trigger) back to disabled if it finds them enabled, on
+# every run.
+#
+# This is a POLICY list: workflows someone deliberately stopped and does not want this job
+# undoing. It is a different thing from the SKIP_IDS array inside n8n-activate.sh itself,
+# which lists workflows that CANNOT activate on this pod because they use a node type the pod
+# does not support. Do not merge the two lists; a policy stop and a pod incompatibility are
+# reversed by different people for different reasons.
+#
+# Format: an id, then two spaces, then a one-line reason. Keep each entry to one line so a
+# simple line-based reader never mistakes a comment continuation for a second id.
+#
+# Removing a line here is a decision for whoever owns OpsJuice cold sending, made on the
+# record in a commit that says why, the same way this comment says why the line was added.
+
+xNWE0BuyBOePIBbU  OpsJuice Cold Outreach (Phase 1). Cold sending is paused pending review of the new HTML templates (starfire-core PR 3729, ops/proofs/oj-cold-engine-deactivated-2026-09-06.md). This job's own /activate sweep undid a plain deactivation of this workflow on 2026-09-06 18:40:09Z, and a separate PUT re-enabled its schedule trigger again at 20:13:55Z the same day; added 2026-09-06 after the second incident.

@@ -48,7 +48,24 @@ SKIP_IDS=(
   SxaBrFdnwaX9v7fR   # BS-Compliance-Assessment-Engine
 )
 
-ok=0; already=0; fail=0; skipped=0
+# POLICY exclusions (2026-09-06): workflows a person deliberately stopped that this job must
+# never turn back on, regardless of pod compatibility. This is a different list from SKIP_IDS
+# above for a different reason: SKIP_IDS is about what the pod can run at all, this is about
+# what a person decided should stay off. Held in config/never-activate.txt, one file, so it
+# can be read and edited without touching this script. See that file for the full reason and
+# who may remove an entry.
+NEVER_FILE="$(cd "$(dirname "$0")/.." && pwd)/config/never-activate.txt"
+NEVER_IDS=()
+if [ -f "$NEVER_FILE" ]; then
+  while read -r nid _rest; do
+    [ -z "$nid" ] && continue
+    case "$nid" in \#*) continue ;; esac
+    NEVER_IDS+=("$nid")
+  done < "$NEVER_FILE"
+fi
+echo "never-activate policy list: ${#NEVER_IDS[@]} workflow(s)"
+
+ok=0; already=0; fail=0; skipped=0; never=0
 cred_fail=0; webhook_fail=0; other_fail=0; notrigger_fail=0
 cursor=""
 ids=$(mktemp)
@@ -76,6 +93,18 @@ skipped_jsonl=$(mktemp)
 
 while IFS=$'\t' read -r id active name; do
   [ -z "$id" ] && continue
+  is_never=0
+  for n in "${NEVER_IDS[@]}"; do
+    if [ "$id" = "$n" ]; then is_never=1; break; fi
+  done
+  if [ "$is_never" = "1" ]; then
+    never=$((never+1))
+    python3 -c "
+import json, sys
+print(json.dumps({'id': sys.argv[1], 'name': sys.argv[2], 'reason': 'policy: never-activate, see config/never-activate.txt'}))
+" "$id" "$name" >> "$skipped_jsonl"
+    continue
+  fi
   if [ "$active" = "True" ] || [ "$active" = "true" ]; then already=$((already+1)); continue; fi
   is_skip=0
   for s in "${SKIP_IDS[@]}"; do
@@ -115,9 +144,63 @@ print(json.dumps({
   fi
 done < "$ids"
 
-echo "ACTIVATE RESULT: newly_activated=$ok already_active=$already failed=$fail skipped=$skipped total=$total"
+echo "ACTIVATE RESULT: newly_activated=$ok already_active=$already failed=$fail skipped=$skipped never_activate_policy=$never total=$total"
 echo "FAILURE BUCKETS: missing-cred=$cred_fail no-trigger=$notrigger_fail webhook-collision=$webhook_fail other=$other_fail"
 [ "$fail" -gt 0 ] && echo "sample failures:" && head -5 "$failures_jsonl"
+
+# --- Guard: workflows in the never-activate list must have every automatic trigger node
+# (any trigger-type node except the manual trigger) held disabled, no matter what turned one
+# back on. Skipping /activate above only stops this job from flipping the workflow-level
+# active flag; it has no power over a node's own disabled flag, which is a different field
+# set by a different kind of write (a PUT of the whole workflow, not a POST to /activate).
+# Something did exactly that to xNWE0BuyBOePIBbU on 2026-09-06, outside this job's own run
+# windows, so the guard checks and corrects node state directly on every run rather than
+# trusting that leaving `active` alone is enough. Never echoes a PUT response body: that
+# endpoint returns every node parameter, including live credentials.
+never_checked=0; never_corrected=0
+corrections_jsonl=$(mktemp)
+: > "$corrections_jsonl"
+for id in "${NEVER_IDS[@]}"; do
+  [ -z "$id" ] && continue
+  never_checked=$((never_checked+1))
+  wf_json=$(curl -sf "${H[@]}" "$API/workflows/$id") || { echo "never-activate guard: GET $id failed, skipping guard this run"; continue; }
+  guard_out=$(echo "$wf_json" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+changed = []
+for n in d.get('nodes', []):
+    t = (n.get('type') or '').lower()
+    is_manual = 'manualtrigger' in t
+    is_auto_trigger = ('trigger' in t or t == 'n8n-nodes-base.webhook') and not is_manual
+    if is_auto_trigger and not n.get('disabled', False):
+        n['disabled'] = True
+        changed.append(n.get('name') or '')
+result = {'changed': changed, 'name': d.get('name') or ''}
+if changed:
+    result['body'] = {k: d[k] for k in ('name', 'nodes', 'connections', 'settings', 'staticData') if k in d}
+print(json.dumps(result))
+")
+  n_changed=$(echo "$guard_out" | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('changed', [])))")
+  if [ "$n_changed" -gt 0 ]; then
+    wf_name=$(echo "$guard_out" | python3 -c "import json,sys; print(json.load(sys.stdin).get('name',''))")
+    changed_csv=$(echo "$guard_out" | python3 -c "import json,sys; print(','.join(json.load(sys.stdin).get('changed', [])))")
+    echo "$guard_out" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['body']))" > /tmp/never-activate-guard-put.json
+    put_code=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "${H[@]}" --data-binary @/tmp/never-activate-guard-put.json "$API/workflows/$id")
+    rm -f /tmp/never-activate-guard-put.json
+    never_corrected=$((never_corrected+1))
+    corrected_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    python3 -c "
+import json, sys
+print(json.dumps({
+    'id': sys.argv[1], 'name': sys.argv[2],
+    'nodes_redisabled': [x for x in sys.argv[3].split(',') if x],
+    'put_http_code': sys.argv[4], 'corrected_at': sys.argv[5],
+}))
+" "$id" "$wf_name" "$changed_csv" "$put_code" "$corrected_at" >> "$corrections_jsonl"
+    echo "never-activate guard: RE-DISABLED drifted trigger(s) on $id ($wf_name): $changed_csv (PUT http_code=$put_code, at $corrected_at)"
+  fi
+done
+echo "NEVER-ACTIVATE GUARD: checked=$never_checked corrected=$never_corrected"
 
 mkdir -p data
 python3 -c "
@@ -138,6 +221,13 @@ with open(sys.argv[10]) as f:
         if line:
             skipped_list.append(json.loads(line))
 
+corrections = []
+with open(sys.argv[12]) as f:
+    for line in f:
+        line = line.strip()
+        if line:
+            corrections.append(json.loads(line))
+
 report = {
     'generated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'total': int(sys.argv[2]),
@@ -145,6 +235,7 @@ report = {
     'already_active': int(sys.argv[4]),
     'failed': int(sys.argv[5]),
     'skipped': int(sys.argv[11]),
+    'never_activate_policy': int(sys.argv[13]),
     'buckets': {
         'missing_cred': int(sys.argv[6]),
         'webhook_collision': int(sys.argv[7]),
@@ -153,10 +244,15 @@ report = {
     },
     'failures': failures,
     'skipped_detail': skipped_list,
+    'never_activate_guard': {
+        'checked': int(sys.argv[14]),
+        'corrected': int(sys.argv[15]),
+        'corrections': corrections,
+    },
 }
 with open('data/n8n-activate-report.json', 'w') as f:
     json.dump(report, f, indent=2)
     f.write('\n')
-" "$failures_jsonl" "$total" "$ok" "$already" "$fail" "$cred_fail" "$webhook_fail" "$other_fail" "$notrigger_fail" "$skipped_jsonl" "$skipped"
+" "$failures_jsonl" "$total" "$ok" "$already" "$fail" "$cred_fail" "$webhook_fail" "$other_fail" "$notrigger_fail" "$skipped_jsonl" "$skipped" "$corrections_jsonl" "$never" "$never_checked" "$never_corrected"
 
 # fire 2026-07-13T21:48:17Z
