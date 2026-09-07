@@ -1,1 +1,1 @@
-2026-09-06 fire moved 135 files to shared automation key cutting direct reads from 567 to 435 and fixing 3 broken checks, fixed email subject from 85 to 73 characters to pass 78-character limit, but 38 contacts (22 Better Societies + 1 OpsJuice + 15 wave B) stuck because 4 mailbox verification providers failed.
+Fixed 2 bugs causing wrong log times and accidental reactivation of paused sender, sorted 104 board cards, and landed 3 new verified buyers moving pool from 9 of 171 to 16 of 178 toward 25 per 100 target while flagging allowance counting question.
