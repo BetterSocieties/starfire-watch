@@ -1,1 +1,1 @@
-Fixed 2 bugs causing wrong log times and accidental reactivation of paused sender, sorted 104 board cards, and landed 3 new verified buyers moving pool from 9 of 171 to 16 of 178 toward 25 per 100 target while flagging allowance counting question.
+On 2026-09-07 team fixed 2 bugs — 1 that stamped finish time instead of start time and 1 that re-triggered a deliberately paused email sender 4 times — added 3 verified buyers growing coverage from 9 of 171 to 16 of 178 (5.3 to 9.0 per 100 toward a 25 target), and sorted 104 backlog cards for ranking.
