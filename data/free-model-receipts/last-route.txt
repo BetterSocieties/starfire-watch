@@ -1,1 +1,1 @@
-[llm-router] bulk -> omniroute/auto/best-free→muse-spark-1.2-contributor-free, 3548 tokens, $0
+[llm-router] bulk -> omniroute/auto/best-free→muse-spark-1.2-contributor-free, 2840 tokens, $0
