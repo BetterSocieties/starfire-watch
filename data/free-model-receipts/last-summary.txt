@@ -1,1 +1,1 @@
-On 2026-09-07 team fixed 2 bugs — 1 that stamped finish time instead of start time and 1 that re-triggered a deliberately paused email sender 4 times — added 3 verified buyers growing coverage from 9 of 171 to 16 of 178 (5.3 to 9.0 per 100 toward a 25 target), and sorted 104 backlog cards for ranking.
+Fixed 2 bugs (log stamped finish not start causing fresh allowance to read as spent, and checker re-armed deliberately paused sender 4 times), added 3 verified buyers moving pool from 9 of 171 to 16 of 178 (5.3 to 9.0 per 100 vs 25 floor), and classified 104 unranked cards.
