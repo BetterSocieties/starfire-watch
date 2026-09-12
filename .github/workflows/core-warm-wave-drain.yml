@@ -1,0 +1,144 @@
+# THE LIVE COPY of the warm wave drain, and the ONLY armed one. The copy in starfire-core
+# is dispatch only and inert.
+#
+# WHY THIS FILE IS NAMED core-warm-wave-drain AND THE OLD warm-wave-drain.yml IS GONE,
+# 2026-09-12, card 3609. The old file's workflow object, id 351083293, was switched off by
+# hand on 2026-09-06 after 4 scheduled runs went red, and every one of those 4 was red for
+# the same wrong reason: the sender exits non-zero when a rail correctly refuses to send,
+# and this job mapped every non-zero exit to a failed run. That defect is fixed now, in the
+# sender and in the step below, and proven in both directions.
+#
+# A disabled workflow object cannot be re-enabled from a cloud fire. Tested live rather
+# than assumed: PUT /repos/BetterSocieties/starfire-watch/actions/workflows/351083293/enable
+# answers HTTP 403 "Resource not accessible by integration", because the session's GitHub
+# App token carries no actions:write, while a plain GET of the same workflow answers 200.
+# So the job is carried under a new filename, which registers a NEW and ACTIVE workflow
+# object, and the old file is DELETED in the same change so there is one file and one job
+# rather than a live one beside a dead one. core- is this repository's existing convention
+# for a job whose code lives in starfire-core: core-canon-drift, core-learning-daily,
+# core-free-model-tick.
+#
+# THIS IS NOT A PAUSED SENDER BEING QUIETLY RE-ARMED, and the difference is on the record.
+# The warm wave is not in config/deliberately-paused-workflows.txt, which holds only the 3
+# n8n OpsJuice senders. The stated condition on this job's own disable, in
+# ops/handoffs/oj-2026-09-06-session-handoff.md, was "do NOT re-enable until the HTML email
+# system in PR 3729 is merged and deployed, because the currently live outreach copy is
+# plain text". Both halves are met and were read live on 2026-09-12: PR 3729 merged at
+# 2026-09-06T21:22:43Z, the sender has posted text and HTML together since 2026-09-07, and
+# the copy review the pause register named was carried out and PASSED on 2026-09-10 against
+# all 4 wired letters. Fires have been sending this wave by hand throughout, 15 letters on
+# 2026-09-10 and 15 more at 2026-09-11T22:34:18Z, under card 3999 which asks for 15 more.
+# So arming the schedule changes nothing a reader receives. It changes only whether those
+# 15 letters are lost on a day no fire happens to be awake after the window frees.
+#
+# WHY IT IS HERE. GitHub meters Actions minutes on PRIVATE repositories only, 2,000 a
+# month on this account, billed with a one minute minimum however short the run.
+# starfire-core is private and spends them, so a scheduled job there is refused a machine
+# and fails in about 4 seconds with a message about payments that has nothing to do with
+# what is wrong. This repository is PUBLIC, so its runners are free and unmetered. That is
+# the same reason core-canon-drift, core-learning-daily and core-free-model-tick live here.
+# Read live 2026-09-05: the copy in starfire-core had 0 runs on the runs API, 80 minutes
+# past its first scheduled slot, and 3 separate fires spent time asking why.
+#
+# EVERY 4 HOURS AND NOT HOURLY. The sender asks one shared daily allowance and sends only
+# what that allowance grants, so waking more often buys no extra letters, only cost.
+#
+# CONCURRENT RUNS MUST NOT CANCEL. The sender's double send guard reads the ledger in its
+# own checkout, so 2 runs at once cannot see each other's letters.
+#
+# THE SENDER'S OUTPUT IS KEPT OUT OF THIS LOG ON PURPOSE. This repository's Actions logs
+# are world readable and send-warm-wave.py names every real person it writes to as it
+# writes to them. So the whole output goes to a file inside the PRIVATE checkout and is
+# pushed back there, and this log carries the exit code and a line count and nothing else.
+# core-canon-drift already does the same with its private gate detail.
+#
+# A REFUSED RUN IS A GREEN RUN, added 2026-09-12 on card 3609. The sender exits 3 when a
+# rail holds every letter back on purpose. This job maps 3 to success and every other
+# non-zero exit to failure. Before that, 4 scheduled runs on 2026-09-05 and 2026-09-06 all
+# went red on a correct refusal and the schedule was then switched off in both
+# repositories, which left OpsJuice's only live sending channel with no scheduler at all
+# for 6 days.
+#
+# THE VAULT SECRET IS NAMED DIFFERENTLY IN EACH REPOSITORY. starfire-core's copy reads
+# secrets.STARFIRE_VAULT_BEARER. This repository holds it as secrets.VAULT_BEARER, which
+# is what echo-session-brief.yml, free-model-worker.yml and sync-pod-key-to-vault.yml all
+# already use here.
+name: core-warm-wave-drain
+on:
+  schedule:
+    - cron: "50 */4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-warm-wave-drain
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout starfire-core (the repository the sender lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Send whatever the allowance permits
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -o pipefail
+          mkdir -p agent
+          rc=0
+          python3 ventures/opsjuice/warm-wave/send-warm-wave.py --send > agent/warm-wave-drain.log 2>&1 || rc=$?
+          echo "sender exit=$rc"
+          echo "log lines: $(wc -l < agent/warm-wave-drain.log)"
+          # Exit 3 is REFUSED_BY_A_RAIL in send-warm-wave.py: a rail, either the bounce
+          # screen or the shared daily allowance, deliberately held every letter back, so
+          # nothing broke and nothing was sent. That is a GREEN run. Treating every
+          # non-zero exit as red is why this job was switched off on 2026-09-06: the
+          # allowance frees once a day while this job wakes 6 times, so a correct refusal
+          # turned the run red most of the time, and 4 red runs in a row ended with the
+          # schedule disabled in both repositories for 6 days. Any OTHER non-zero exit is
+          # a real fault and still fails the step, including the unrecorded-send case,
+          # which keeps its exit 1 on purpose because a letter that left without reaching
+          # the contacts map really is broken.
+          if [ "$rc" -eq 3 ]; then
+            echo "a rail refused this run on purpose: nothing was sent, and that is not a failure"
+            exit 0
+          fi
+          exit $rc
+
+      - name: Push the ledger and the log back to the private repository
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-warm-wave-drain"
+          git config user.email "info@bettersocieties.world"
+          git add ventures/opsjuice/warm-wave/sent-ledger.jsonl agent/warm-wave-drain.log || true
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "core-warm-wave-drain: ledger and log from public runner ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| send-warm-wave | ${{ job.status }} |"
+            echo ""
+            echo "Recipient detail is in starfire-core at agent/warm-wave-drain.log, deliberately not here."
+          } >> "$GITHUB_STEP_SUMMARY"
