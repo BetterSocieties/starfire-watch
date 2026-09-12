@@ -15,9 +15,14 @@
 # THE READING THAT SIZES IT, taken live off tenant wwacjhkpuaiijbkqnhsi on
 # 2026-09-12T10:2xZ, 2763 prospect rows paged to the end, HTTP 200: 1291 carry an
 # observation, 143 carry a dated trigger, all 143 carry the date they were derived, and 13
-# of those 143 are ALREADY past the 21 day window, the oldest by 35 days. So 13 businesses
-# had quietly dropped from "a reason to write today" to generic copy with nothing scheduled
-# to bring them back.
+# of those 143 are ALREADY past the 21 day window, the oldest by 35 days.
+# Scoped to the pool this job actually reaches, which is outreach_state=queued plus an email
+# plus email_mx_ok true, the same reading gives 1336 rows: 313 carry no usable opener, 1
+# carries a dated trigger past the window, and 1022 are neither. So this job moves 1 business
+# today, not 13. Most of those 13 sit on rows that have already left the queue, where nothing
+# re-reads them because nothing needs to. It is worth running anyway because the bare group
+# grows toward the per-run cap of 500 as sending continues, and at that point a stale trigger
+# with no place in the order starves.
 #
 # WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
 # PRIVATE repositories only, 2,000 a month on this account. starfire-core is private and
