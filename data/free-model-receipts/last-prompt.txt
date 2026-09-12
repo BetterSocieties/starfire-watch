@@ -1,27 +1,4 @@
 Summarize the newest changelog entry below in 1 plain-English sentence a non-technical founder understands. Use digits for numbers. Some details have been replaced with a description of what they were; summarise what is there and never invent the removed value. Entry:
-## 2026-09-04T06:25-06:40Z daily inbox monitor, 11 items handled, 2 real people answered, 7 rows filed
+## 2026-09-12 daily inbox monitor cloud fire, 06:09Z
 
-Cloud fire. The published digest was 47 hours stale, so the sweep was run by hand over the last
-two days as the procedure requires, and the staleness itself is now a row rather than a silence.
-
-- **Two real people answered and both sends read back out of the mailbox.** Grace Alexander had
-  written three times since 27 August about a podcast and had just said she was checking one
-  last time; the reply that was already sitting in drafts in substance went out through the
-  Better Societies door, HTTP 200, message 1a06b1feb3590d5d, and thread 1a043d1edb4cb082 reads
-  back as 4 messages with ours SENT at 06:34:09Z. GoLogin asking to buy a sponsored video was
-  declined, HTTP 200, message 1a06b1f4c2698ac1, thread 1a06acdf239ea6d0 reads back as 2
-  messages. Both used in_reply_to so they landed inside the conversation.
-- **The mailbox can read but can no longer write.** Creating a throwaway folder was refused as
-  an expired sign in at 06:28Z while a search in the same minute answered with 201
-  conversations. Same split failure as 21 August. Recorded in
-  STATE/mailbox-write-capability.json and filed as row 3447.
-- **Supabase reports row level security off on public tables in BOTH live tenants**,
-  opsjuice-prod wwacjhkpuaiijbkqnhsi and open-brain qcmxbmxamrqzqifhyzbj, critical finding
-  rls_disabled_in_public dated 31 August. Not yet reproduced against the live tables, which is
-  said plainly on the row. Filed as row 3446.
-- **The pod ran out of memory twice on 3 September and the host raised it to 4GB by itself**, so
-  the monthly rate is now higher than the 5 dollars the standing facts record and the runway is
-  unknown rather than comfortable. Filed as row 3449. Pod health itself answered HTTP 200.
-- Also filed: the digest that stopped publishing (3450), ten ZeroBounce tickets opened by our
-  own autoresponder answering their ticket robot (3451), Retell's legacy list endpoint
-  deprecation on the OpsJuice org (3452), and ZeroBounce running out of credits (3448).
+- 2026-09-12 inbox-monitor: the stand-down was void for the third morning running, because the Google inbox program is still dark. Its last morning mail is 2026-09-04T05:32:57Z, thread 1a06ae7e9d7dc3c1, and a search over the last 9 days returns only that one, so the mailbox has gone 8 days with nobody watching it and this fire swept it by hand. 50 threads over the last 2 days were classified on a free model through `scripts/llm-router.py`, openai/gpt-oss-120b via OmniRoute auto/best-free, 5882 tokens at 0 dollars; it flagged 2 people waiting and both were checked by hand, one being a New York Life insurance pitch delivered as a LinkedIn message rather than a person waiting, so the true count is 1. That one is Grace Alexander at Health Tech Founders, thread 1a043d1edb4cb082, writing for the fourth time since Adrien answered on 4 September and asking to book the interview; because it commits him to an interview and a public position the reply was written and deliberately not sent, and because the mailbox connection has been read only since 2026-08-21 it went into `agent/unsent-drafts.md` rather than a Gmail draft. Two machines that watch for money were found broken and neither is fixed here: BS-Reply-Poller (`XlejXC4RcZRMr6jQ`) has 23 errors and 0 successes from 2026-09-11T22:00:07Z to 2026-09-12T06:10:07Z, every run failing on a 504 from its read of `bs_event_log`, while that table answers HTTP 200 in 0.20 seconds over 6713 rows when probed live from here with the BS v2 service role key, so the fault is in the pod's own call and not the store, filed as card 4013; and OS-Daily-Inbox-Digest still has not published, `inbox-digest.json` `generated_at` still 2026-09-02T07:46:19.924Z, so yesterday's deactivate and activate did not take, commented on card 3450. One claim from yesterday was corrected rather than repeated: the Claude Max gate was recorded as GATE-7 on the dashboard but `git log -S GATE-7` on `cf-pages/starfire/gates.json` returns nothing, so it was never in the feed. It and the School of Play safeguarding signature were written into `STATE/OPEN-GATES.md` and both feeds regenerated, and `attention.json` at 2026-09-12T06:20:54Z now carries GATE-7 and GATE-8. Claude Max access ends tomorrow, 13 September, read live off thread 1a07a7bae929e27f which is still the only Anthropic mail and still unread. Pod healthz HTTP 200 and the n8n API HTTP 200 on `N8N_POD_API_KEY`; no PikaPods mail in 3 days so the 22.70 dollar balance and its runway to about early December stand. North star unchanged: 0 dollars a month, gap 20000 dollars.

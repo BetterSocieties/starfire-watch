@@ -1,10 +1,11 @@
 {
-  "generated_at": "2026-09-04T11:51:12Z",
-  "total": 1284,
+  "generated_at": "2026-09-12T11:22:13Z",
+  "total": 1286,
   "newly_activated": 0,
   "already_active": 129,
   "failed": 1140,
   "skipped": 15,
+  "never_activate_policy": 2,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
@@ -7995,6 +7996,11 @@
   ],
   "skipped_detail": [
     {
+      "id": "0fgWEQgSDZUMy9fB",
+      "name": "OJ-Followup-Engine",
+      "reason": "policy: never-activate, see config/never-activate.txt"
+    },
+    {
       "id": "2zJcRi6fx7IToe0I",
       "name": "BRAIN-009 Daily inbox routing 11pm",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
@@ -8068,6 +8074,16 @@
       "id": "tUxaj0MPS9eCnRpO",
       "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
+    },
+    {
+      "id": "xNWE0BuyBOePIBbU",
+      "name": "OpsJuice Cold Outreach (Phase 1)",
+      "reason": "policy: never-activate, see config/never-activate.txt"
     }
-  ]
+  ],
+  "never_activate_guard": {
+    "checked": 2,
+    "corrected": 0,
+    "corrections": []
+  }
 }
