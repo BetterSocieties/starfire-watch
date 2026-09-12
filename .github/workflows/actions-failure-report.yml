@@ -31,21 +31,38 @@ jobs:
         with:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.CORE_READ_TOKEN }}
-          # FOUR paths, not one and not three. The digest reports failures; the
-          # checker and its registry are the half that notices a job which
-          # stopped running at all; and the checker in turn loads
-          # ec-ops-scheduled-task-audit.py for compute_task_health, so a list
-          # that stops at the checker fetches a file that cannot import.
+          # FIVE paths, and the count keeps rising for the same reason each
+          # time: this list is a hand-copied dependency graph and the graph
+          # moves. The digest reports failures; the checker and its registry
+          # are the half that notices a job which stopped running at all; the
+          # checker in turn loads ec-ops-scheduled-task-audit.py for
+          # compute_task_health, so a list that stops at the checker fetches a
+          # file that cannot import.
           # Run 31128804772 proved exactly that: every path present, every
-          # path readable, and still "the silent-job check did not run",
-          # because this list is a hand-copied dependency graph and the graph
-          # moved. Leaving one out does not disable that half quietly, which
-          # is the one thing that went right. Guarded by
-          # scripts/tests/test-digest-runner-layout.py, which stands this
-          # exact file list up in an empty tree and refuses a list that cannot
-          # load the checker.
+          # path readable, and still "the silent-job check did not run".
+          #
+          # scripts/lib/load_by_path.py is the FIFTH, added 2026-09-12 on card
+          # 4032 after five nights of total silence. Both
+          # report-actions-failures-to-slack.py (line 71) and
+          # check-scheduled-jobs-alive.py (line 56) import load_by_path off
+          # scripts/lib, so leaving it out did NOT degrade the digest, it
+          # stopped the run dead at import with ModuleNotFoundError before a
+          # single line of the report was built. That module imports only the
+          # standard library, so this closes the graph.
+          #
+          # Guarded by scripts/tests/test-digest-runner-layout.py, which stands
+          # this exact file list up in an empty tree and refuses a list that
+          # cannot load. That guard passed all five of those nights and was
+          # itself repaired on the same card: it read this file only through
+          # gh, which a cloud fire does not have, and exited 2 NOT CONFIGURED
+          # having checked nothing; and it imported load_by_path itself, so the
+          # digest under test resolved the import from the parent process
+          # rather than the temp tree. Do not remove a path from this list on
+          # the strength of that guard being green without first running it
+          # where it can actually read this file.
           sparse-checkout: |
             scripts/report-actions-failures-to-slack.py
+            scripts/lib/load_by_path.py
             scripts/check-scheduled-jobs-alive.py
             scripts/ec-ops-scheduled-task-audit.py
             ops/scheduled-jobs-registry.json
