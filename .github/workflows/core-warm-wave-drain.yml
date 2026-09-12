@@ -40,8 +40,11 @@
 # Read live 2026-09-05: the copy in starfire-core had 0 runs on the runs API, 80 minutes
 # past its first scheduled slot, and 3 separate fires spent time asking why.
 #
-# EVERY 4 HOURS AND NOT HOURLY. The sender asks one shared daily allowance and sends only
-# what that allowance grants, so waking more often buys no extra letters, only cost.
+# HOURLY AND NOT EVERY 4 HOURS. Actions minutes are free and unmetered on a public
+# repository so the runner cost that justified 4 hours does not exist here. The sender's
+# ceiling is a rolling 24 hours so what the interval buys is the wait between the window
+# freeing and the next slot and that wait falls from up to 4 hours to up to 1. The send
+# hour therefore drifts forward by 1 hour a day instead of 4.
 #
 # CONCURRENT RUNS MUST NOT CANCEL. The sender's double send guard reads the ledger in its
 # own checkout, so 2 runs at once cannot see each other's letters.
@@ -66,7 +69,7 @@
 name: core-warm-wave-drain
 on:
   schedule:
-    - cron: "50 */4 * * *"
+    - cron: "50 * * * *"
   workflow_dispatch: {}
 
 permissions:
