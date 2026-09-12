@@ -21,6 +21,13 @@
 # pushed back there, and this log carries the exit code and a line count and nothing else.
 # core-canon-drift already does the same with its private gate detail.
 #
+# A REFUSED RUN IS A GREEN RUN, added 2026-09-12 on card 3609. The sender exits 3 when a
+# rail holds every letter back on purpose. This job maps 3 to success and every other
+# non-zero exit to failure. Before that, 4 scheduled runs on 2026-09-05 and 2026-09-06 all
+# went red on a correct refusal and the schedule was then switched off in both
+# repositories, which left OpsJuice's only live sending channel with no scheduler at all
+# for 6 days.
+#
 # THE VAULT SECRET IS NAMED DIFFERENTLY IN EACH REPOSITORY. starfire-core's copy reads
 # secrets.STARFIRE_VAULT_BEARER. This repository holds it as secrets.VAULT_BEARER, which
 # is what echo-session-brief.yml, free-model-worker.yml and sync-pod-key-to-vault.yml all
@@ -67,6 +74,20 @@ jobs:
           python3 ventures/opsjuice/warm-wave/send-warm-wave.py --send > agent/warm-wave-drain.log 2>&1 || rc=$?
           echo "sender exit=$rc"
           echo "log lines: $(wc -l < agent/warm-wave-drain.log)"
+          # Exit 3 is REFUSED_BY_A_RAIL in send-warm-wave.py: a rail, either the bounce
+          # screen or the shared daily allowance, deliberately held every letter back, so
+          # nothing broke and nothing was sent. That is a GREEN run. Treating every
+          # non-zero exit as red is why this job was switched off on 2026-09-06: the
+          # allowance frees once a day while this job wakes 6 times, so a correct refusal
+          # turned the run red most of the time, and 4 red runs in a row ended with the
+          # schedule disabled in both repositories for 6 days. Any OTHER non-zero exit is
+          # a real fault and still fails the step, including the unrecorded-send case,
+          # which keeps its exit 1 on purpose because a letter that left without reaching
+          # the contacts map really is broken.
+          if [ "$rc" -eq 3 ]; then
+            echo "a rail refused this run on purpose: nothing was sent, and that is not a failure"
+            exit 0
+          fi
           exit $rc
 
       - name: Push the ledger and the log back to the private repository
