@@ -1,0 +1,94 @@
+# core-weekly-sprint-retro.yml
+#
+# Replaces the Claude cloud routine "starfire-weekly-sprint-retro", a claude.ai RemoteTrigger
+# that ran on Anthropic's own hosting. Every one of the 7 Claude cloud routines was
+# retired 2026-09-12 (they are Anthropic-hosted sessions and die with the account
+# change described in ops/handoffs that day). The routine's own prompt was only an
+# authorization paragraph plus a pointer to a procedure file in starfire-core; only
+# the runner died, and this workflow is the new runner: it clones starfire-core,
+# writes a heartbeat, and runs the SAME procedure file through the cascade grok,
+# claude (dormant until a CI token exists), gemini, free, codex, exactly as
+# scripts/cloud-fire.sh implements it. First rung that answers wins.
+#
+# WHY IT IS HERE AND NOT IN starfire-core. GitHub meters Actions minutes on PRIVATE
+# repositories only; starfire-core is private and metered, this repository is public
+# and its runners are free. core- is this repository's existing convention for a job
+# whose code lives in starfire-core (core-canon-drift, core-learning-daily,
+# core-free-model-tick, core-warm-wave-drain, core-oj-observation-refresh).
+#
+# PUBLIC LOGS RULE: this repository's Actions logs are world readable. Every model's
+# stdout and stderr is written to files committed into starfire-core under
+# evidence/cloud-fire/weekly-sprint-retro/<ts>/, never echoed here. This workflow's own log
+# carries only step names and the exit code.
+name: core-weekly-sprint-retro
+on:
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+    inputs:
+      host:
+        description: "force one cascade rung (grok|claude|gemini|free|codex), empty runs the full cascade"
+        required: false
+        default: ""
+
+concurrency:
+  group: core-weekly-sprint-retro
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout starfire-watch
+        uses: actions/checkout@v4
+
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Configure git user
+        working-directory: core
+        run: |
+          git config user.name "Starfire Cloud Fire"
+          git config user.email "info@bettersocieties.world"
+
+      - name: Run cloud-fire cascade
+        working-directory: core
+        env:
+          CORE_DIR: .
+          CLOUD_FIRE_HOST: ${{ github.event.inputs.host }}
+          GROK_AUTH_JSON: ${{ secrets.GROK_AUTH_JSON }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set +e
+          bash scripts/cloud-fire.sh weekly-sprint-retro >/tmp/cloud-fire.out 2>/tmp/cloud-fire.err
+          rc=$?
+          echo "cloud-fire exit=$rc"
+          exit $rc
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| cloud-fire weekly-sprint-retro | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
