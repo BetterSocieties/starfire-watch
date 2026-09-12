@@ -1,0 +1,133 @@
+# Re-read the OpsJuice personal observations once a week, so a dated event that has gone
+# by is replaced instead of silently suppressed. Card 1334, legacy id c2f8a5b3, 2026-09-12.
+#
+# WHAT THE CARD ASKED AND WHAT WAS ACTUALLY MISSING. The enricher writes one true sentence
+# about each business off that business's own site, and 6 of its rules describe something
+# that HAPPENED rather than something that IS: a front desk role advertised, a location just
+# opened, a jump in reviews, a booking link that started erroring, a review naming a call
+# nobody answered, a page dated inside the last 90 days. A job advert closes. The sender
+# already REFUSES to open with one of those sentences once it is more than
+# TRIGGER_MAX_AGE_DAYS old, which is 21, and that refusal was read live on 2026-09-12 as
+# already deployed on xNWE0BuyBOePIBbU. So nothing wrong reaches a reader today. What was
+# missing is the other half: nothing ever re-read those businesses, so a trigger that aged
+# out just fell back to generic copy and stayed there.
+#
+# THE READING THAT SIZES IT, taken live off tenant wwacjhkpuaiijbkqnhsi on
+# 2026-09-12T10:2xZ, 2763 prospect rows paged to the end, HTTP 200: 1291 carry an
+# observation, 143 carry a dated trigger, all 143 carry the date they were derived, and 13
+# of those 143 are ALREADY past the 21 day window, the oldest by 35 days. So 13 businesses
+# had quietly dropped from "a reason to write today" to generic copy with nothing scheduled
+# to bring them back.
+#
+# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
+# PRIVATE repositories only, 2,000 a month on this account. starfire-core is private and
+# spends them, so a scheduled job there is refused a machine and fails in about 4 seconds
+# with a message about payments that has nothing to do with what is wrong. That cost card
+# 3609 six days of a dead warm wave scheduler and 3 separate fires asking why. This
+# repository is PUBLIC, so its runners are free. core- is this repository's existing
+# convention for a job whose code lives in starfire-core: core-canon-drift,
+# core-learning-daily, core-free-model-tick, core-warm-wave-drain.
+#
+# THE SLOT, 03:40 UTC on Sundays. GitHub's own events reference states that the schedule
+# event is delayed under high load, that the start of every hour is one of those high load
+# times, and that queued jobs may be dropped, so it advises spreading schedules across the
+# hour. Read 2026-09-12. :40 is clear of every other cron in this repository: the 2 hourly
+# jobs sit at :17 and :25, the quarter-hourly one at :00 :15 :30 :45, and the 4 hourly pair
+# at :20 and :50. Weekly is what the card asks for and is enough: the window is 21 days, so
+# a weekly pass keeps every trigger under 7 days old.
+#
+# ONE THING TO KNOW ABOUT SCHEDULES IN A PUBLIC REPOSITORY, from the same page: they are
+# disabled automatically after 60 days with NO repository activity. This repository is
+# committed to far more often than that, so it is a latent risk rather than a live one, and
+# it applies equally to the 4 other core- jobs here. scripts/check-scheduled-jobs-alive.py
+# in starfire-core is the thing that would notice, which is why this job is registered with
+# it rather than only written here.
+#
+# THE OUTPUT IS KEPT OUT OF THIS LOG ON PURPOSE. This repository's Actions logs are world
+# readable and the enricher prints business names, and in its dry run the email address it
+# matched, as it goes. So the whole output goes to a file inside the PRIVATE checkout and is
+# pushed back there, and this log carries the exit code and a line count and nothing else.
+# core-warm-wave-drain and core-canon-drift both already do exactly this.
+#
+# EVERY NON-ZERO EXIT HERE IS A REAL FAULT, so there is no exit code to map to green, and
+# that was checked rather than assumed. Read live off the script on 2026-09-12: it returns 2
+# when the vault will not answer for a database key, and 1 only when most or all of the
+# websites it tried refused to open, which is the shape of being blocked or throttled. A run
+# that opened sites and found no buying signal returns 0. That is the opposite of
+# send-warm-wave.py, whose exit 3 on a correct refusal had to be mapped to success, and the
+# difference is why this file does not copy that mapping.
+#
+# THE VAULT SECRET IS NAMED DIFFERENTLY IN EACH REPOSITORY. starfire-core's workflows read
+# secrets.STARFIRE_VAULT_BEARER. This repository holds it as secrets.VAULT_BEARER, which is
+# what core-warm-wave-drain, echo-session-brief, free-model-worker and sync-pod-key-to-vault
+# all already use here.
+name: core-oj-observation-refresh
+on:
+  schedule:
+    - cron: "40 3 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-observation-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout starfire-core (the repository the enricher lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Re-read the observations
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -o pipefail
+          mkdir -p agent
+          rc=0
+          python3 scripts/oj-enrich-personal-observation.py --apply --rewrite \
+            > agent/oj-observation-refresh.log 2>&1 || rc=$?
+          echo "enricher exit=$rc"
+          echo "log lines: $(wc -l < agent/oj-observation-refresh.log)"
+          # The run count the card asks for, read out of the enricher's own output rather
+          # than recounted here, and safe to print because it is a number.
+          grep -cE '^(wrote|would write) ' agent/oj-observation-refresh.log \
+            | sed 's/^/observations written: /' || true
+          exit $rc
+
+      - name: Push the refreshed log back to the private repository
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-oj-observation-refresh"
+          git config user.email "info@bettersocieties.world"
+          git add agent/oj-observation-refresh.log || true
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "core-oj-observation-refresh: log from public runner ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| oj-enrich-personal-observation | ${{ job.status }} |"
+            echo ""
+            echo "Business detail is in starfire-core at agent/oj-observation-refresh.log, deliberately not here."
+          } >> "$GITHUB_STEP_SUMMARY"
