@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-09-12T21:08:43Z",
-  "total": 1286,
+  "generated_at": "2026-09-13T00:31:17Z",
+  "total": 1284,
   "newly_activated": 0,
   "already_active": 129,
-  "failed": 1140,
+  "failed": 1138,
   "skipped": 15,
   "never_activate_policy": 2,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1140
+    "other": 1138
   },
   "failures": [
     {
@@ -1073,13 +1073,6 @@
     {
       "id": "92qD5jdahLtBrO4x",
       "name": "opsjuice-revops-ae-territory-plan-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "9B0L3gnq3cjFGE8p",
-      "name": "opsjuice-sales-reply-classify",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -4531,13 +4524,6 @@
     {
       "id": "M1EhWKNomtwKm6Q8",
       "name": "sgtl-trust-safety-community-guideline-enforcement",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "M249T9gFVBGwV7tw",
-      "name": "opsjuice-sales-reply-respond",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
