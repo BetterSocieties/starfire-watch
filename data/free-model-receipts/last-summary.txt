@@ -1,1 +1,1 @@
-Free lane dead every cloud fire for 2 stacked reasons, silently burned paid turns instead of showing error, now fixed and live-verified with 645 free models responding and 3 cards closed.
+On 2026-09-12 the team fixed cards 3123, 4504 and 3527 that had left the free AI lane dead and silent in every cloud run due to 2 stacked startup and login failures, and proved the fix works with 645 models responding in 0.847 seconds for 0 dollars while also closing an unprotected paid route open to the internet and fixing safety checks that had skipped 2 folders and missed 3 live cases.
