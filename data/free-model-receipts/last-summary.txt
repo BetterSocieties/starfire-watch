@@ -1,1 +1,1 @@
-We repaired the free‑model lane that was completely down—its startup script crashed and the API key was wrong—by fixing the script’s failure, adding proper authentication, correcting a directory‑filter bug, and now 645 free models respond to calls (e.g., a chat request returns in 0.85 seconds) at $0 cost.
+We fixed three critical bugs—a startup script that exited early, missing authentication keys, and overly permissive routing—so the free‑model lane now returns real answers (showing 645 models, a free chat reply in 0.847 s) and records $0 usage for the month.
