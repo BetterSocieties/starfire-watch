@@ -1,1 +1,1 @@
-Free lane dead in every cloud run for 2 stacked failures, silently burned paid quota instead, now fixed and live-verified with 645 free models answering in 0.847 seconds for 0 dollars.
+Free lane dead for 2 stacked reasons with 0 errors shown so all cloud work burned paid turns instead, now fixed with real health check requiring 645 models back, proper authentication and loopback lockdown, verified with free answer in 0.847 seconds for 0 dollars.
