@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-16T21:48:57Z",
+  "generated_at": "2026-09-17T00:58:18Z",
   "total": 1284,
   "newly_activated": 0,
-  "already_active": 129,
+  "already_active": 130,
   "failed": 1138,
   "skipped": 15,
-  "never_activate_policy": 2,
+  "never_activate_policy": 1,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
@@ -8060,15 +8060,10 @@
       "id": "tUxaj0MPS9eCnRpO",
       "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
-    },
-    {
-      "id": "xNWE0BuyBOePIBbU",
-      "name": "OpsJuice Cold Outreach (Phase 1)",
-      "reason": "policy: never-activate, see config/never-activate.txt"
     }
   ],
   "never_activate_guard": {
-    "checked": 2,
+    "checked": 1,
     "corrected": 0,
     "corrections": []
   }
