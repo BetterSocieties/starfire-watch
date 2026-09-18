@@ -1,1 +1,2 @@
-[llm-router] bulk -> omniroute/auto/best-free→@cf/openai/gpt-oss-120b, 1693 tokens, $0
+[llm-router] auto/best-free ran out of room at 400, asking again with 4000
+[llm-router] bulk -> omniroute/auto/best-free→@cf/nvidia/nemotron-3-120b-a12b, 4140 tokens, $0
