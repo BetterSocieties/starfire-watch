@@ -1,1 +1,1 @@
-The free model lane was not working properly in the cloud due to 2 main issues: the script that starts the free gateway was terminating early and the authentication process for the inference plane was not set up correctly, but these issues have now been fixed.
+The company's free model service was not working properly due to 2 main issues, but after several fixes, including updating authentication and health check processes, the service is now working correctly and users can access free models again.
