@@ -1,0 +1,29 @@
+name: mbj-cloud-continuation
+on:
+  workflow_dispatch: {}
+concurrency:
+  group: mbj-cloud-continuation
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  continue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: codex/mbj-migration-20260921
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate isolated builder image
+        working-directory: core/scripts
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s 15m docker build -t mbj-cloud-builder:validate -f mbj-cloud-builder.Dockerfile . >/tmp/mbj-image.log 2>&1
+          env -u GH_PAT -u GITHUB_TOKEN -u VAULT_BEARER -u GEMINI_API_KEY -u GROQ_API_KEY \
+            docker run --rm --network=none --read-only --tmpfs /tmp -e HOME=/tmp mbj-cloud-builder:validate -lc '
+              opencode --version && git --version && python3 --version && test ! -e /Users/adrienharrison && test -z "${GH_PAT:-}${GITHUB_TOKEN:-}${VAULT_BEARER:-}${GEMINI_API_KEY:-}${GROQ_API_KEY:-}" && ! sh -c "echo no >/etc/mbj-write-probe"' >/tmp/mbj-image-probe.log 2>&1
