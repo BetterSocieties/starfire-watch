@@ -17,7 +17,10 @@ jobs:
           ref: codex/mbj-migration-20260921
           token: ${{ secrets.GH_PAT }}
           path: core
-          fetch-depth: 0
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts/mbj-cloud-builder.Dockerfile
+          sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Validate isolated builder image
         working-directory: core/scripts
