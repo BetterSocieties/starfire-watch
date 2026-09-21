@@ -5,11 +5,11 @@ concurrency:
   group: mbj-cloud-continuation
   cancel-in-progress: false
 permissions:
-  contents: read
+  contents: write
 jobs:
   continue:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:
@@ -18,15 +18,42 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           path: core
           fetch-depth: 1
-          sparse-checkout: |
-            scripts/mbj-cloud-builder.Dockerfile
-          sparse-checkout-cone-mode: false
           persist-credentials: false
-      - name: Validate isolated builder image
-        working-directory: core/scripts
+      - name: Build and test isolated continuation
+        working-directory: core
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=30s 15m docker build -t mbj-cloud-builder:validate -f mbj-cloud-builder.Dockerfile . >/tmp/mbj-image.log 2>&1
-          env -u GH_PAT -u GITHUB_TOKEN -u VAULT_BEARER -u GEMINI_API_KEY -u GROQ_API_KEY \
-            docker run --rm --network=none --read-only --tmpfs /tmp -e HOME=/tmp mbj-cloud-builder:validate -lc '
-              opencode --version && git --version && python3 --version && test ! -e /Users/adrienharrison && test -z "${GH_PAT:-}${GITHUB_TOKEN:-}${VAULT_BEARER:-}${GEMINI_API_KEY:-}${GROQ_API_KEY:-}" && ! sh -c "echo no >/etc/mbj-write-probe"' >/tmp/mbj-image-probe.log 2>&1
+          exec >/tmp/mbj-build-test.log 2>&1
+          docker build -t mbj-cloud-builder:local -f scripts/mbj-cloud-builder.Dockerfile scripts
+          bash scripts/tests/test-mbj-cloud-continuation.sh
+          bash scripts/tests/test-sync-omniroute-free-providers.sh
+          bash scripts/tests/test-start-free-gateway-gemini-only.sh
+      - name: Run private continuation
+        working-directory: core
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          exec >/tmp/mbj-checkpoint.log 2>&1
+          timeout --signal=TERM --kill-after=30s 35m bash scripts/mbj-cloud-continuation.sh
+      - name: Save private checkpoint
+        if: always()
+        working-directory: core
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          exec >/tmp/mbj-save-checkpoint.log 2>&1
+          git restore --staged -- agent/mbj-cloud-continuation 2>/dev/null || true
+          test -f agent/mbj-cloud-continuation/state.json || exit 0
+          find agent/mbj-cloud-continuation/candidates -mindepth 1 \( ! -type f -o -type l \) -print -quit | grep -q . && exit 64 || true
+          find agent/mbj-cloud-continuation/candidates -type f ! -name CHECKPOINT.md ! -name '*.patch' ! -name '*.txt' -print -quit | grep -q . && exit 64 || true
+          grep -RIEq 'BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' agent/mbj-cloud-continuation/candidates && exit 64 || true
+          git add -- agent/mbj-cloud-continuation/state.json agent/mbj-cloud-continuation/candidates
+          bad="$(git diff --cached --name-only | awk '$0 != "agent/mbj-cloud-continuation/state.json" && $0 !~ /^agent\/mbj-cloud-continuation\/candidates\// {print; exit}')"
+          test -z "$bad"
+          git diff --cached --quiet && exit 0
+          git -c user.name='MBJ cloud checkpoint' -c user.email='mbj-cloud@users.noreply.github.com' commit -m 'checkpoint: mbj cloud continuation'
+          auth="$(printf 'x-access-token:%s' "$GH_PAT" | base64 | tr -d '\n')"
+          GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraheader GIT_CONFIG_VALUE_0="AUTHORIZATION: Basic ${auth}" \
+            git push https://github.com/BetterSocieties/starfire-core.git HEAD:codex/mbj-migration-20260921
