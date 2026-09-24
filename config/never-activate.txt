@@ -15,5 +15,18 @@
 # Removing a line here is a decision for whoever owns OpsJuice cold sending, made on the
 # record in a commit that says why, the same way this comment says why the line was added.
 # xNWE0BuyBOePIBbU released 2026-09-16 on card 3916, on the two live numbers the hold named: a mailbox verifier answering again, and a 3 day bounce rate of 0.0 in every 100 against a line of 2.0. Matching removal made in starfire-core config/deliberately-paused-workflows.txt in the same hour.
+#
+# REASON CORRECTED 2026-09-24 by profit-pulse-A-20260924T1408Z, and the hold itself is
+# UNCHANGED. The line below used to say sending was stopped until Adrien had reviewed the new
+# HTML templates, and that reversing it was his decision. Both were withdrawn in starfire-core
+# on 2026-09-10 by profit-pulse-A-20260910T1810Z, evidence
+# evidence/oj-send-hold-names-the-wrong-reason-2026-09-10/, verify-claim exit 0: that review
+# was carried out that day against all 4 wired letters and they pass every rail, and under the
+# gate model Adrien locked on 2026-07-05 a taste or copy call is explicitly not a blocking
+# gate. starfire-core was corrected that day and this copy was not, so for 14 days the two
+# repositories carried different reasons for the same hold, and THIS is the copy that enforces
+# it on every run. A fire reading the old wording concludes it is waiting on a person and
+# stops testing the condition, which is exactly the stale directive failure. The reason below
+# now names the thing that is actually measured, so a fire can test it instead of waiting.
 
-0fgWEQgSDZUMy9fB  OJ-Followup-Engine. Sending is deliberately stopped across OpsJuice until Adrien has reviewed the new HTML templates that another agent has just wired into this workflow, the same hold that already covers xNWE0BuyBOePIBbU. Found live at 23:18:32Z on 2026-09-06/07 with its schedule trigger, manual trigger and webhook trigger all enabled while 353 follow-ups sat overdue behind it; the schedule and webhook triggers were disabled by hand at 23:19:18Z, manual left enabled so it can still be run deliberately. Added 2026-09-07. Reversing this is Adrien's decision, made on the record in a commit that says why, the same as the entry above.
+0fgWEQgSDZUMy9fB  OJ-Followup-Engine. Held on the BOUNCE CEILING, which is a measured condition and not a person: the hold lifts when the trailing 30 day OpsJuice bounce rate reads under 2.0 in every 100, read by python3 scripts/check-oj-bounce-rate.py --window 30 in starfire-core. Read live 2026-09-24 it is 637 verdicts, 19 back, 2.98 in every 100, so the condition is NOT met and this stands. The fresh 3 day batch is separately clean at 0 of 33 and is a different question, card 3483; do not read it as the release. This engine is un-held SECOND and never first, after xNWE0BuyBOePIBbU which was released 2026-09-16, because 829 records were counted due behind it on 2026-09-24, 644 on rung 0, 94 on rung 1 and 91 on rung 2, up from the 353 found overdue when the hold went on. Its schedule and webhook triggers were disabled by hand at 23:19:18Z on 2026-09-06/07 and its manual trigger was left enabled on purpose. Its silence is intentional, not a defect; do not fix it by re-enabling either trigger, which is the incident in starfire-core ops/proofs/oj-cold-engine-rearmed-and-fixed-2026-09-07.md. Added 2026-09-07, reason corrected 2026-09-24. Removing this line is the same decision as removing the matching line in starfire-core config/deliberately-paused-workflows.txt, made in both places at once.
