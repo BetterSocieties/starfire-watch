@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-24T00:59:18Z",
-  "total": 1285,
+  "generated_at": "2026-09-24T07:53:54Z",
+  "total": 1286,
   "newly_activated": 0,
-  "already_active": 131,
+  "already_active": 132,
   "failed": 1138,
   "skipped": 15,
   "never_activate_policy": 1,
