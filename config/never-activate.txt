@@ -29,15 +29,37 @@
 # stops testing the condition, which is exactly the stale directive failure. The reason below
 # now names the thing that is actually measured, so a fire can test it instead of waiting.
 #
-# WAITING DOES NOT CLEAR THIS HOLD, and that sentence corrects the one the same fire wrote an
-# hour earlier in commit e43a9b8f, which implied the rate falls under the line on its own as
-# the 2 historical waves age out. Measured after it was written: the window that would REMAIN
-# once those waves leave, meaning every send from 2026-09-10, is 257 letters, 251 delivered
-# and 6 bounced, 2.33 in every 100, still above the line. Aging the old bounces out moves the
-# rate from 2.98 to about 2.33 and stops. With those 6 bounces standing, a rate under 2.0
-# needs more than 300 verdicts in the window, about 43 more clean letters than the 257 there
-# now, and one further bounce puts it back by roughly 50 more. So the release is on the order
-# of 43 clean letters away rather than a month of calendar, which is why card 4651, pricing a
-# warm batch BEFORE it sends, is the path to the release and not merely a guard on it.
+# WHICH NUMBER TO READ, corrected 2026-09-24 after an audit caught the same fire quoting the
+# wrong one. python3 scripts/check-oj-bounce-rate.py --window 30 prints a HEADLINE of 637
+# verdicts, 19 back, 2.98 in every 100, and under it prints "of which follow-up letters: 117
+# reached a verdict, 0 came back" and "the first touches alone: 520 resolved, 19 came back,
+# 3.65 in every 100". Read the FIRST TOUCHES line, not the headline. The 2 things that really
+# hold or throttle sending call gate.bounce_report() without the letters argument, at
+# scripts/oj-bounce-circuit-breaker.py line 640 and send-warm-wave.py line 2161, so both
+# compute 3.65; only the CLI passes letters and prints 2.98. The headline is also the more
+# flattering one for a bad reason: the 117 follow-up letters diluting it all arrived, and they
+# exist only because the follow-up engine sent before it was held, so while it stays dark they
+# age out and the headline drifts up toward 3.65 on its own. The hold is unmet on either
+# reading, so nothing about the decision below changes, only the figure to quote.
+#
+# WAITING DOES NOT CLEAR THIS HOLD, and that sentence corrects the one the same fire wrote
+# here an hour earlier, which said the rate falls under the line on its own as the 2 historical
+# bad waves leave the window on about 2026-10-10. It was written before it was measured and the
+# measurement disagrees. Estimated on the raw rows, which is an estimate and not a gate
+# reading: every send from 2026-09-10, which IS the window that would remain once those waves
+# leave, is 257 letters, 251 delivered, 6 bounced, 2.33 in every 100, still above the line.
+# Aging the old bounces out moves the rate down and stops above 2.0, it does not cross it. The
+# reason is that warm_wave_f, the only wave sending in volume, is itself at 2.34 in every 100
+# over 209 delivered and 5 bounced, so sending more of that same mix holds the rate where it
+# is, because it IS the rate.
+#
+# WHAT THE RELEASE ACTUALLY NEEDS. Clean volume, not calendar. On the raw-row estimate above,
+# with 6 bounces standing, a rate under 2.0 needs more than 300 verdicts in the window, about
+# 43 more clean letters than the 257 there now, and one further bounce puts it back by roughly
+# 50 more. That is why card 4651, pricing a warm batch BEFORE it sends, is the route to the
+# release and not merely a guard on it, and why card 4652 matters just as much: the OpsJuice
+# cold first touch lane, which holds 348 verified named prospects and is the natural source of
+# those clean letters, put out 0 letters on 3 consecutive weekdays, 2026-09-21, 09-22 and
+# 09-23, with 6 causes ruled out live on that card.
 
-0fgWEQgSDZUMy9fB  OJ-Followup-Engine. Held on the BOUNCE CEILING, which is a measured condition and not a person: the hold lifts when the trailing 30 day OpsJuice bounce rate reads under 2.0 in every 100, read by python3 scripts/check-oj-bounce-rate.py --window 30 in starfire-core. Read live 2026-09-24 it is 637 verdicts, 19 back, 2.98 in every 100, so the condition is NOT met and this stands. The fresh 3 day batch is separately clean at 0 of 33 and is a different question, card 3483; do not read it as the release. This engine is un-held SECOND and never first, after xNWE0BuyBOePIBbU which was released 2026-09-16, because 829 records were counted due behind it on 2026-09-24, 644 on rung 0, 94 on rung 1 and 91 on rung 2, up from the 353 found overdue when the hold went on. Its schedule and webhook triggers were disabled by hand at 23:19:18Z on 2026-09-06/07 and its manual trigger was left enabled on purpose. Its silence is intentional, not a defect; do not fix it by re-enabling either trigger, which is the incident in starfire-core ops/proofs/oj-cold-engine-rearmed-and-fixed-2026-09-07.md. Added 2026-09-07, reason corrected 2026-09-24. Removing this line is the same decision as removing the matching line in starfire-core config/deliberately-paused-workflows.txt, made in both places at once.
+0fgWEQgSDZUMy9fB  OJ-Followup-Engine. Held on the BOUNCE CEILING, which is a measured condition and not a person: the hold lifts when the trailing 30 day OpsJuice first touch bounce rate reads under 2.0 in every 100, read off the "first touches alone" line of python3 scripts/check-oj-bounce-rate.py --window 30 in starfire-core, which is the figure the circuit breaker and the warm sender both compute. Read live 2026-09-24 it is 520 resolved, 19 back, 3.65 in every 100, so the condition is NOT met and this stands; the same command's headline of 637, 19 and 2.98 is diluted by 117 follow-up letters and is not what gates sending. The fresh 3 day batch is separately clean at 0 of 33 and is a different question, card 3483; do not read it as the release. This engine is un-held SECOND and never first, after xNWE0BuyBOePIBbU which was released 2026-09-16, because 829 records were counted due behind it on 2026-09-24, 644 on rung 0, 94 on rung 1 and 91 on rung 2, up from the 353 found overdue when the hold went on. Its schedule and webhook triggers were disabled by hand at 23:19:18Z on 2026-09-06/07 and its manual trigger was left enabled on purpose. Its silence is intentional, not a defect; do not fix it by re-enabling either trigger, which is the incident in starfire-core ops/proofs/oj-cold-engine-rearmed-and-fixed-2026-09-07.md. Added 2026-09-07, reason corrected 2026-09-24. Removing this line is the same decision as removing the matching line in starfire-core config/deliberately-paused-workflows.txt, made in both places at once.
