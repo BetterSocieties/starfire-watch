@@ -41,6 +41,13 @@ jobs:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.GH_PAT }}
           path: core
+          # CARD 4034, 2026-09-25. This was shallow, at actions/checkout's default depth
+          # of 1. The push step below now calls scripts/push-to-main.sh, which rebases
+          # onto origin/main, and a rebase needs history to stand on. Migrating the push
+          # without this would trade the exit 128 dirty-tree failure for a rebase that
+          # cannot find a base. Every workflow here that calls the script uses
+          # fetch-depth: 0.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
