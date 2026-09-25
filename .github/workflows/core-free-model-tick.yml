@@ -50,14 +50,37 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # ADDED 2026-09-25, card 4693, after this job had failed its newest 10 runs.
+          # Without this the runner has no free lane at all, and the failure reads as a
+          # product fault rather than a missing credential. The self-test's last 2 legs go
+          # through the OmniRoute gateway, and the router reaches that only by asking the
+          # vault for the hosted address and for the gateway key; both lookups need a
+          # bearer, nothing answers on a runner's loopback, and this job never passed one.
+          # free-model-worker.yml in this same repository has carried exactly this line
+          # since 2026-09-04 and is alive on schedule, which is the proof that the secret
+          # exists here and works. Read live 2026-09-25 from run 36097015342: the step
+          # printed "self-test exit=1" while the identical command in a cloud container
+          # exited 0 on "PASS omniroute/auto/best-free: 839 tokens, $0".
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           if [ -z "${GROQ_API_KEY}${GEMINI_API_KEY}${OPENROUTER_API_KEY}" ]; then
             echo "no free-model secrets; skip self-test"
             exit 0
           fi
+          if [ -z "${STARFIRE_VAULT_BEARER}" ]; then
+            echo "no vault bearer, so the OmniRoute legs of this self-test cannot authenticate"
+            echo "and a run here would fail for a missing credential rather than a real fault."
+            echo "This is a real gap, not a pass: fix the VAULT_BEARER secret."
+            exit 1
+          fi
           mkdir -p agent
           rc=0; python3 scripts/llm-router.py --self-test > agent/free-model-tick-selftest.log 2>&1 || rc=$?
-          echo "self-test exit=$rc"; exit $rc
+          echo "self-test exit=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "----- router self-test log -----"
+            cat agent/free-model-tick-selftest.log || true
+          fi
+          exit $rc
 
       # --verify proves the generator converged against its own output rather than trusting
       # that it ran. A generator that does not converge is a real defect and must not be
