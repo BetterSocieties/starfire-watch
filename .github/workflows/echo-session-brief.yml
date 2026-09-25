@@ -90,6 +90,15 @@ jobs:
           tail -2 agent/echo-session-brief-last.log | head -1 | cut -c1-160
           exit $rc
 
+      # Card 4034: this hand-rolled retry loop (`git push ... || { git fetch && git
+      # rebase || git rebase --abort; }`) is exactly the pattern scripts/push-to-main.sh
+      # in starfire-core was written to replace: a dirty tree makes `git rebase` refuse
+      # to start, the unconditional `git rebase --abort` then fails because no rebase is
+      # in progress, and under this shell's default -e that failure dies the step at
+      # exit 128 after the brief itself already ran clean. This step checks out
+      # starfire-core into core/ and pushes there, so it can call that checkout's own
+      # copy of the script directly, matching core-warm-wave-drain.yml and
+      # core-oj-observation-refresh.yml.
       - name: Commit the last log so a fire can see whether this actually ran
         if: always()
         working-directory: core
@@ -99,7 +108,4 @@ jobs:
           git add agent/echo-session-brief-last.log || true
           if git diff --cached --quiet; then echo "no change in brief log"; exit 0; fi
           git commit -m "echo-session-brief: last run from public runner ${{ github.run_id }}"
-          for i in 1 2 3 4 5; do
-            git push origin HEAD:main && exit 0 || { git fetch origin main && git rebase origin/main || git rebase --abort; }
-          done
-          echo "push failed after 5 attempts" >&2; exit 1
+          bash scripts/push-to-main.sh
