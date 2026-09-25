@@ -1,1 +1,1 @@
-The company's free model service was not working properly due to 2 main issues, but after several fixes, it is now working correctly and users can access free models without being charged.
+The company's free model service was not working properly due to 2 main issues, but after several fixes, including updating authentication and health check processes, the service is now working correctly and providing free model access to users.
