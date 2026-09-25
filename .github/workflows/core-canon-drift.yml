@@ -134,6 +134,18 @@ jobs:
             --gate "contentid=${{ steps.contentid.outcome }}" \
             --gate "withdrawn=${{ steps.withdrawn.outcome }}"
 
+      # Card 4034: this hand-rolled retry loop (`git push ... || { git fetch && git
+      # rebase || git rebase --abort; }`) is exactly the pattern scripts/push-to-main.sh
+      # in starfire-core was written to replace. The gate steps above rewrite
+      # STATE/fire-checks-*.json as their own bookkeeping, so the tree here is routinely
+      # dirty when this step runs; a dirty tree makes `git rebase` refuse to start, the
+      # unconditional `git rebase --abort` that followed then failed because no rebase
+      # was in progress, and under this shell's default -e that failure died the step at
+      # exit 128 after every gate above had already passed. push-to-main.sh stashes the
+      # dirty tree before rebasing and only aborts a rebase that actually started. This
+      # step checks out starfire-core into core/ and pushes there, so it can call that
+      # checkout's own copy of the script directly, matching core-warm-wave-drain.yml
+      # and core-oj-observation-refresh.yml.
       - name: Push the detail back to the private repository
         if: always()
         working-directory: core
@@ -143,10 +155,7 @@ jobs:
           git add agent/canon-drift-* STATE/cards-to-file.json || true
           if git diff --cached --quiet; then echo "no change in gate detail"; exit 0; fi
           git commit -m "canon-drift: gate detail from public runner ${{ github.run_id }}"
-          for i in 1 2 3 4 5; do
-            git push origin HEAD:main && exit 0 || { git fetch origin main && git rebase origin/main || git rebase --abort; }
-          done
-          echo "could not push gate detail; the verdict below still stands" >&2
+          bash scripts/push-to-main.sh
 
       - name: Summary
         if: always()
