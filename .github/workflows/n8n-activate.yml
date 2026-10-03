@@ -3,18 +3,29 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main]
-    paths: [".github/workflows/n8n-activate.yml", "scripts/n8n-activate.sh"]
+    paths: [".github/workflows/n8n-activate.yml", "scripts/n8n-activate.sh", "scripts/test-n8n-activation-report.sh"]
   schedule:
     - cron: "51 */2 * * *"
 concurrency:
   group: n8n-pod-mutations
   cancel-in-progress: false
 permissions:
-  contents: write
+  contents: read
 jobs:
+  regression:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: offline activation report regression
+        run: bash scripts/test-n8n-activation-report.sh
   activate:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: gate on key
@@ -22,29 +33,87 @@ jobs:
         env:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
         run: |
-          if [ -z "$N8N_API_KEY" ]; then echo "ready=no" >> "$GITHUB_OUTPUT"; echo "no key yet"; else echo "ready=yes" >> "$GITHUB_OUTPUT"; fi
+          if [ -z "$N8N_API_KEY" ]; then echo "missing n8n API key"; exit 1; fi
+          echo "ready=yes" >> "$GITHUB_OUTPUT"
       - name: read pod url
         if: steps.gate.outputs.ready == 'yes'
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
-          token: ${{ secrets.CORE_READ_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
           path: core
-          sparse-checkout: config/n8n-cloud-url
+          fetch-depth: 0
+          sparse-checkout: |
+            config/n8n-cloud-url
+            STATE/n8n-activate-report.json
+            scripts/push-to-main.sh
+          sparse-checkout-cone-mode: false
       - name: activate all workflows
         if: steps.gate.outputs.ready == 'yes'
         env:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_PRIVATE_REPORT: core/STATE/n8n-activate-report.json
         run: |
           export N8N_URL="$(cat core/config/n8n-cloud-url)"
           bash scripts/n8n-activate.sh
       - name: publish activate report
-        if: always() && steps.gate.outputs.ready == 'yes'
+        if: ${{ !cancelled() && steps.gate.outputs.ready == 'yes' }}
         run: |
-          test -f data/n8n-activate-report.json || exit 0
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 - <<'PY'
+          import json, os, pathlib, re, sys
+          from datetime import datetime
+          private = pathlib.Path('core/STATE/n8n-activate-report.json')
+          public = pathlib.Path('data/n8n-activate-summary.json')
+          try:
+              a, b = json.loads(private.read_text()), json.loads(public.read_text())
+              allowed = {'run_id', 'run_attempt', 'generated_at', 'status', 'enumeration_complete',
+                         'total', 'newly_activated', 'already_active', 'failed',
+                         'skipped', 'never_activate_policy', 'archived', 'buckets',
+                         'never_activate_guard'}
+              if set(b) != allowed or set(b['buckets']) != {'missing_cred', 'webhook_collision', 'no_trigger', 'other'}:
+                  raise ValueError()
+              if set(b['never_activate_guard']) != {'checked', 'corrected', 'failed'}:
+                  raise ValueError()
+              counts = ('total', 'newly_activated', 'already_active', 'failed',
+                        'skipped', 'never_activate_policy', 'archived')
+              values = [b[key] for key in counts]
+              values += list(b['buckets'].values()) + list(b['never_activate_guard'].values())
+              if any(type(value) is not int or value < 0 for value in values):
+                  raise ValueError()
+              if type(b['enumeration_complete']) is not bool or b['status'] not in ('success', 'failure'):
+                  raise ValueError()
+              if not isinstance(b['run_id'], str) or not re.fullmatch(r'[A-Za-z0-9-]{1,64}', b['run_id']):
+                  raise ValueError()
+              if not isinstance(b['run_attempt'], str) or not re.fullmatch(r'[1-9][0-9]*', b['run_attempt']):
+                  raise ValueError()
+              if not isinstance(b['generated_at'], str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z', b['generated_at']):
+                  raise ValueError()
+              datetime.strptime(b['generated_at'], '%Y-%m-%dT%H:%M:%SZ')
+              if a['run_id'] != b['run_id'] or b['run_id'] != os.environ['GITHUB_RUN_ID']:
+                  raise ValueError()
+              if a['run_attempt'] != b['run_attempt'] or b['run_attempt'] != os.environ['GITHUB_RUN_ATTEMPT']:
+                  raise ValueError()
+              if any(a[key] != b[key] for key in allowed - {'never_activate_guard'}):
+                  raise ValueError()
+              if any(a['never_activate_guard'][key] != b['never_activate_guard'][key] for key in ('checked', 'corrected', 'failed')):
+                  raise ValueError()
+          except (OSError, ValueError, KeyError, TypeError):
+              print('fresh matching activation reports missing or invalid', file=sys.stderr)
+              sys.exit(1)
+          PY
+          git -C core config user.name starfire-watch
+          git -C core config user.email actions@users.noreply.github.com
+          git -C core add STATE/n8n-activate-report.json
+          git -C core diff --cached --quiet || git -C core commit -q -m "n8n activation private report $GITHUB_RUN_ID"
+          if ! (cd core && bash scripts/push-to-main.sh >/dev/null 2>&1); then
+            echo "private report publication failed" >&2
+            exit 1
+          fi
           git config user.name starfire-watch
           git config user.email actions@users.noreply.github.com
-          git add data/n8n-activate-report.json
-          git diff --cached --quiet || git commit -m "n8n-activate report $(date -u +%FT%TZ)"
-          for i in 1 2 3; do git push && break || { git pull --rebase; }; done
+          git add data/n8n-activate-summary.json
+          git diff --cached --quiet || git commit -q -m "n8n activation counts $GITHUB_RUN_ID"
+          if ! git push -q origin HEAD:main >/dev/null 2>&1; then
+            echo "public summary publication failed" >&2
+            exit 1
+          fi
