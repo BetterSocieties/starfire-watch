@@ -79,3 +79,13 @@ jobs:
         run: |
           python3 ../../scripts/write-the-floor-feed.py --check-public dist
           npx wrangler pages deploy dist --project-name=starfireos --branch main --commit-dirty=true
+
+      - name: Verify deployed version
+        working-directory: apps/starfire-os
+        run: |
+          python3 ../../scripts/verify-os-deployment.py dist/build-stamp.json https://starfireos.pages.dev
+          home_status="$(curl -q --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' --url https://starfireos.pages.dev)"
+          if [[ "$home_status" != "200" ]]; then
+            printf '[os-deploy] homepage returned HTTP %s, expected 200\n' "$home_status" >&2
+            exit 1
+          fi

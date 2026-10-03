@@ -102,6 +102,7 @@ unset FLOOR_SELF_TEST_EXIT
 
 deploy_command="$(awk '
   /- name: Deploy to Cloudflare Pages/ { in_step = 1; next }
+  in_step && /^      - name:/ { exit }
   in_step && /^        run: \|/ { run = 1; next }
   run && /^          / { sub(/^          /, ""); print }
 ' "$workflow_file")"
