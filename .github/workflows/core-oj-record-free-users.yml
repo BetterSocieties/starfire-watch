@@ -1,0 +1,53 @@
+# Reconcile OpsJuice free-door completions into oj_free_users on a schedule, so the OJ
+# Stage 0 counter moves. scripts/oj-record-free-users.py existed but was scheduled nowhere.
+#
+# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
+# PRIVATE repositories only. starfire-core is private, so a scheduled job there is refused a
+# runner. This repository is PUBLIC, so its runners are free. core- is this repository's
+# convention for a job whose code lives in starfire-core.
+#
+# THE LOG IS WORLD READABLE. The only thing the recorder prints is its own --json summary
+# line, which carries counts (arrivals, written), never a key or an address.
+#
+# THE VAULT SECRET IS NAMED secrets.VAULT_BEARER HERE (starfire-core calls it
+# STARFIRE_VAULT_BEARER). The recorder re-runs itself under scripts/vault-get.py to fetch
+# OJ_SUPABASE_SECRET_KEY. N8N_URL is needed to read the pod events.
+name: core-oj-record-free-users
+on:
+  schedule:
+    - cron: "40 3 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-record-free-users
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout starfire-core (the repository the recorder lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Record free-door completions
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          N8N_URL: https://n8n.opsjuice.com
+        run: |
+          set -eo pipefail
+          python3 scripts/oj-record-free-users.py --json
