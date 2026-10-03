@@ -1,0 +1,87 @@
+{
+  "verdict": "pass",
+  "brief_sha256": "841e1c25a6b1117692c40c499610b8115c44963ca57add41d1729f3b5cb9e4a9",
+  "scope": "Local workflow contract only. No production rollout, deployed source, safe rollback, scheduled refresh, UI, cost, or whole-audit certification. Core verify-os-deployment.py must land before this watch workflow is activated. That dependency is not certified as deployed.",
+  "time": "2026-10-03T07:54:18Z",
+  "profile": "Dated 2026-10-03 Codex audit profile, before 2026-10-20T15:00:00Z cutoff. No authoritatively known earlier actual subscription expiry. Loaded mbj-codex and full canonical starfire-qa. Fresh requirements-only context; no builder reports or earlier verdicts read.",
+  "browser": "None. Eligible non-UI artifact reviewed through direct source inspection and executed shell blocks with isolated stubs. Primary reference pages opened with web tool. No real curl, deployment, provider call, credential read or workflow dispatch.",
+  "bar_sources": [
+    {
+      "address": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "page_stated_date": "No publication or update date visible; footer states copyright 2026.",
+      "what_it_does_better": "Defines runner shell and step semantics authoritatively. Linux default is bash -e; working-directory scopes command execution. Candidate follows these semantics without conditional verification or continue-on-error. Independently exercised using bash -e as well as the regression script's stricter shell."
+    },
+    {
+      "address": "https://curl.se/docs/manpage.html",
+      "page_stated_date": "No publication or update date visible.",
+      "what_it_does_better": "Defines config suppression, transfer timeout, status output and redirect behavior precisely. Candidate uses -q first, max-time 5, /dev/null output and http_code, with no redirect option. Shell tests reject non-200 statuses and request errors."
+    },
+    {
+      "address": "https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/",
+      "page_stated_date": "Last updated Sep 18, 2026",
+      "what_it_does_better": "Official example reports a GitHub Deployment and explicitly specifies job permissions; candidate does not provide that reporting. Both upload the built output directory using Wrangler. Candidate adds a revision check after upload; no live deployment or release claim follows from this local review."
+    }
+  ],
+  "live_checks": [
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-watch-audit-20261003/.github/workflows/os-deploy.yml",
+      "status": 0,
+      "sha256": "8c22a45884772fa4e102e01a9b19612e6afc78d48e9d0a5087e0b63d96f6a733",
+      "quoted": "python3 ../../scripts/verify-os-deployment.py dist/build-stamp.json https://starfireos.pages.dev",
+      "observed": "Deploy starts at line 74, verification at 83. Verification working-directory is apps/starfire-os, has no if or continue-on-error, and follows upload. Floor generation and self-test precede build; final check-public dist immediately precedes upload. Full workflow inspected. Scoped tracked diff adds ten verification lines and no other workflow change.",
+      "runtime": [
+        "Actual verification run block extracted with awk and executed under bash -e with exported shell-function stubs, no filesystem artifacts or network calls.",
+        "Success: helper arguments ../../scripts/verify-os-deployment.py|dist/build-stamp.json|https://starfireos.pages.dev; curl arguments -q|--silent|--show-error|--max-time|5|--output|/dev/null|--write-out|%{http_code}|--url|https://starfireos.pages.dev; success-marker; EXIT 0.",
+        "Helper failure: helper called with exact arguments; no curl; no success-marker; EXIT 19.",
+        "HTTP 302: [os-deploy] homepage returned HTTP 302, expected 200; no success-marker; EXIT 1.",
+        "HTTP 503: [os-deploy] homepage returned HTTP 503, expected 200; no success-marker; EXIT 1.",
+        "Request failure: helper then curl; no success-marker; EXIT 28.",
+        "Extracted verification block bash -n passed. Existing regression test independently verifies logged helper-before-curl order."
+      ]
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-watch-audit-20261003/scripts/test-os-floor-publish.sh",
+      "status": 0,
+      "sha256": "8b3d279a312835214f85beee113feb33848067271e266790795886c64b6a333b",
+      "quoted": "PASS Floor generation, self-test and final publish gate, including exit 23 and mutation",
+      "observed": "Read complete source, executed original script successfully. Tracked diff contains only one inserted next-step extraction terminator. Existing exact generator/self-test command checks, generation failure, self-test failure, final-gate failure, success upload, unsafe mutation execution and mutated-workflow rejection remain intact. All run with temporary command stubs."
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-watch-audit-20261003/scripts/test-os-deployment-verification.sh",
+      "status": 0,
+      "sha256": "84ee7d8b80e6c4edd12372cc28d89486e01bfe9fb5b694f56639e0c4b7f46b8a",
+      "quoted": "PASS deployed-version verification block, failure propagation, exact homepage 200 and removal mutation",
+      "observed": "Read full new untracked test script. Executed original under bash -x and normally. Trace shows positive marker, exact argument/order assertions, helper19 no curl, 302/503 rejection, request28 rejection, and absent success markers. Temporary workflow removes Verify deployed version and original child test rejects it. Additional in-memory reporting instrumentation exposes the actual child failure: FAIL verification must follow deployment. No source edited.",
+      "checks": "bash -n both regression scripts and git diff --check passed. Source SHA256 values unchanged after tests. Entire tracked binary diff before and after clean regression rerun had SHA256 2f1d3c38cee4260759890503175ba93b41399fec19bd6998a1a50be828c4e737. Status shows only workflow modification, extraction-line modification, and new regression script.",
+      "harness_notes": "An initial combined diagnostic left judge shell-function stubs exported into the Floor regression, causing FAIL generation did not precede build. A fresh shell running the unchanged originals passed. An initial in-memory instrumentation invocation lacked BASH_SOURCE and failed before testing; using its original script path for that variable allowed the actual mutation child to execute and reject. Neither harness failure is counted as artifact failure or proof."
+    },
+    {
+      "address": "/private/tmp/astra-floor-integration-20261003.mR3sDf/scripts/verify-os-deployment.py",
+      "status": 0,
+      "sha256": "4367deefd892bbf261263aebb785c9874e421d832553a1fecebeadb2e08a9166",
+      "quoted": "Usage: verify-os-deployment.py EXPECTED_STAMP SITE_URL",
+      "observed": "Read full exact helper source only, per brief. CLI argument order matches workflow. Source reads expected stamp, validates nonempty fields and duplicate keys, fetches public build-stamp.json with bounded retries, and compares source_signature/deployed_at/deployed_by before success. No helper network execution performed; local inspection is not certification that dependency has landed or works live."
+    },
+    {
+      "address": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "status": "opened",
+      "quoted": "bash -e {0}",
+      "observed": "Opened primary page and relevant working-directory and Exit codes and error action preference sections in this session. HTTP status not exposed by web tool."
+    },
+    {
+      "address": "https://curl.se/docs/manpage.html",
+      "status": "opened",
+      "quoted": "The numerical response code that was found in the last retrieved HTTP(S) or FTP(s) transfer.",
+      "observed": "Opened primary manpage, -q first-argument behavior, max-time, http_code and location sections. HTTP status not exposed by web tool."
+    },
+    {
+      "address": "https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/",
+      "status": "opened",
+      "quoted": "pages deploy YOUR_DIRECTORY_OF_STATIC_ASSETS --project-name=YOUR_PROJECT_NAME",
+      "observed": "Opened current Direct Upload CI page and GitHub example. Page states Last updated Sep 18, 2026. HTTP status not exposed by web tool."
+    }
+  ],
+  "negative_control": "Removing the verification step makes its regression fail with FAIL verification must follow deployment. This deliberately false workflow is rejected. No separate hidden false requirement can be identified from the supplied brief.",
+  "fixes": []
+}
+
