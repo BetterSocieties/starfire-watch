@@ -50,14 +50,37 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # ADDED 2026-09-25, card 4693, after this job had failed its newest 10 runs.
+          # Without this the runner has no free lane at all, and the failure reads as a
+          # product fault rather than a missing credential. The self-test's last 2 legs go
+          # through the OmniRoute gateway, and the router reaches that only by asking the
+          # vault for the hosted address and for the gateway key; both lookups need a
+          # bearer, nothing answers on a runner's loopback, and this job never passed one.
+          # free-model-worker.yml in this same repository has carried exactly this line
+          # since 2026-09-04 and is alive on schedule, which is the proof that the secret
+          # exists here and works. Read live 2026-09-25 from run 36097015342: the step
+          # printed "self-test exit=1" while the identical command in a cloud container
+          # exited 0 on "PASS omniroute/auto/best-free: 839 tokens, $0".
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           if [ -z "${GROQ_API_KEY}${GEMINI_API_KEY}${OPENROUTER_API_KEY}" ]; then
             echo "no free-model secrets; skip self-test"
             exit 0
           fi
+          if [ -z "${STARFIRE_VAULT_BEARER}" ]; then
+            echo "no vault bearer, so the OmniRoute legs of this self-test cannot authenticate"
+            echo "and a run here would fail for a missing credential rather than a real fault."
+            echo "This is a real gap, not a pass: fix the VAULT_BEARER secret."
+            exit 1
+          fi
           mkdir -p agent
           rc=0; python3 scripts/llm-router.py --self-test > agent/free-model-tick-selftest.log 2>&1 || rc=$?
-          echo "self-test exit=$rc"; exit $rc
+          echo "self-test exit=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "----- router self-test log -----"
+            cat agent/free-model-tick-selftest.log || true
+          fi
+          exit $rc
 
       # --verify proves the generator converged against its own output rather than trusting
       # that it ran. A generator that does not converge is a real defect and must not be
@@ -79,10 +102,26 @@ jobs:
           python3 scripts/check-agent-host-alive.py > /dev/null
           echo "host alive"
 
-      - name: Commit and push (race-safe)
+      # CARD 4034, 2026-09-25: this step used to carry its own 8 iteration push retry loop.
+      # Card 3029 replaced that pattern with ONE tested script because the copies drift, and
+      # this was the longest copy left. The loop's real failure is not untidiness: the steps
+      # above leave the tree dirty, git rebase then refuses to start, git rebase --abort
+      # fails because no rebase is in progress, and under bash -e the step dies exit 128
+      # after every gate has already passed. Read live on core-canon-drift run 34685411340,
+      # step 10, 2026-09-12T09:19:43Z: "error: cannot rebase: You have unstaged changes."
+      # then "fatal: no rebase in progress" then exit 128. push-to-main.sh stashes around
+      # the rebase and aborts cleanly.
+      #
+      # The old loop also did `git reset --hard origin/main` on a lost race and re-applied
+      # its heartbeats afterwards. That is survivable for disposable bookkeeping and would
+      # be data loss for anything else. The script does not do it.
+      #
+      # This step can call the script directly because working-directory is core, and that
+      # checkout IS starfire-core, so scripts/push-to-main.sh is present at that path. The
+      # shape is copied from core-warm-wave-drain.yml.
+      - name: Commit and push (tested script, card 4034)
         working-directory: core
         run: |
-          set -e
           git config user.name "starfire-free-model-tick"
           git config user.email "info@bettersocieties.world"
           git add agent/free-model-tick-heartbeat.log agent/cloud-tick-heartbeat.log agent/free-model-tick-selftest.log TASKS.md agent/llm-router-usage.jsonl ops/STARFIRE-MASTER-PLAN.md ops/HANDOFF-CURRENT.md 2>/dev/null || true
@@ -91,24 +130,4 @@ jobs:
             exit 0
           fi
           git commit -m "free-model-tick: cloud heartbeat run ${{ github.run_id }} (public runner, zero Claude)"
-          for i in 1 2 3 4 5 6 7 8; do
-            if git push origin HEAD:main; then
-              echo "push_ok attempt=$i"
-              exit 0
-            fi
-            git fetch origin main
-            git reset --hard origin/main
-            # Re-apply the heartbeats after the reset, and rebuild the plan from the NEWER
-            # sources we just took. Never replay our generated copy on top of theirs: it is
-            # disposable by construction, so rebuilding is exactly what this job would have
-            # produced had it started a moment later, and it can never conflict.
-            ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-            echo "$ts host=cloud-free-model-tick status=ok run=${{ github.run_id }} retry=$i" >> agent/cloud-tick-heartbeat.log
-            echo "$ts free-model-tick alive run=${{ github.run_id }} retry=$i" >> agent/free-model-tick-heartbeat.log
-            python3 scripts/build-master-plan.py > /dev/null || true
-            git add agent/free-model-tick-heartbeat.log agent/cloud-tick-heartbeat.log ops/STARFIRE-MASTER-PLAN.md ops/HANDOFF-CURRENT.md
-            git commit -m "free-model-tick: cloud heartbeat run ${{ github.run_id }} retry=$i" || true
-            sleep $((i))
-          done
-          echo "push_failed"
-          exit 1
+          bash scripts/push-to-main.sh

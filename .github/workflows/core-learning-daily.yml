@@ -33,6 +33,13 @@ jobs:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.GH_PAT }}
           path: core
+          # CARD 4034, 2026-09-25. This was shallow, at actions/checkout's default depth
+          # of 1. The push step below now calls scripts/push-to-main.sh, which rebases
+          # onto origin/main, and a rebase needs history to stand on. Every workflow here
+          # that already calls the script checks out with fetch-depth: 0, both
+          # core-warm-wave-drain.yml and core-free-model-tick.yml. Migrating the push
+          # without this would have traded one failure for a different one.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -51,7 +58,17 @@ jobs:
           tail -1 agent/learning-daily-last.log | cut -c1-120
           exit $rc
 
-      - name: Commit results (retry-rebase, HEAD:main per d-cloud-push)
+      # CARD 4034, 2026-09-25: this step used to carry its own 5 iteration push retry loop.
+      # Card 3029 replaced that pattern with ONE tested script because the copies drift and
+      # each one then has to be debugged again. What the loop got wrong, read live on
+      # core-canon-drift run 34685411340, step 10, 2026-09-12T09:19:43Z, after every gate in
+      # that run had already passed: "error: cannot rebase: You have unstaged changes." then
+      # "fatal: no rebase in progress" then exit 128. The steps before a push leave the tree
+      # dirty, git rebase refuses to start, the `|| git rebase --abort` fallback fails
+      # because there is no rebase in progress, and under bash -e the step dies. The script
+      # stashes around the rebase and aborts cleanly, and it pushes with the explicit
+      # HEAD:main refspec exactly as the line it replaces did.
+      - name: Commit results (tested push script, card 4034)
         if: always()
         working-directory: core
         run: |
@@ -60,7 +77,4 @@ jobs:
           git add config/learning-sources.json ops/library/transcripts agent/learning-daily-heartbeat.log agent/learning-daily-last.log agent/learning-daily-misses.json || true
           git diff --cached --quiet && { echo "nothing new"; exit 0; }
           git commit -m "learning-daily: poll + transcript pull (public runner, 0 Claude tokens)"
-          for i in 1 2 3 4 5; do
-            git push origin HEAD:main && exit 0 || { git fetch origin main && git rebase origin/main || git rebase --abort; }
-          done
-          echo "push failed after 5 attempts" >&2; exit 1
+          bash scripts/push-to-main.sh

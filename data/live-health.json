@@ -1,5 +1,5 @@
 {
- "ts": "2026-09-12T12:24:42.899Z",
+ "ts": "2026-10-03T05:19:53.211Z",
  "all_ok": true,
  "checks": [
   {
@@ -33,9 +33,9 @@
   {
    "name": "br-storefront",
    "url": "https://bloodlustreverie.com/",
-   "ok": true,
-   "status": 200,
-   "note": ""
+   "ok": false,
+   "status": 403,
+   "note": "optional;"
   }
  ]
 }

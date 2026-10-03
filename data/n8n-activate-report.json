@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-09-12T11:22:13Z",
-  "total": 1286,
+  "generated_at": "2026-10-03T05:54:53Z",
+  "total": 1288,
   "newly_activated": 0,
-  "already_active": 129,
-  "failed": 1140,
+  "already_active": 134,
+  "failed": 1138,
   "skipped": 15,
-  "never_activate_policy": 2,
+  "never_activate_policy": 1,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
     "no_trigger": 0,
-    "other": 1140
+    "other": 1138
   },
   "failures": [
     {
@@ -1073,13 +1073,6 @@
     {
       "id": "92qD5jdahLtBrO4x",
       "name": "opsjuice-revops-ae-territory-plan-orchestrator",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "9B0L3gnq3cjFGE8p",
-      "name": "opsjuice-sales-reply-classify",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -4531,13 +4524,6 @@
     {
       "id": "M1EhWKNomtwKm6Q8",
       "name": "sgtl-trust-safety-community-guideline-enforcement",
-      "http_code": "400",
-      "bucket": "other",
-      "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
-    },
-    {
-      "id": "M249T9gFVBGwV7tw",
-      "name": "opsjuice-sales-reply-respond",
       "http_code": "400",
       "bucket": "other",
       "message": "{\"message\":\"Cannot activate an archived workflow.\"}"
@@ -8074,15 +8060,10 @@
       "id": "tUxaj0MPS9eCnRpO",
       "name": "BRAIN-010 Karpathy hook (Sun 2:50am)",
       "reason": "mac-local-only or completed oneshot, see SKIP_IDS comment in scripts/n8n-activate.sh"
-    },
-    {
-      "id": "xNWE0BuyBOePIBbU",
-      "name": "OpsJuice Cold Outreach (Phase 1)",
-      "reason": "policy: never-activate, see config/never-activate.txt"
     }
   ],
   "never_activate_guard": {
-    "checked": 2,
+    "checked": 1,
     "corrected": 0,
     "corrections": []
   }

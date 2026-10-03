@@ -1,0 +1,59 @@
+name: mbj-cloud-continuation
+on:
+  workflow_dispatch: {}
+concurrency:
+  group: mbj-cloud-continuation
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  continue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: codex/mbj-migration-20260921
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Build and test isolated continuation
+        working-directory: core
+        run: |
+          set -euo pipefail
+          exec >/tmp/mbj-build-test.log 2>&1
+          docker build -t mbj-cloud-builder:local -f scripts/mbj-cloud-builder.Dockerfile scripts
+          bash scripts/tests/test-mbj-cloud-continuation.sh
+          bash scripts/tests/test-sync-omniroute-free-providers.sh
+          bash scripts/tests/test-start-free-gateway-gemini-only.sh
+      - name: Run private continuation
+        working-directory: core
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          exec >/tmp/mbj-checkpoint.log 2>&1
+          timeout --signal=TERM --kill-after=30s 35m bash scripts/mbj-cloud-continuation.sh
+      - name: Save private checkpoint
+        if: always()
+        working-directory: core
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          exec >/tmp/mbj-save-checkpoint.log 2>&1
+          git restore --staged -- agent/mbj-cloud-continuation 2>/dev/null || true
+          test -f agent/mbj-cloud-continuation/state.json || exit 0
+          find agent/mbj-cloud-continuation/candidates -mindepth 1 \( ! -type f -o -type l \) -print -quit | grep -q . && exit 64 || true
+          find agent/mbj-cloud-continuation/candidates -type f ! -name CHECKPOINT.md ! -name '*.patch' ! -name '*.txt' -print -quit | grep -q . && exit 64 || true
+          grep -RIEq 'BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|bearer[[:space:]]+[A-Za-z0-9._~-]{20,}' agent/mbj-cloud-continuation/candidates && exit 64 || true
+          git add -- agent/mbj-cloud-continuation/state.json agent/mbj-cloud-continuation/candidates
+          bad="$(git diff --cached --name-only | awk '$0 != "agent/mbj-cloud-continuation/state.json" && $0 !~ /^agent\/mbj-cloud-continuation\/candidates\// {print; exit}')"
+          test -z "$bad"
+          git diff --cached --quiet && exit 0
+          git -c user.name='MBJ cloud checkpoint' -c user.email='mbj-cloud@users.noreply.github.com' commit -m 'checkpoint: mbj cloud continuation'
+          auth="$(printf 'x-access-token:%s' "$GH_PAT" | base64 | tr -d '\n')"
+          GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraheader GIT_CONFIG_VALUE_0="AUTHORIZATION: Basic ${auth}" \
+            git push https://github.com/BetterSocieties/starfire-core.git HEAD:codex/mbj-migration-20260921

@@ -99,6 +99,16 @@ jobs:
             exit "$rc"
           fi
           date -u +%Y-%m-%dT%H:%M:%SZ > data/free-model-receipts/last-run.txt
+      # Card 4034: this push step targets starfire-watch itself (the default checkout
+      # above, at the workspace root, no working-directory), and starfire-core's
+      # scripts/push-to-main.sh lives only inside the OTHER checkout, core/, a
+      # different repository this step does not push to. It cannot simply call that
+      # script, so the same two fixes it makes are inlined here instead: stash any
+      # dirty tree before rebasing (a `git pull --rebase` on a dirty tree just fails,
+      # same as a bare `git rebase` would), and only run `git rebase --abort` when a
+      # rebase is actually in progress, since calling it unconditionally on a clean
+      # tree fails with nothing to abort and, under this shell's default -e, that
+      # failure used to die the step at exit 128 rather than retry or report.
       - name: Commit the receipt
         run: |
           git config user.name "starfire-free-model-worker"
@@ -109,11 +119,24 @@ jobs:
           # which exits with the status of the LAST git pull, so 5 lost races reported
           # success and the receipt was silently dropped. Fail out loud instead.
           for i in 1 2 3 4 5; do
-            if git push; then
+            if git push origin HEAD:main; then
               echo "push_ok attempt=$i"
               exit 0
             fi
-            git pull --rebase
+            git fetch origin main
+            stashed=no
+            if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+              git stash push -u -q -m "free-model-worker autostash" && stashed=yes
+            fi
+            if ! git rebase origin/main; then
+              if git rev-parse --verify REBASE_HEAD >/dev/null 2>&1; then
+                git rebase --abort
+              fi
+              [ "$stashed" = yes ] && git stash pop -q 2>/dev/null
+              echo "free-model-worker: rebase onto origin/main conflicted, stopping rather than looping" >&2
+              exit 1
+            fi
+            [ "$stashed" = yes ] && git stash pop -q 2>/dev/null
             sleep $i
           done
           echo "push_failed after 5 attempts"
