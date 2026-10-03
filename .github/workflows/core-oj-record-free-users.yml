@@ -1,4 +1,5 @@
 # Reconcile OpsJuice free-door completions into oj_free_users on a schedule, so the OJ
+# schedule re-registered 2026-10-03 (nudge: first scheduled run had not fired after 3 slots)
 # Stage 0 counter moves. scripts/oj-record-free-users.py existed but was scheduled nowhere.
 #
 # WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
