@@ -18,6 +18,17 @@ PY
 test_root="$(mktemp -d "${TMPDIR:-/tmp}/n8n-report-test.XXXXXXXX")"
 trap 'rm -rf -- "$test_root"' EXIT
 mkdir -p "$test_root/bin" "$test_root/project/scripts" "$test_root/project/config" "$test_root/project/data" "$test_root/project/core/STATE"
+# Keep the fixture independent of ripgrep even on developer machines that have it.
+NO_RG_MARKER="$test_root/unexpected-rg-call"
+export NO_RG_MARKER
+cat > "$test_root/bin/rg" <<'STUB'
+#!/usr/bin/env bash
+: > "$NO_RG_MARKER"
+exit 99
+STUB
+chmod +x "$test_root/bin/rg"
+PATH="$test_root/bin:$PATH"
+export PATH
 cp "$repo/scripts/n8n-activate.sh" "$test_root/project/scripts/n8n-activate.sh"
 printf 'held123 policy hold\n' > "$test_root/project/config/never-activate.txt"
 SKIP_ID="$(awk '/^SKIP_IDS=\(/ { inside=1; next } inside && $1 !~ /^#/ { print $1; exit }' "$repo/scripts/n8n-activate.sh")"
@@ -57,7 +68,7 @@ case "$url:$method" in
   */workflows/bad123/activate:POST) code=400; body='{"message":"SENTINEL_RAW_ERROR unknown failure"}' ;;
   */workflows/held123:GET)
     if [ "$CASE_NAME" = guard_get_fail ]; then code=503; body='{"message":"SENTINEL_RAW_ERROR"}'
-    elif rg -q 'PUT .*/workflows/held123' "$STUB_LOG"; then
+    elif grep -qE 'PUT .*/workflows/held123' "$STUB_LOG"; then
       case "$CASE_NAME" in
         guard_empty_nodes) body='{"id":"held123","nodes":[]}' ;;
         guard_wrong_workflow) body='{"id":"different123","nodes":[{"id":"trigger123","type":"n8n-nodes-base.webhook","disabled":true}]}' ;;
@@ -93,10 +104,26 @@ run_case() {
       N8N_PRIVATE_REPORT="$test_root/project/core/STATE/n8n-activate-report.json" \
       bash scripts/n8n-activate.sh
   ) > "$test_root/log" 2>&1 || rc=$?
-  [ "$rc" -eq "$expected" ] || { echo "$scenario exit $rc, expected $expected"; exit 1; }
-  ! rg -q 'POST .*/workflows/(archived123|held123)/activate' "$test_root/stub-calls" || { echo "$scenario activated held or archived workflow"; exit 1; }
+  if [ "$rc" -ne "$expected" ]; then
+    python3 - "$test_root/project" "$test_root/stub-calls" "$scenario" "$rc" "$expected" <<'PY'
+import collections, json, pathlib, sys
+root, calls, scenario, actual, expected = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), *sys.argv[3:]
+methods = collections.Counter(line.split(' ', 1)[0] for line in calls.read_text().splitlines())
+try:
+    summary = json.loads((root / 'data/n8n-activate-summary.json').read_text())
+    status = summary.get('status', 'missing')
+    guard = summary.get('never_activate_guard', {})
+    guard_counts = {key: guard.get(key, 'missing') for key in ('checked', 'corrected', 'failed')}
+except (OSError, ValueError):
+    status, guard_counts = 'missing_or_invalid', {}
+print(f'{scenario} exit {actual}, expected {expected}; summary_status={status}; guard_counts={guard_counts}; request_methods={dict(methods)}')
+PY
+    [ ! -e "$NO_RG_MARKER" ] || echo 'test invoked unavailable rg'
+    exit 1
+  fi
+  ! grep -qE 'POST .*/workflows/(archived123|held123)/activate' "$test_root/stub-calls" || { echo "$scenario activated held or archived workflow"; exit 1; }
   if [ "$scenario" = guard_missing_identity ] || [ "$scenario" = guard_no_drift ]; then
-    ! rg -q 'PUT .*/workflows/held123' "$test_root/stub-calls" || { echo "$scenario issued an unjustified guard PUT"; exit 1; }
+    ! grep -qE 'PUT .*/workflows/held123' "$test_root/stub-calls" || { echo "$scenario issued an unjustified guard PUT"; exit 1; }
   fi
   python3 - "$test_root/project" "$scenario" "$test_root/log" <<'PY'
 import json, os, pathlib, sys
@@ -195,7 +222,7 @@ GIT_CALL_LOG="$test_root/git-calls"; export GIT_CALL_LOG
   cd "$test_root/project"
   PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 GIT_FAIL_PRIVATE=1 bash "$test_root/publish.sh"
 ) > "$test_root/publish-log" 2>&1 && { echo 'private push failure was masked'; exit 1; }
-! rg -q '/project push -q' "$GIT_CALL_LOG" || { echo 'public push after private failure'; exit 1; }
+! grep -qF '/project push -q' "$GIT_CALL_LOG" || { echo 'public push after private failure'; exit 1; }
 
 python3 - "$test_root/project/data/n8n-activate-summary.json" <<'PY'
 import json, pathlib, sys
@@ -292,7 +319,7 @@ done
   cd "$test_root/project"
   PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 bash "$test_root/publish.sh"
 ) > "$test_root/publish-log" 2>&1
-[ "$(rg -c 'push -q origin HEAD:main' "$GIT_CALL_LOG")" -eq 2 ] || { echo 'private/public publish path incomplete'; exit 1; }
+[ "$(grep -cF 'push -q origin HEAD:main' "$GIT_CALL_LOG")" -eq 2 ] || { echo 'private/public publish path incomplete'; exit 1; }
 
 rm -f "$test_root/project/core/STATE/n8n-activate-report.json"
 : > "$GIT_CALL_LOG"
@@ -337,4 +364,5 @@ rc=0
     bash scripts/n8n-activate.sh
 ) > "$test_root/log" 2>&1 || rc=$?
 [ "$rc" -eq 0 ] || { echo 'mutation did not restore false success'; exit 1; }
-echo 'PASS: 14 offline entrypoint scenarios, private/public publish, private push failure, stale/missing/prior-attempt publication, write failures, false-success mutation'
+[ ! -e "$NO_RG_MARKER" ] || { echo 'test invoked unavailable rg'; exit 1; }
+echo 'PASS: 14 offline entrypoint scenarios, private/public publish, private push failure, stale/missing/prior-attempt publication, write failures, false-success mutation, no-rg fixture'
