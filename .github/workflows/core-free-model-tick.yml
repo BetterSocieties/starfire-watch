@@ -63,10 +63,8 @@ jobs:
           # exited 0 on "PASS omniroute/auto/best-free: 839 tokens, $0".
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
-          if [ -z "${GROQ_API_KEY}${GEMINI_API_KEY}${OPENROUTER_API_KEY}" ]; then
-            echo "no free-model secrets; skip self-test"
-            exit 0
-          fi
+          core_sha=$(git rev-parse --verify HEAD)
+          echo "core checkout sha=$core_sha"
           if [ -z "${STARFIRE_VAULT_BEARER}" ]; then
             echo "no vault bearer, so the OmniRoute legs of this self-test cannot authenticate"
             echo "and a run here would fail for a missing credential rather than a real fault."

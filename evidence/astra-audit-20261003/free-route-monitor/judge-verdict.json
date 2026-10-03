@@ -1,0 +1,81 @@
+{
+  "verdict": "pass",
+  "brief_sha256": "69c3ae83b437292324dc9ea355b7cb8a14a5e0b7a71a73017c010161e14b57ff",
+  "checked_at": "2026-10-03T08:29:38Z",
+  "scope": "Only the candidate local diagnostic and workflow prerequisite contract. No certification of production HTTP502 resolution, actual free completions or quality, upstream zero-cost enforcement, runtime activation, automatic execution, or whole-audit completion.",
+  "profile": "Dated Codex non-UI audit profile eligible at observed UTC time, before 2026-10-21T00:00:00+09:00. No authoritative earlier expiry known. Read mbj-codex and full starfire-qa rulebooks. Fresh requirements-only context; no builder reports or previous verdicts read. Browser: none, CLI-only artifacts and primary references opened through web read.",
+  "bar_sources": [
+    {
+      "address": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "page_stated_date": "No publication or update date visible; footer copyright 2026.",
+      "what_it_does_better": "Authoritatively defines shell exit-code failure and default fail-fast behavior. Candidate matches this bar by exiting with the router status and using ordinary downstream steps without continue-on-error. Local execution tests this behavior; hosted execution is outside scope."
+    },
+    {
+      "address": "https://docs.python.org/3/library/urllib.error.html",
+      "page_stated_date": "Last updated on Oct 02, 2026 (20:52 UTC).",
+      "what_it_does_better": "Defines HTTPError's separate code, URL, reason, headers and file-like body. Candidate uses a bounded numeric code and fixed exception class labels, without serializing private fields. Tested invalid code controls return unknown."
+    },
+    {
+      "address": "https://sre.google/sre-book/monitoring-distributed-systems/",
+      "page_stated_date": "Copyright 2017 Google, Inc.; no publication or update date visible.",
+      "what_it_does_better": "Provides a broader symptom-versus-cause monitoring model and user-facing signal discipline. Candidate adds useful selected-backend signals but does not establish the production root cause or system health. That broader monitoring evidence remains outside this local contract."
+    }
+  ],
+  "live_checks": [
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-free-route-4693/scripts/llm-router.py",
+      "status": 0,
+      "sha256": "4d498497ff4791cb8b0056b9887ef5d9773e627f563431902d6cd3320c1afd34",
+      "quoted": "ROUTE omniroute/auto/best-free (reasoning,code,content,bulk): backend=local-omniroute\nROUTE_RESULT omniroute/auto/best-free (reasoning,code,content,bulk): backend=workers-ai\nHTTPError status=502\n[llm-router] self-test FAIL",
+      "observed": "Read exact source and scoped git diff. AST comparison shows only _resolve_omniroute and self_test changed among existing functions; two new diagnostic helpers. Routing, fallback, retries and request implementation unchanged. Independently executed actual resolver under socket/vault stubs: local, hosted and Workers AI return values and cached repeat pass. Explicit route wins with empty and stale cache and leaves cache unchanged, with socket/vault access forbidden. Diagnostic getter executes with resolver forbidden. Invalid HTTP codes 99, 600, string 502 and None report unknown; 100 and 599 preserved. Actual self_test under stubs exits 0 on success and changed successful backend, 1 on HTTP502. Private URL/body/message do not appear. Hash unchanged after execution. Core HEAD recorded before testing: 08961db870f0a5ef4cbcc478f2d42c6ed775082c."
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-free-route-4693/scripts/tests/test-free-route-diagnostics.py",
+      "status": 0,
+      "sha256": "216645d31087dcf6fc7ae978412ef2c9ec30c10f7998c90486ce4491ef50fbf1",
+      "quoted": "Ran 4 tests in 0.010s\nOK",
+      "observed": "Executed python3 -B scripts/tests/test-free-route-diagnostics.py -v. Import guards forbid socket, urlopen and subprocess.run. Test cases stub provider calls, vault, hosted reachability, sockets and internal self-checks. Covers all five label states, explicit stale-cache precedence, private RuntimeError and HTTP502 content, changed success and changed failure. Each self_test execution asserts exactly two completion probes. Read actual assertions independently and separately executed source-based additional controls. Python syntax parse passed."
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-free-route-4693/scripts/tests/test-router-no-claude.py",
+      "status": 0,
+      "sha256": "f06a01c98bedd7ac2e3f293f5a95899e73145e99cfc0a4ba06df99e481c6c5ba",
+      "quoted": "PASS: 5 routes checked, no anthropic provider and no claude model",
+      "observed": "Read source then executed python3 -B scripts/tests/test-router-no-claude.py. Python syntax parse passed. This is only offline route policy evidence, not model quality or billing evidence."
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-watch-free-route-4693/.github/workflows/core-free-model-tick.yml",
+      "status": 0,
+      "sha256": "dc3142bceafa89fe1e72e8db34f386f21e1d68bbae291786bf2d75aa4b7b01db",
+      "quoted": "core checkout sha=ac0194b8f05d9f3d698ba785dae48e6e959b3b2f\nThis is a real gap, not a pass: fix the VAULT_BEARER secret.\nobserved case=missing_bearer exit=1\nself-test exit=0\nobserved case=success exit=0\nself-test exit=7\nstub self-test\nobserved case=router_failure exit=7",
+      "observed": "Read actual workflow and diff, then executed its extracted self-test block through the test harness with empty legacy key variables. Missing bearer exits 1 without router invocation or downstream marker. Synthetic bearer with router exit 0 invokes once and permits marker. Router exit 7 invokes once and suppresses marker. Checked-out fixture SHA is printed before testing. Actual block bash syntax passed. Quoted SHA is the isolated fixture, not a production checkout. Watch HEAD before tests: 969df09827d3e0faaf23662bae59173c8a0094d8. Schedule exists but automatic operation is not claimed or certified."
+    },
+    {
+      "address": "/Users/adrienharrison/starfire/worktrees/astra-watch-free-route-4693/scripts/test-free-model-tick.sh",
+      "status": 0,
+      "sha256": "b8d81f0d864a6ed23b811af3d703918004b4f2b4a27976bc9b274fa21007a33c",
+      "quoted": "PASS: workflow block cases and green-skip mutation rejection",
+      "observed": "Read exact harness and ran bash -n then bash -x scripts/test-free-model-tick.sh. Trace independently shows statuses 1, 0, 7 and invocation/downstream assertions. Harness creates a temporary workflow with the retired legacy-key green-skip and reruns the original test script against it; mutation is rejected. Additional in-memory instrumentation printed fixture output without editing source. Temporary fixture is removed by the harness. Both repository git diff --check commands exit 0. Before and after status lists contain only the intended router plus new diagnostics test, and workflow plus new shell test. All five artifact hashes unchanged. No source/runtime edits, installs, real router self-test, provider, vault, credential, activation or dispatch calls made."
+    },
+    {
+      "address": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "status": 200,
+      "quoted": "By default, fail-fast behavior is enforced using `set -e`",
+      "observed": "Opened current primary reference; verified shell exit semantics and footer date evidence."
+    },
+    {
+      "address": "https://docs.python.org/3/library/urllib.error.html",
+      "status": 200,
+      "quoted": "Contains the request URL.",
+      "observed": "Opened current primary reference; read HTTPError code, reason, headers and URL fields and page update date."
+    },
+    {
+      "address": "https://sre.google/sre-book/monitoring-distributed-systems/",
+      "status": 200,
+      "quoted": "Your monitoring system should address two questions: what's broken, and why?",
+      "observed": "Opened current primary reference; read symptom-versus-cause and monitoring signal guidance. Apostrophe normalized to ASCII. Read copyright footer, no update date stated."
+    }
+  ],
+  "negative_control": "The deliberately restored green-skip would falsely report success with absent legacy keys and bearer. The original suite rejected it. No other hidden false claim was identified in the generated requirements brief.",
+  "fixes": []
+}
