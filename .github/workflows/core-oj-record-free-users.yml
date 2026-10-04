@@ -18,6 +18,10 @@ on:
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch: {}
+  # Cloud routines start this with POST /repos/.../dispatches (event_type record-free-users):
+  # their GitHub App token gets 403 on workflow_dispatch but repository_dispatch needs only contents write.
+  repository_dispatch:
+    types: [record-free-users]
 
 permissions:
   contents: read
