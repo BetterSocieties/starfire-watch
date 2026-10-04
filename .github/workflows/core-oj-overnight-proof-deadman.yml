@@ -1,0 +1,66 @@
+# Dead-man check for the OpsJuice 07:00 Paris overnight proof (starfire-core ticket 4782).
+# Looks for the proof's ea_messages row and tells Slack directly if it is not there.
+#
+# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
+# PRIVATE repositories only, and starfire-core's are spent. This repository is PUBLIC, so its
+# runners are free. core- is this repository's convention for a job whose code lives in
+# starfire-core.
+#
+# WHY IT POSTS TO SLACK DIRECT. GitHub's failure email is switched off (see
+# actions-failure-report.yml) and every other alert path in this system runs through the pod
+# relay, which is exactly the thing being watched. If the pod is dead, a pod-routed alert is
+# dead too. The script therefore calls the Slack API itself and never touches the pod.
+#
+# WHY 06:20 UTC. The proof runs at 07:00 Paris. That is 06:00 UTC in winter (CET) and 05:00 UTC
+# in summer (CEST), so 06:20 UTC is after it in both, at 07:20 or 08:20 Paris.
+#
+# ON PUSH to this file the workflow runs --self-check-live instead: a present-date check, a
+# simulated-missing check, and one Slack summary line. Pushing a branch of this repository tests
+# the same-named branch of starfire-core.
+name: core-oj-overnight-proof-deadman
+on:
+  schedule:
+    - cron: "20 6 * * *"
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/core-oj-overnight-proof-deadman.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-overnight-proof-deadman
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout starfire-core (the repository the check lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ github.event_name == 'push' && github.ref_name || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check the overnight proof row
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -eo pipefail
+          FLAGS=""
+          if [ "$EVENT_NAME" = "push" ]; then FLAGS="--self-check-live"; fi
+          python3 scripts/vault-get.py CORE_SUPABASE_SERVICE_ROLE --into CORE_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/vault-get.py OPEN_BRAIN_SUPABASE_SLACK_BOT_TOKEN --into SLACK_BOT_TOKEN -- \
+            python3 scripts/check-overnight-proof-row.py $FLAGS
