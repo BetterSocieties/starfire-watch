@@ -56,3 +56,15 @@ jobs:
         run: |
           set -eo pipefail
           python3 scripts/oj-record-free-users.py --json
+
+      # The script lives in starfire-core (ticket 4844). It counts a taker as used only when a
+      # session carrying their link code completes a free tool, and never counts a page view alone.
+      - name: Record use from link completions
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          N8N_URL: https://n8n.opsjuice.com
+        run: |
+          set -eo pipefail
+          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --into OJ_SUPABASE_SECRET_KEY_VALUE -- python3 scripts/oj-mark-used-from-link-codes.py --apply
