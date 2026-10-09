@@ -1,0 +1,131 @@
+# OpsJuice Stage 0 feed, plan item 2a (2026-10-09). Before this file, the three scripts below
+# had no scheduler at all: every free-tool letter and every "did you try it" ask left only when
+# a session typed the command. This runs them once each weekday, in this public repo because
+# private repos on this account get no free runner minutes (see core-warm-wave-drain.yml).
+#
+# Order: verify mailboxes first (only mailbox-verified addresses are written to), then send
+# the cold letter under the standing scope evidence/mbj/4768/daily-scope.md (judged, with an
+# EXPIRES line the sender enforces), to the ids the same run's --candidates returns, then the
+# asks that are due, then reconcile delivery so oj_free_users is written. Each script keeps its
+# own rails: pre-send PASS, two-bounce stop, one per business. Recipient detail goes to the
+# private repo log, never to this public run log, and every secret is masked before use.
+#
+# Volume: SEND_LIMIT starts at 10 a day. Ramp to 25 then 40 only when the 30 day bounce rate
+# (scripts/check-oj-bounce-rate.py) stays inside its 2.0 line.
+name: core-oj-free-asset-daily
+on:
+  schedule:
+    - cron: "30 14 * * 1-5"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: core-oj-free-asset-daily
+  cancel-in-progress: false
+env:
+  SEND_LIMIT: "10"
+  VERIFY_LIMIT: "20"
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout starfire-core (the repository the senders live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Load the sender secrets from the vault, masked
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -eo pipefail
+          load() {
+            v="$(python3 scripts/vault-get.py "$2" --into V -- sh -c 'printf %s "$V"')"
+            [ -n "$v" ] || { echo "vault gave nothing for $2"; exit 1; }
+            echo "::add-mask::$v"
+            echo "$1=$v" >> "$GITHUB_ENV"
+          }
+          load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
+          load OPSJUICE_RESEND_API_KEY OPSJUICE_RESEND_API_KEY
+          load N8N_API_KEY N8N_POD_API_KEY
+          load OJ_ANSWER_SECRET OJ_ANSWER_SECRET
+          {
+            echo "OJ_SUPABASE_URL=https://wwacjhkpuaiijbkqnhsi.supabase.co"
+            echo "N8N_URL=https://n8n.opsjuice.com"
+            echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
+          } >> "$GITHUB_ENV"
+      - name: Verify waiting mailboxes
+        working-directory: core
+        continue-on-error: true
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          mkdir -p agent
+          python3 -u scripts/oj-verify-the-mailbox-before-the-letter.py --apply --limit "$VERIFY_LIMIT" >> agent/oj-free-asset-daily.log 2>&1
+      - name: Send the free-tool letter under the standing scope
+        id: send
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -o pipefail
+          if ! python3 scripts/check-oj-bounce-rate.py >> agent/oj-free-asset-daily.log 2>&1; then
+            echo '{"stopped": "bounce rate over its line, nothing sent"}' > "$RUNNER_TEMP/send.json"
+            echo "bounce_ok=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "bounce_ok=yes" >> "$GITHUB_OUTPUT"
+          python3 -u scripts/oj-send-free-asset-email.py --candidates "$SEND_LIMIT" --save-ids "$RUNNER_TEMP/ids.json" > /dev/null 2>> agent/oj-free-asset-daily.log
+          python3 -u scripts/oj-send-free-asset-email.py --send "$SEND_LIMIT" --only-ids "$RUNNER_TEMP/ids.json" \
+            --confirm-judged evidence/mbj/4768/daily-scope.md > "$RUNNER_TEMP/send.json" 2>> agent/oj-free-asset-daily.log
+      - name: Send the asks that are due
+        if: always() && steps.send.outputs.bounce_ok == 'yes'
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          python3 -u scripts/oj-ask-free-users.py --send >> agent/oj-free-asset-daily.log 2>&1
+      - name: Reconcile delivery into oj_free_users
+        if: always()
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          python3 -u scripts/oj-send-free-asset-email.py --reconcile >> agent/oj-free-asset-daily.log 2>&1
+      - name: Push the log back to the private repository
+        if: always()
+        working-directory: core
+        run: |
+          git config user.name "starfire-oj-free-asset-daily"
+          git config user.email "info@bettersocieties.world"
+          git add agent/oj-free-asset-daily.log evidence/mbj/4768/sends.jsonl || true
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "core-oj-free-asset-daily: log from public runner ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| free-asset feed | ${{ job.status }} |"
+            python3 - "$RUNNER_TEMP/send.json" <<'PY'
+          import json, sys
+          try:
+              d = json.load(open(sys.argv[1]))
+          except Exception:
+              d = {"stopped": "send step left no readable result"}
+          for k in ("sent", "bounced", "skipped_refused", "send_failed", "stopped"):
+              print("| %s | %s |" % (k, d.get(k, "n/a")))
+          PY
+            echo ""
+            echo "Recipient detail is in starfire-core at agent/oj-free-asset-daily.log, deliberately not here."
+          } >> "$GITHUB_STEP_SUMMARY"
