@@ -69,7 +69,7 @@ jobs:
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           mkdir -p agent
-          python3 -u scripts/oj-verify-the-mailbox-before-the-letter.py --apply --limit "$VERIFY_LIMIT" >> agent/oj-free-asset-daily.log 2>&1
+          python3 -u scripts/oj-verify-the-mailbox-before-the-letter.py --pool free-asset --apply --limit "$VERIFY_LIMIT" >> agent/oj-free-asset-daily.log 2>&1
       - name: Send the free-tool letter under the standing scope
         id: send
         working-directory: core
