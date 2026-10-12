@@ -32,7 +32,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # One mailbox pass of 40 addresses took about 19 minutes on 2026-10-12 (run 38271546364),
+    # so 60 minutes cancelled the job inside pass 4 of 6. Six passes need about 2 hours.
+    timeout-minutes: 150
     env:
       STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
       STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
