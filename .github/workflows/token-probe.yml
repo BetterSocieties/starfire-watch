@@ -148,7 +148,7 @@ jobs:
             TEXT="Token probe failed: GH_PAT ($PAT_DETAIL), CORE_READ_TOKEN ($CORE_DETAIL). Run: $RUN_URL"
           fi
 
-          PAYLOAD="{\"channel\":\"#starfire-done\",\"text\":\"$TEXT\"}"
+          PAYLOAD="{\"channel\":\"needs_you\",\"text\":\"$TEXT\"}"
           
           curl -s -X POST \
              -H "Content-Type: application/json" \

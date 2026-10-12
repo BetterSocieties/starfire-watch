@@ -45,12 +45,3 @@ jobs:
           rc=${PIPESTATUS[0]}
           { echo '### OpsJuice prices against canon'; echo '```'; cat "$RUNNER_TEMP/prices.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
-
-      - name: Tell Slack the job failed
-        if: failure()
-        env:
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          jq -n --arg t "core-oj-prices-match-canon-daily failed: a sales doc or live page quotes a price canon does not sell. Run: $RUN_URL" '{channel: "#starfire-done", text: $t}' \
-            | curl -sS --fail-with-body -X POST -H "Content-Type: application/json" -d @- \
-              https://n8n.opsjuice.com/webhook/starfire-alert-relay
