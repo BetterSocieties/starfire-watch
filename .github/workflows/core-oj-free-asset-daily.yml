@@ -10,6 +10,10 @@
 # own rails: pre-send PASS, two-bounce stop, one per business. Recipient detail goes to the
 # private repo log, never to this public run log, and every secret is masked before use.
 #
+# The Resend key is NOT loaded here. Every letter leaves through the oj-events Worker
+# (https://opsjuice.com/api/send), which holds the key, signs the one-click unsubscribe link
+# and re-checks ICP, links and suppression; delivery state is read back through the Worker too.
+#
 # Volume: SEND_LIMIT starts at 10 a day. Ramp to 25 then 40 only when the 30 day bounce rate
 # (scripts/check-oj-bounce-rate.py) stays inside its 2.0 line.
 name: core-oj-free-asset-daily
@@ -54,12 +58,13 @@ jobs:
             echo "$1=$v" >> "$GITHUB_ENV"
           }
           load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
-          load OPSJUICE_RESEND_API_KEY OPSJUICE_RESEND_API_KEY
+          load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
           load N8N_API_KEY N8N_POD_API_KEY
           load OJ_ANSWER_SECRET OJ_ANSWER_SECRET
           {
             echo "OJ_SUPABASE_URL=https://wwacjhkpuaiijbkqnhsi.supabase.co"
             echo "N8N_URL=https://n8n.opsjuice.com"
+            echo "OJ_WORKER_URL=https://opsjuice.com"
             echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
           } >> "$GITHUB_ENV"
       - name: Verify waiting mailboxes
