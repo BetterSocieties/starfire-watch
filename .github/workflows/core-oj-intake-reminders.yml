@@ -1,0 +1,54 @@
+# Remind paying OpsJuice buyers to fill in https://opsjuice.com/intake, on day 2, 4 and 7
+# after the assessment payment, until their intake row exists. Code: scripts/oj-intake-reminders.py
+# in starfire-core.
+#
+# THE SEND FLAG IS OFF. Nothing is mailed unless the repository variable
+# OJ_INTAKE_REMINDERS_SEND is set to "on" (Settings, Secrets and variables, Actions, Variables).
+# Until then every run is a dry run that prints how many buyers it would remind, with the
+# addresses masked. Mail leaves only through the oj-events Worker send door as transactional
+# mail; this job holds no mail key.
+#
+# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
+# PRIVATE repositories only, and starfire-core is private. This one is PUBLIC, so the log is
+# world readable: the job prints counts and masked addresses, never a key.
+name: core-oj-intake-reminders
+on:
+  schedule:
+    - cron: "11 15 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-intake-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the job lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Remind buyers whose intake form is still open
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_INTAKE_REMINDERS_SEND: ${{ vars.OJ_INTAKE_REMINDERS_SEND }}
+        run: |
+          set -eo pipefail
+          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
+            python3 scripts/oj-intake-reminders.py | tee "$RUNNER_TEMP/intake.txt"
+          { echo '### Intake reminders'; echo '```'; cat "$RUNNER_TEMP/intake.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
