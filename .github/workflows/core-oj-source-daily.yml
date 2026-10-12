@@ -1,9 +1,13 @@
-# Source new OpsJuice prospects every weekday, then find each one's public contact address.
+# Source new OpsJuice prospects every weekday, find each one's public contact address, read its own
+# site, stamp the fit verdict and screen it, all in one run so a new row is never left unscreened.
 # Decisions: GitHub issue map BetterSocieties/starfire-core#4953 (#4957 for what is sendable).
 #
-# 13:00 UTC Monday to Friday. Overture Maps Places for Phoenix and Tucson
-# (scripts/oj-source-overture.py), then scripts/oj-discover-emails-from-website.py reads each
-# queued business's own website for an address. The screen job follows 45 minutes later.
+# 13:00 UTC Monday to Friday. Overture Maps Places for today's 3 metros from config/oj-metros.json
+# (scripts/oj-source-overture.py --rotate), then scripts/oj-discover-emails-from-website.py reads
+# each queued business's own website for an address, scripts/oj-enrich-home-services-booking-signal.py
+# reads the same sites for widgets and service-area phrases, scripts/oj-stamp-icp-verdict.py writes
+# the fit verdict, and the owner-operator screen scores the row. Address verification (kind, MX,
+# mailbox) is its own job, core-oj-verify-daily.yml, the next morning before the sender runs.
 #
 # WHY HERE AND NOT IN starfire-core. This repository is PUBLIC so its runners are free;
 # starfire-core is private and its scheduled jobs are refused a runner. core- is the prefix for
@@ -31,7 +35,7 @@ concurrency:
 jobs:
   source:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -48,7 +52,7 @@ jobs:
       - name: Install duckdb (reads the Overture parquet over S3)
         run: pip install --quiet duckdb==1.1.3
 
-      - name: Source Phoenix and Tucson from Overture
+      - name: Source today's metros from Overture
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -56,18 +60,10 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # xmin,ymin,xmax,ymax in longitude, latitude
-          for area in "phoenix:-112.40,33.28,-111.92,33.92" "tucson:-111.12,32.05,-110.78,32.40"; do
-            name="${area%%:*}"; bbox="${area#*:}"
-            echo "== $name"
-            scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
-              python3 scripts/oj-source-overture.py --bbox="$bbox" --apply \
-              > "$RUNNER_TEMP/overture-$name.log" 2>&1 || { echo "overture $name exit=$?"; tail -n 3 "$RUNNER_TEMP/overture-$name.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; rc=1; }
-            grep -E '^(Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture-$name.log" || true
-            if grep -q 'OJ_SUPABASE_SECRET_KEY not set' "$RUNNER_TEMP/overture-$name.log"; then
-              echo "the Overture script ran without a database key and inserted nothing"; rc=1
-            fi
-          done
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
+            python3 scripts/oj-source-overture.py --rotate --apply \
+            > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+          grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
       - name: Discover public addresses from each business's own website
@@ -78,11 +74,61 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          python3 scripts/oj-discover-emails-from-website.py --limit 50 --apply \
+          python3 scripts/oj-discover-emails-from-website.py --limit 250 --apply \
             > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
           echo "discover exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/discover.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           grep -E '^(suppression:|worklist:|found=)' "$RUNNER_TEMP/discover.log" || true
+          exit $rc
+
+      - name: Read each new row's own website (booking widget, service area phrases)
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          rc=0
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
+            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
+              --apply --email-only --limit 400' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
+          echo "site signals exit=$rc"
+          [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/signals.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          sed -n '/^--- run summary ---/,$p' "$RUNNER_TEMP/signals.log" || true
+          grep -E '^(queued home-services rows|already carrying|rows to check)' "$RUNNER_TEMP/signals.log" || true
+          exit $rc
+
+      - name: Stamp the fit verdict the sender's pool reads
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || rc=$?
+          echo "stamp exit=$rc"
+          tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
+      - name: Screen every unscreened row against the owner-operator ICP
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          rc=0
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
+            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
+              --unscreened --write --summary-md "$RUNNER_TEMP/screened.md"' > "$RUNNER_TEMP/screen.log" 2>&1 || rc=$?
+          echo "screen exit=$rc"
+          cat "$RUNNER_TEMP/screen.log"
+          {
+            echo "### Screened today"
+            echo ""
+            if [ -f "$RUNNER_TEMP/screened.md" ]; then cat "$RUNNER_TEMP/screened.md"; else echo "No list was written."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
       - name: Tell Slack the job failed
