@@ -1,0 +1,113 @@
+# Verify the addresses of newly sourced OpsJuice prospects, every weekday, on free tiers only.
+# Benchmark and why: starfire-core STATE/benchmarks/oj-sourcing-2026-10-12.md.
+#
+# 12:00 UTC Monday to Friday, BEFORE the sender (core-oj-free-asset-daily, 14:30), so the rows
+# sourced and screened the day before are verified when the sender looks for them.
+#
+# Order, cheapest first:
+#   1. address kind (named, role, general), local rule, no network
+#   2. MX stamp over DNS-over-HTTPS, free
+#   3. hold out domains that cannot receive mail at all, free
+#   4. mailbox depth on the sender's own pool (ICP-passed rows only), spending the free provider
+#      allowances. Only 0.3 in every 100 bad addresses are visible from DNS, and a hosted runner
+#      cannot open an SMTP session, so these allowances are the ceiling on verified mailboxes a day.
+#      One pass spends one provider (40 at most); passes repeat until no provider has allowance.
+#
+# Results go into prospects.enrichment (email_mx_ok, email_deliverable, email_deliverable_tier),
+# which is what the sender reads. Nothing here sends mail. The log is world readable, so each
+# script's output goes to a file on the runner and only counts are echoed.
+name: core-oj-verify-daily
+on:
+  schedule:
+    - cron: "0 12 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-verify-daily
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Stamp each address as named, role or general
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/oj-redecide-address-kind.py --apply > "$RUNNER_TEMP/kind.log" 2>&1 || rc=$?
+          echo "address kind exit=$rc"
+          tail -n 4 "$RUNNER_TEMP/kind.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
+      - name: Stamp MX for every queued address that has none
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --to-file "$RUNNER_TEMP/ojkey" --mode 600 > /dev/null
+          OJ_KEY_FILE="$RUNNER_TEMP/ojkey" python3 scripts/oj-repair-enrichment-mx.py --apply --queued-only --limit 1500 \
+            > "$RUNNER_TEMP/mx.log" 2>&1 || rc=$?
+          rm -f "$RUNNER_TEMP/ojkey"
+          echo "mx exit=$rc"
+          tail -n 6 "$RUNNER_TEMP/mx.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
+      - name: Hold out domains that cannot receive mail
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/oj-verify-the-domain-can-receive-mail.py --apply --limit 500 > "$RUNNER_TEMP/domain.log" 2>&1 || rc=$?
+          echo "domain check exit=$rc"
+          tail -n 6 "$RUNNER_TEMP/domain.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
+      - name: Verify mailboxes of the ICP-passed pool on the free allowances
+        working-directory: core
+        run: |
+          set -uo pipefail
+          total=0
+          for pass in 1 2 3 4 5 6; do
+            rc=0
+            python3 -u scripts/oj-verify-the-mailbox-before-the-letter.py --pool free-asset --apply --limit 40 \
+              > "$RUNNER_TEMP/mailbox-$pass.log" 2>&1 || rc=$?
+            echo "== pass $pass exit=$rc"
+            grep -E '^(the sender can send|rows read|never asked about|provider chosen|asking about|no verifications available|addresses taken out)' "$RUNNER_TEMP/mailbox-$pass.log" || true
+            sed -n '/^what the provider said:/,/^addresses taken out/p' "$RUNNER_TEMP/mailbox-$pass.log" | grep -E '^  [a-z_]+ +[0-9]+$' || true
+            n="$(grep -E '^asking about [0-9]+' "$RUNNER_TEMP/mailbox-$pass.log" | grep -oE '[0-9]+' | head -1)"
+            total=$((total + ${n:-0}))
+            # exit 2 = no provider has allowance left (a normal ending); 0 with nothing asked = done
+            [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 3 "$RUNNER_TEMP/mailbox-$pass.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; exit "$rc"; }
+            [ "$rc" -eq 0 ] && [ -z "$n" ] && break
+            [ "$rc" -eq 2 ] && break
+          done
+          echo "mailboxes asked about today: $total"
+
+      - name: Tell Slack the job failed
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          jq -n --arg t "core-oj-verify-daily failed. Run: $RUN_URL" '{channel: "#starfire-done", text: $t}' \
+            | curl -sS --fail-with-body -X POST -H "Content-Type: application/json" -d @- \
+              https://n8n.opsjuice.com/webhook/starfire-alert-relay
