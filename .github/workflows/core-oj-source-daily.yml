@@ -61,7 +61,7 @@ jobs:
             name="${area%%:*}"; bbox="${area#*:}"
             echo "== $name"
             scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
-              python3 scripts/oj-source-overture.py --bbox "$bbox" --apply \
+              python3 scripts/oj-source-overture.py --bbox="$bbox" --apply \
               > "$RUNNER_TEMP/overture-$name.log" 2>&1 || { echo "overture $name exit=$?"; tail -n 3 "$RUNNER_TEMP/overture-$name.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; rc=1; }
             grep -E '^(Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture-$name.log" || true
             if grep -q 'OJ_SUPABASE_SECRET_KEY not set' "$RUNNER_TEMP/overture-$name.log"; then
