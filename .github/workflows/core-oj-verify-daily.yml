@@ -1,8 +1,9 @@
 # Verify the addresses of newly sourced OpsJuice prospects, every weekday, on free tiers only.
 # Benchmark and why: starfire-core STATE/benchmarks/oj-sourcing-2026-10-12.md.
 #
-# 12:00 UTC Monday to Friday, BEFORE the sender (core-oj-free-asset-daily, 14:30), so the rows
-# sourced and screened the day before are verified when the sender looks for them.
+# Runs as the second job of core-oj-source-daily.yml (05:00 UTC Monday to Friday), after the
+# screen, so the rows screened today are verified before the sender (core-oj-free-asset-daily,
+# 14:30) looks for them. It has no schedule of its own; workflow_dispatch runs it alone.
 #
 # Order, cheapest first:
 #   1. address kind (named, role, general), local rule, no network
@@ -18,8 +19,7 @@
 # script's output goes to a file on the runner and only counts are echoed.
 name: core-oj-verify-daily
 on:
-  schedule:
-    - cron: "0 12 * * 1-5"
+  workflow_call: {}
   workflow_dispatch: {}
 
 permissions:
