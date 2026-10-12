@@ -1,0 +1,63 @@
+# Name every vendor event of the last 48 hours that is missing from the oj_events ledger.
+# Decision: GitHub issue #4956 item 5.
+#
+# 06:00 UTC daily. scripts/oj-reconcile-events.py lists Resend emails, Stripe charges, Cal.com
+# bookings and Retell calls from the vendors' own APIs and exits 1 naming each id that
+# oj_events does not hold, or 2 when a source could not be read. Either fails the run and
+# posts to Slack. The output is ids and counts only, so it is safe in a public log.
+#
+# Cal.com's key is the vault entry CAL_API_API_KEY. OPSJUICE_CALCOM_KEY is not an API key
+# (16 characters, the API answers 403 to it).
+name: core-oj-reconcile-daily
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-reconcile-daily
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Reconcile the vendors against oj_events
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          scripts/with-vault-env.sh \
+            OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OPSJUICE_RESEND_API_KEY \
+            OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
+            python3 scripts/oj-reconcile-events.py --hours 48 | tee "$RUNNER_TEMP/reconcile.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Reconcile, last 48 hours'; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Tell Slack the job failed
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          jq -n --arg t "core-oj-reconcile-daily failed. Run: $RUN_URL" '{channel: "#starfire-done", text: $t}' \
+            | curl -sS --fail-with-body -X POST -H "Content-Type: application/json" -d @- \
+              https://n8n.opsjuice.com/webhook/starfire-alert-relay
