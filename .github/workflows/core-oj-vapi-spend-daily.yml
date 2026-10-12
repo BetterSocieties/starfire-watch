@@ -1,0 +1,48 @@
+# Daily Vapi spend probe for the OpsJuice demo line (+16408379084). Vapi took the line over from
+# Retell on 2026-10-12, when Retell answered 402. The Retell probe was retired the same day:
+# no page dials Retell any more, so its daily red alert reported on nothing in use. Add a probe back
+# when a client build ships on Retell. Posts to Slack itself, independent of the n8n pod.
+# ON PUSH to this file it runs once, so a branch push proves it.
+name: core-oj-vapi-spend-daily
+on:
+  schedule:
+    - cron: "15 13 * * *"
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/core-oj-vapi-spend-daily.yml
+      - scripts/check-vapi-spend.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-vapi-spend-daily
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core (vault-get.py lives there)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe Vapi spend (demo line) and alert Slack near the end of the free credit
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -eo pipefail
+          python3 core/scripts/vault-get.py VAPI_API_KEY --into VAPI_API_KEY -- \
+            python3 core/scripts/vault-get.py OPEN_BRAIN_SUPABASE_SLACK_BOT_TOKEN --into SLACK_BOT_TOKEN -- \
+            python3 scripts/check-vapi-spend.py
