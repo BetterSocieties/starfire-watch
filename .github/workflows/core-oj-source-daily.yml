@@ -1,13 +1,20 @@
-# Source new OpsJuice prospects every weekday, find each one's public contact address, read its own
-# site, stamp the fit verdict and screen it, all in one run so a new row is never left unscreened.
+# The OpsJuice W1 to W3 chain, one run every weekday: source new prospects, read the website of the
+# unmeasured ones best-ranked first (home services, then law, then med spas), find public contact
+# addresses for home services, stamp the fit verdict, screen against the owner-operator ICP, then
+# verify addresses. Every step writes its outcome onto the prospect row.
 # Decisions: GitHub issue map BetterSocieties/starfire-core#4953 (#4957 for what is sendable).
 #
-# 13:00 UTC Monday to Friday. Overture Maps Places for today's 3 metros from config/oj-metros.json
-# (scripts/oj-source-overture.py --rotate), then scripts/oj-discover-emails-from-website.py reads
-# each queued business's own website for an address, scripts/oj-enrich-home-services-booking-signal.py
-# reads the same sites for widgets and service-area phrases, scripts/oj-stamp-icp-verdict.py writes
-# the fit verdict, and the owner-operator screen scores the row. Address verification (kind, MX,
-# mailbox) is its own job, core-oj-verify-daily.yml, the next morning before the sender runs.
+# 05:00 UTC Monday to Friday, so the whole chain has finished before the sender (14:30). Overture Maps
+# Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate), then
+# scripts/oj-enrich-home-services-booking-signal.py reads up to 2500 unmeasured sites (about 2 s a row
+# observed, so about 85 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
+# reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
+# owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
+# The second job is core-oj-verify-daily.yml called as a reusable workflow: address kind, MX, mailbox.
+#
+# WHY THE SITE READ HAS NO ADDRESS FILTER. Until 2026-10-13 it ran with --email-only and the screen
+# read only rows with an address. Almost no unscreened row had one, so 1,400 of 1,500 rows came back
+# cannot_read: nothing had measured their website. The measure was never missing, it was never aimed.
 #
 # WHY HERE AND NOT IN starfire-core. This repository is PUBLIC so its runners are free;
 # starfire-core is private and its scheduled jobs are refused a runner. core- is the prefix for
@@ -22,7 +29,7 @@
 name: core-oj-source-daily
 on:
   schedule:
-    - cron: "0 13 * * 1-5"
+    - cron: "0 5 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
@@ -35,7 +42,7 @@ concurrency:
 jobs:
   source:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -66,7 +73,7 @@ jobs:
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
-      - name: Discover public addresses from each business's own website
+      - name: Discover public addresses from the websites of home-services rows
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -74,7 +81,8 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          python3 scripts/oj-discover-emails-from-website.py --limit 250 --apply \
+          niches="$(python3 -c "import sys; sys.path.insert(0, 'scripts'); import oj_icp_canon as c; print(','.join(next(e for e in c.cold_screen_entries() if e['slug'] == 'home-services')['sourcing']['store_niches']))")"
+          python3 scripts/oj-discover-emails-from-website.py --niche "$niches" --limit 300 --apply \
             > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
           echo "discover exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/discover.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
@@ -91,11 +99,11 @@ jobs:
           rc=0
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
             OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
-              --apply --email-only --limit 400' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
+              --apply --limit 2500' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
           echo "site signals exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/signals.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           sed -n '/^--- run summary ---/,$p' "$RUNNER_TEMP/signals.log" || true
-          grep -E '^(queued home-services rows|already carrying|rows to check)' "$RUNNER_TEMP/signals.log" || true
+          grep -E '^(queued home-services rows|measured, or tried|rows to check)' "$RUNNER_TEMP/signals.log" || true
           exit $rc
 
       - name: Stamp the fit verdict the sender's pool reads
@@ -130,3 +138,8 @@ jobs:
             if [ -f "$RUNNER_TEMP/screened.md" ]; then cat "$RUNNER_TEMP/screened.md"; else echo "No list was written."; fi
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
+
+  verify:
+    needs: source
+    uses: ./.github/workflows/core-oj-verify-daily.yml
+    secrets: inherit
