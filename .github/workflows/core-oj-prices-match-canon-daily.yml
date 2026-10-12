@@ -1,0 +1,56 @@
+# Fail when an OpsJuice sales doc or live opsjuice.com page quotes a build price, or a payment
+# link, that STATE/CANON-PRICES.md does not sell.
+# Decision: plan oj-stage1-plus-now item R2 (2026-10-12).
+#
+# 06:30 UTC daily. scripts/check-oj-prices-match-canon.py (in starfire-core) reads the closing kit
+# and every page of the live sitemap. Exit 1 is drift, exit 2 is "live site unreadable"; either
+# fails the run and posts to Slack. Output is file, line and figure only, safe in a public log.
+# It needs no secret beyond the checkout token.
+name: core-oj-prices-match-canon-daily
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-prices-match-canon-daily
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Self-test, then check the docs and the live site
+        working-directory: core
+        run: |
+          set -uo pipefail
+          python3 scripts/check-oj-prices-match-canon.py --self-test
+          python3 scripts/check-oj-prices-match-canon.py | tee "$RUNNER_TEMP/prices.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### OpsJuice prices against canon'; echo '```'; cat "$RUNNER_TEMP/prices.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Tell Slack the job failed
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          jq -n --arg t "core-oj-prices-match-canon-daily failed: a sales doc or live page quotes a price canon does not sell. Run: $RUN_URL" '{channel: "#starfire-done", text: $t}' \
+            | curl -sS --fail-with-body -X POST -H "Content-Type: application/json" -d @- \
+              https://n8n.opsjuice.com/webhook/starfire-alert-relay
