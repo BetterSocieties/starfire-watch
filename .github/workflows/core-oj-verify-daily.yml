@@ -102,12 +102,3 @@ jobs:
             [ "$rc" -eq 2 ] && break
           done
           echo "mailboxes asked about today: $total"
-
-      - name: Tell Slack the job failed
-        if: failure()
-        env:
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          jq -n --arg t "core-oj-verify-daily failed. Run: $RUN_URL" '{channel: "#starfire-done", text: $t}' \
-            | curl -sS --fail-with-body -X POST -H "Content-Type: application/json" -d @- \
-              https://n8n.opsjuice.com/webhook/starfire-alert-relay
