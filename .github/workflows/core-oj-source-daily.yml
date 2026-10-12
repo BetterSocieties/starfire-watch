@@ -6,8 +6,8 @@
 #
 # 05:00 UTC Monday to Friday, so the whole chain has finished before the sender (14:30). Overture Maps
 # Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate), then
-# scripts/oj-enrich-home-services-booking-signal.py reads up to 2500 unmeasured sites (about 2 s a row
-# observed, so about 85 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
+# scripts/oj-enrich-home-services-booking-signal.py reads up to 6000 unmeasured sites (0.8 s a row
+# observed on 2026-10-13, so about 80 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
 # reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
 # The second job is core-oj-verify-daily.yml called as a reusable workflow: address kind, MX, mailbox.
@@ -82,7 +82,7 @@ jobs:
           set -uo pipefail
           rc=0
           niches="$(python3 -c "import sys; sys.path.insert(0, 'scripts'); import oj_icp_canon as c; print(','.join(next(e for e in c.cold_screen_entries() if e['slug'] == 'home-services')['sourcing']['store_niches']))")"
-          python3 scripts/oj-discover-emails-from-website.py --niche "$niches" --limit 300 --apply \
+          python3 scripts/oj-discover-emails-from-website.py --niche "$niches" --limit 120 --apply \
             > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
           echo "discover exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/discover.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
@@ -99,7 +99,7 @@ jobs:
           rc=0
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
             OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
-              --apply --limit 2500' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
+              --apply --limit 6000' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
           echo "site signals exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/signals.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           sed -n '/^--- run summary ---/,$p' "$RUNNER_TEMP/signals.log" || true
@@ -114,9 +114,14 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || rc=$?
+          # The stamper reads at most 1000 rows a pass (the REST page size), so repeat until it has nothing left.
+          for pass in $(seq 1 20); do
+            python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
+            echo "stamp pass $pass: $(grep -E '^(wrote|nothing to stamp)' "$RUNNER_TEMP/stamp.log" | cut -c1-40)"
+            grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && break
+          done
           echo "stamp exit=$rc"
-          tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
       - name: Screen every unscreened row against the owner-operator ICP
