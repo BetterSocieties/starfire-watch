@@ -13,6 +13,7 @@ on:
     paths:
       - .github/workflows/core-oj-retell-balance-daily.yml
       - scripts/check-retell-balance.py
+      - scripts/check-vapi-spend.py
 
 permissions:
   contents: read
@@ -47,3 +48,13 @@ jobs:
           python3 core/scripts/vault-get.py RETELL_API_KEY_API_KEY --into RETELL_API_KEY -- \
             python3 core/scripts/vault-get.py OPEN_BRAIN_SUPABASE_SLACK_BOT_TOKEN --into SLACK_BOT_TOKEN -- \
             python3 scripts/check-retell-balance.py
+      - name: Probe Vapi spend (demo line) and alert Slack near the end of the free credit
+        if: always()
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -eo pipefail
+          python3 core/scripts/vault-get.py VAPI_API_KEY --into VAPI_API_KEY -- \
+            python3 core/scripts/vault-get.py OPEN_BRAIN_SUPABASE_SLACK_BOT_TOKEN --into SLACK_BOT_TOKEN -- \
+            python3 scripts/check-vapi-spend.py
