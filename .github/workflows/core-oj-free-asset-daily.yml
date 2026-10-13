@@ -5,14 +5,17 @@
 #
 # Order: verify mailboxes first (only mailbox-verified addresses are written to), then send
 # the cold letter under the standing scope evidence/mbj/4768/daily-scope.md (judged, with an
-# EXPIRES line the sender enforces), to the ids the same run's --candidates returns, then the
-# asks that are due, then reconcile delivery so oj_free_users is written. Each script keeps its
+# EXPIRES line the sender enforces), to the ids the same run's --candidates returns, then
+# reconcile delivery so oj_free_users is written. Each script keeps its
 # own rails: pre-send PASS, two-bounce stop, one per business. Recipient detail goes to the
 # private repo log, never to this public run log, and every secret is masked before use.
 #
-# The Resend key is NOT loaded here. Every letter leaves through the oj-events Worker
-# (https://opsjuice.com/api/send), which holds the key, signs the one-click unsubscribe link
-# and re-checks ICP, links and suppression; delivery state is read back through the Worker too.
+# Cold mail never goes through Resend (its acceptable use policy bans it). Every letter leaves by
+# Gmail SMTP as adrien@getopsjuice.com (scripts/oj_cold_mail.py), which does what the oj-events
+# Worker did: ICP gate, /r/ link tokens, signed one-click unsubscribe, ledger rows. Delivery is read
+# back from the same mailbox (a bounce notice is a bounce). The Google app password is the GitHub
+# secret BS_WORKSPACE_IMAP_APP_PASSWORD. The "asks that are due" step is gone until the ask sender
+# also leaves by Gmail: free_user_ask is a cold template and would go through Resend.
 #
 # Volume: SEND_LIMIT starts at 10 a day. Ramp to 25 then 40 only when the 30 day bounce rate
 # (scripts/check-oj-bounce-rate.py) stays inside its 2.0 line.
@@ -27,6 +30,7 @@ concurrency:
   group: core-oj-free-asset-daily
   cancel-in-progress: false
 env:
+  BS_WORKSPACE_IMAP_APP_PASSWORD: ${{ secrets.BS_WORKSPACE_IMAP_APP_PASSWORD }}
   SEND_LIMIT: "10"
   VERIFY_LIMIT: "20"
 jobs:
@@ -61,6 +65,7 @@ jobs:
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
           load N8N_API_KEY N8N_POD_API_KEY
           load OJ_ANSWER_SECRET OJ_ANSWER_SECRET
+          load OJ_UNSUBSCRIBE_SECRET OJ_UNSUBSCRIBE_SECRET
           {
             echo "OJ_SUPABASE_URL=https://wwacjhkpuaiijbkqnhsi.supabase.co"
             echo "N8N_URL=https://n8n.opsjuice.com"
@@ -91,13 +96,6 @@ jobs:
           python3 -u scripts/oj-send-free-asset-email.py --candidates "$SEND_LIMIT" --save-ids "$RUNNER_TEMP/ids.json" > /dev/null 2>> agent/oj-free-asset-daily.log
           python3 -u scripts/oj-send-free-asset-email.py --send "$SEND_LIMIT" --only-ids "$RUNNER_TEMP/ids.json" \
             --confirm-judged evidence/mbj/4768/daily-scope.md > "$RUNNER_TEMP/send.json" 2>> agent/oj-free-asset-daily.log
-      - name: Send the asks that are due
-        if: always() && steps.send.outputs.bounce_ok == 'yes'
-        working-directory: core
-        env:
-          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
-        run: |
-          python3 -u scripts/oj-ask-free-users.py --send >> agent/oj-free-asset-daily.log 2>&1
       - name: Reconcile delivery into oj_free_users
         if: always()
         working-directory: core
