@@ -74,7 +74,7 @@ fi
 
 ok=0; already=0; fail=0; skipped=0; never=0; archived=0; total=0
 cred_fail=0; webhook_fail=0; other_fail=0; notrigger_fail=0
-guard_checked=0; guard_corrected=0; guard_failed=0
+guard_checked=0; guard_corrected=0; guard_failed=0; guard_absent=0
 list_failed=0; list_failure_reason=""; cursor=""; page=0
 
 request() {
@@ -209,6 +209,8 @@ for id in "${NEVER_IDS[@]}"; do
   [ -z "$id" ] && continue
   guard_checked=$((guard_checked+1))
   code=$(request "$tmp/guard-get.json" "$API/workflows/$id")
+  # 404 means the workflow no longer exists on the pod, so it cannot fire. Any other non-200 stays a failure.
+  if [ "$code" = 404 ]; then guard_absent=$((guard_absent+1)); continue; fi
   if [ "$code" != 200 ]; then
     guard_failed=$((guard_failed+1)); record_guard_error "$id" get "$code"; continue
   fi
@@ -313,13 +315,13 @@ done
 
 status=success
 if [ "$list_failed" -ne 0 ] || [ "$fail" -ne 0 ] || [ "$guard_failed" -ne 0 ]; then status=failure; fi
-python3 - "$PRIVATE_REPORT" "$PUBLIC_REPORT" "$failures" "$skipped_detail" "$corrections" "$guard_errors" "$RUN_ID" "$RUN_ATTEMPT" "$status" "$total" "$ok" "$already" "$fail" "$skipped" "$never" "$archived" "$cred_fail" "$webhook_fail" "$notrigger_fail" "$other_fail" "$guard_checked" "$guard_corrected" "$guard_failed" "$list_failed" "$list_failure_reason" 2>/dev/null <<'PY'
+python3 - "$PRIVATE_REPORT" "$PUBLIC_REPORT" "$failures" "$skipped_detail" "$corrections" "$guard_errors" "$RUN_ID" "$RUN_ATTEMPT" "$status" "$total" "$ok" "$already" "$fail" "$skipped" "$never" "$archived" "$cred_fail" "$webhook_fail" "$notrigger_fail" "$other_fail" "$guard_checked" "$guard_corrected" "$guard_failed" "$list_failed" "$list_failure_reason" "$guard_absent" 2>/dev/null <<'PY'
 import json, pathlib, sys
 from datetime import datetime, timezone
 
 (private_path, public_path, failures_path, skipped_path, corrections_path, guard_errors_path, run_id, run_attempt,
  status, total, activated, already, failed, skipped, never, archived, cred, webhook,
- no_trigger, other, checked, corrected, guard_failed, list_failed, list_reason) = sys.argv[1:]
+ no_trigger, other, checked, corrected, guard_failed, list_failed, list_reason, absent) = sys.argv[1:]
 def rows(path):
     return [json.loads(line) for line in pathlib.Path(path).read_text().splitlines() if line]
 summary = {
@@ -338,7 +340,7 @@ summary = {
     'buckets': {'missing_cred': int(cred), 'webhook_collision': int(webhook),
                 'no_trigger': int(no_trigger), 'other': int(other)},
     'never_activate_guard': {'checked': int(checked), 'corrected': int(corrected),
-                             'failed': int(guard_failed)},
+                             'failed': int(guard_failed), 'absent': int(absent)},
 }
 private = dict(summary, failures=rows(failures_path), skipped_detail=rows(skipped_path),
                never_activate_guard=dict(summary['never_activate_guard'], corrections=rows(corrections_path),
@@ -354,5 +356,5 @@ if [ "$report_rc" -ne 0 ]; then
 fi
 echo "ACTIVATE RESULT: status=$status newly_activated=$ok already_active=$already failed=$fail skipped=$skipped never_activate_policy=$never archived=$archived total=$total"
 echo "FAILURE BUCKETS: missing-cred=$cred_fail no-trigger=$notrigger_fail webhook-collision=$webhook_fail other=$other_fail"
-echo "NEVER-ACTIVATE GUARD: checked=$guard_checked corrected=$guard_corrected failed=$guard_failed"
+echo "NEVER-ACTIVATE GUARD: checked=$guard_checked corrected=$guard_corrected failed=$guard_failed absent=$guard_absent"
 [ "$status" = success ]
