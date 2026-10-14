@@ -212,7 +212,15 @@ if [ "${1:-}" = -C ]; then
   [ "${3:-}" = diff ] && exit 1
 else
   [ "${1:-}" = diff ] && exit 1
-  case "$PWD" in */core) [ "${1:-}" = push ] && [ "${GIT_FAIL_PRIVATE:-0}" = 1 ] && exit 1 ;; esac
+  case "$PWD" in
+    */core) [ "${1:-}" = push ] && [ "${GIT_FAIL_PRIVATE:-0}" = 1 ] && exit 1 ;;
+    *)
+      # Public push: fail the first GIT_FAIL_PUBLIC_PUSHES attempts, counted in a file.
+      if [ "${1:-}" = push ] && [ "${GIT_FAIL_PUBLIC_PUSHES:-0}" -gt 0 ]; then
+        n=$(cat "$GIT_PUSH_COUNT" 2>/dev/null || echo 0)
+        if [ "$n" -lt "$GIT_FAIL_PUBLIC_PUSHES" ]; then echo $((n + 1)) > "$GIT_PUSH_COUNT"; exit 1; fi
+      fi ;;
+  esac
 fi
 exit 0
 STUB
@@ -320,6 +328,25 @@ done
   PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 bash "$test_root/publish.sh"
 ) > "$test_root/publish-log" 2>&1
 [ "$(grep -cF 'push -q origin HEAD:main' "$GIT_CALL_LOG")" -eq 2 ] || { echo 'private/public publish path incomplete'; exit 1; }
+
+# Public push race: one rejected push is retried and succeeds; three rejected pushes fail loudly.
+GIT_PUSH_COUNT="$test_root/push-count"; export GIT_PUSH_COUNT
+rm -f "$GIT_PUSH_COUNT"; : > "$GIT_CALL_LOG"
+(
+  cd "$test_root/project"
+  PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 GIT_FAIL_PUBLIC_PUSHES=1 bash "$test_root/publish.sh"
+) > "$test_root/publish-log" 2>&1 || { echo 'public push retry did not recover from one failure'; cat "$test_root/publish-log"; exit 1; }
+[ "$(cat "$GIT_PUSH_COUNT")" -eq 1 ] || { echo 'public push was not actually rejected once'; exit 1; }
+rm -f "$GIT_PUSH_COUNT"; : > "$GIT_CALL_LOG"
+rc=0
+(
+  cd "$test_root/project"
+  PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 GIT_FAIL_PUBLIC_PUSHES=3 bash "$test_root/publish.sh"
+) > "$test_root/publish-log" 2>&1 || rc=$?
+[ "$rc" -eq 1 ] || { echo "three failed public pushes exited $rc, expected 1"; exit 1; }
+grep -qF 'public summary publication failed' "$test_root/publish-log" || { echo 'missing publication failed message'; exit 1; }
+[ "$(cat "$GIT_PUSH_COUNT")" -eq 3 ] || { echo 'public push was not attempted 3 times'; exit 1; }
+unset GIT_PUSH_COUNT
 
 rm -f "$test_root/project/core/STATE/n8n-activate-report.json"
 : > "$GIT_CALL_LOG"
