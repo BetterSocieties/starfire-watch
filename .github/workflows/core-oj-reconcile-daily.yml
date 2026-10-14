@@ -1,7 +1,7 @@
 # Name every vendor event of the last 48 hours that is missing from the oj_events ledger.
 # Decision: GitHub issue #4956 item 5.
 #
-# 06:00 UTC daily. scripts/oj-reconcile-events.py lists Resend emails, Stripe charges, Cal.com
+# 06:17 UTC daily (never :00: GitHub delays or drops top-of-hour schedules; the 06:00 run of 2026-10-13 started 7.5 h late and 2026-10-14 had none). scripts/oj-reconcile-events.py lists Resend emails, Stripe charges, Cal.com
 # bookings and Retell calls from the vendors' own APIs and exits 1 naming each id that
 # oj_events does not hold, or 2 when a source could not be read. Either fails the run and
 # posts to Slack. The output is ids and counts only, so it is safe in a public log.
@@ -11,7 +11,7 @@
 name: core-oj-reconcile-daily
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "17 6 * * *"
   workflow_dispatch: {}
 
 permissions:
