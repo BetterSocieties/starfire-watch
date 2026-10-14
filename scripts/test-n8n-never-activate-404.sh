@@ -35,3 +35,5 @@ PY
 }
 run 404 0 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=0 absent=1'
 run 500 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'
+run 401 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'
+run 403 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'

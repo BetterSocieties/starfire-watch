@@ -212,7 +212,23 @@ if [ "${1:-}" = -C ]; then
   [ "${3:-}" = diff ] && exit 1
 else
   [ "${1:-}" = diff ] && exit 1
-  case "$PWD" in */core) [ "${1:-}" = push ] && [ "${GIT_FAIL_PRIVATE:-0}" = 1 ] && exit 1 ;; esac
+  case "$PWD" in
+    */core) [ "${1:-}" = push ] && [ "${GIT_FAIL_PRIVATE:-0}" = 1 ] && exit 1 ;;
+    *)
+      # Public push: the first GIT_FAIL_PUBLIC_PUSHES pushes are rejected as non-fast-forward. After any
+      # rejection every push stays rejected until a rebase (pull) has run, as on a real moved main.
+      if [ "${1:-}" = push ]; then
+        if [ -e "${GIT_NEEDS_REBASE:-/nonexistent}" ]; then echo 'rejected: non-fast-forward, rebase first' >&2; exit 1; fi
+        n=$(cat "${GIT_PUSH_COUNT:-/nonexistent}" 2>/dev/null || echo 0)
+        if [ "$n" -lt "${GIT_FAIL_PUBLIC_PUSHES:-0}" ]; then
+          echo $((n + 1)) > "$GIT_PUSH_COUNT"; : > "$GIT_NEEDS_REBASE"
+          echo 'rejected: non-fast-forward' >&2; exit 1
+        fi
+      elif [ "${1:-}" = pull ]; then
+        if [ "${GIT_FAIL_REBASE:-0}" = 1 ]; then echo 'CONFLICT (content): rebase stopped' >&2; exit 1; fi
+        rm -f "${GIT_NEEDS_REBASE:-/nonexistent}"
+      fi ;;
+  esac
 fi
 exit 0
 STUB
@@ -320,6 +336,33 @@ done
   PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 bash "$test_root/publish.sh"
 ) > "$test_root/publish-log" 2>&1
 [ "$(grep -cF 'push -q origin HEAD:main' "$GIT_CALL_LOG")" -eq 2 ] || { echo 'private/public publish path incomplete'; exit 1; }
+
+# Public push race: one rejected push is retried and succeeds; three rejected pushes fail loudly.
+GIT_PUSH_COUNT="$test_root/push-count"; GIT_NEEDS_REBASE="$test_root/needs-rebase"; export GIT_PUSH_COUNT GIT_NEEDS_REBASE
+# Sequence of public git calls as letters: P = push, R = rebase (pull), A = rebase --abort.
+public_seq() { awk '$1 ~ /\/project$/ && $2 == "push" { printf "P" } $1 ~ /\/project$/ && $2 == "pull" { printf "R" } $1 ~ /\/project$/ && $2 == "rebase" { printf "A" }' "$GIT_CALL_LOG"; }
+pub_case() { # fails rebase_fails -> sets rc and sequence
+  rm -f "$GIT_PUSH_COUNT" "$GIT_NEEDS_REBASE"; : > "$GIT_CALL_LOG"; rc=0
+  (
+    cd "$test_root/project"
+    PATH="$test_root/bin:$PATH" GITHUB_RUN_ID=offline-42 GIT_FAIL_PUBLIC_PUSHES="$1" GIT_FAIL_REBASE="$2" bash "$test_root/publish.sh"
+  ) > "$test_root/publish-log" 2>&1 || rc=$?
+  seq="$(public_seq)"
+}
+pub_case 1 0
+[ "$rc" -eq 0 ] || { echo 'public push retry did not recover from one failure'; cat "$test_root/publish-log"; exit 1; }
+[ "$seq" = PRP ] || { echo "retried public push must follow a rebase, got sequence $seq"; exit 1; }
+pub_case 3 0
+[ "$rc" -eq 1 ] || { echo "three failed public pushes exited $rc, expected 1"; exit 1; }
+grep -qF 'public summary publication failed' "$test_root/publish-log" || { echo 'missing publication failed message'; exit 1; }
+grep -qF 'rejected: non-fast-forward' "$test_root/publish-log" || { echo 'last git error was not printed'; exit 1; }
+[ "$seq" = PRPRP ] || { echo "expected 3 pushes each retry after a rebase, got sequence $seq"; exit 1; }
+pub_case 1 1
+[ "$rc" -eq 1 ] || { echo "failed rebase exited $rc, expected 1"; exit 1; }
+[ "$seq" = PRA ] || { echo "failed rebase must abort and not push again, got sequence $seq"; exit 1; }
+grep -qF 'CONFLICT' "$test_root/publish-log" || { echo 'rebase error was not printed'; exit 1; }
+grep -qF 'public summary publication failed' "$test_root/publish-log" || { echo 'missing publication failed message after rebase failure'; exit 1; }
+unset GIT_PUSH_COUNT GIT_NEEDS_REBASE
 
 rm -f "$test_root/project/core/STATE/n8n-activate-report.json"
 : > "$GIT_CALL_LOG"
