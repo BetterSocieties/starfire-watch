@@ -45,4 +45,14 @@ jobs:
           git config user.email actions@users.noreply.github.com
           git add data/n8n-workflow-inspect.json
           git diff --cached --quiet || git commit -m "n8n-inspect-workflow report $(date -u +%FT%TZ)"
-          for i in 1 2 3; do git push && break || { git pull --rebase; }; done
+          # Rebase and retry when main moved; fail loudly if no push succeeded.
+          pushed=0
+          for attempt in 1 2 3; do
+            if git push -q origin HEAD:main; then pushed=1; break; fi
+            git pull --rebase -q origin main || true
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 2))
+          done
+          if [ "$pushed" -ne 1 ]; then
+            echo "inspect report publication failed" >&2
+            exit 1
+          fi
