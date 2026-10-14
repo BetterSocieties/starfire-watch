@@ -1,0 +1,47 @@
+# Daily OpsJuice funnel digest (Adrien, 2026-10-14: every funnel, stage, method and conversion rate, every day).
+# scripts/oj-daily-funnel-digest.py in starfire-core snapshots oj_crm_funnel_by_icp_method into oj_funnel_snapshots
+# and posts the per ICP, method, step and variant summary, with a sample message, to the Slack done channel.
+# Deterministic SQL views, no model call. The log carries only the Slack ack, never the message samples, because
+# those are real prospects' words.
+#
+# 02:00 UTC daily. A fire-checks entry would never run: that registry is read only by core-three-role-loop,
+# which has been disabled since its failed run on 2026-09-28.
+name: core-oj-funnel-digest
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Snapshot the funnel and post the digest
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -eo pipefail
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
+            python3 scripts/oj-daily-funnel-digest.py | grep -E '^slack ok='
