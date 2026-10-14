@@ -3,7 +3,7 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main]
-    paths: [".github/workflows/n8n-activate.yml", "scripts/n8n-activate.sh", "scripts/test-n8n-activation-report.sh"]
+    paths: [".github/workflows/n8n-activate.yml", "scripts/n8n-activate.sh", "scripts/test-n8n-activation-report.sh", "scripts/test-n8n-never-activate-404.sh"]
   schedule:
     - cron: "51 */2 * * *"
 concurrency:
@@ -19,7 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: offline activation report regression
-        run: bash scripts/test-n8n-activation-report.sh
+        run: |
+          bash scripts/test-n8n-activation-report.sh
+          bash scripts/test-n8n-never-activate-404.sh
   activate:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -72,7 +74,7 @@ jobs:
                          'never_activate_guard'}
               if set(b) != allowed or set(b['buckets']) != {'missing_cred', 'webhook_collision', 'no_trigger', 'other'}:
                   raise ValueError()
-              if set(b['never_activate_guard']) != {'checked', 'corrected', 'failed'}:
+              if set(b['never_activate_guard']) != {'checked', 'corrected', 'failed', 'absent'}:
                   raise ValueError()
               counts = ('total', 'newly_activated', 'already_active', 'failed',
                         'skipped', 'never_activate_policy', 'archived')
@@ -95,7 +97,7 @@ jobs:
                   raise ValueError()
               if any(a[key] != b[key] for key in allowed - {'never_activate_guard'}):
                   raise ValueError()
-              if any(a['never_activate_guard'][key] != b['never_activate_guard'][key] for key in ('checked', 'corrected', 'failed')):
+              if any(a['never_activate_guard'][key] != b['never_activate_guard'][key] for key in ('checked', 'corrected', 'failed', 'absent')):
                   raise ValueError()
           except (OSError, ValueError, KeyError, TypeError):
               print('fresh matching activation reports missing or invalid', file=sys.stderr)
