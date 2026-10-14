@@ -10,16 +10,24 @@
 # own rails: pre-send PASS, two-bounce stop, one per business. Recipient detail goes to the
 # private repo log, never to this public run log, and every secret is masked before use.
 #
-# The Resend key is NOT loaded here. Every letter leaves through the oj-events Worker
-# (https://opsjuice.com/api/send), which holds the key, signs the one-click unsubscribe link
-# and re-checks ICP, links and suppression; delivery state is read back through the Worker too.
+# DOOR AND RAMP (2026-10-14, starfire-core PR 5069). Every letter leaves by Gmail SMTP as
+# adrien@getopsjuice.com (scripts/oj_cold_mail.py); cold mail never goes through Resend, whose
+# policy bans it. The sender enforces three rails itself and exits without sending when any fails:
+#   1. DKIM verdict: STATE/oj-cold-dkim-verdict.json in starfire-core, written only by
+#      `--read-seed-verdict` after a seed letter shows dkim=pass for getopsjuice.com. No file, no mail.
+#   2. Schedule from that verdict date: 10 a day, 15, 20, 25, 30, then 40 from day 28.
+#   3. Hold at more than 2 bounces in 100 sends or more than 1 spam complaint in 1000.
+# Three runs a weekday spread the day's letters (the sender caps one run at 14), and each run only
+# sends what is left of that day's allowance.
 #
-# Volume: SEND_LIMIT starts at 10 a day. Ramp to 25 then 40 only when the 30 day bounce rate
-# (scripts/check-oj-bounce-rate.py) stays inside its 2.0 line.
+# THIS WORKFLOW IS DISABLED. To turn the ramp on, once the DKIM verdict file is on starfire-core main:
+#   gh workflow enable core-oj-free-asset-daily -R BetterSocieties/starfire-watch
 name: core-oj-free-asset-daily
 on:
   schedule:
     - cron: "30 14 * * 1-5"
+    - cron: "30 16 * * 1-5"
+    - cron: "30 18 * * 1-5"
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -27,7 +35,7 @@ concurrency:
   group: core-oj-free-asset-daily
   cancel-in-progress: false
 env:
-  SEND_LIMIT: "10"
+  SEND_LIMIT: "14"
   VERIFY_LIMIT: "20"
 jobs:
   feed:
@@ -59,6 +67,8 @@ jobs:
           }
           load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
+          load OJ_UNSUBSCRIBE_SECRET OJ_UNSUBSCRIBE_SECRET
+          load BS_WORKSPACE_IMAP_APP_PASSWORD BS_WORKSPACE_IMAP_APP_PASSWORD
           load N8N_API_KEY N8N_POD_API_KEY
           load OJ_ANSWER_SECRET OJ_ANSWER_SECRET
           {
