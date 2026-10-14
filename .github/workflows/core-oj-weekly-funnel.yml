@@ -1,13 +1,14 @@
-# Weekly OpsJuice funnel report to Slack. Plain computed numbers from the oj_events views,
+# Daily OpsJuice funnel report to Slack. Plain computed numbers from the oj_events views,
 # no model call, no paid service. Names the weakest funnel step, the best and worst template
-# and trade (only when each has 10 or more sends), and says nothing on a quiet week.
+# and trade (only when each has 10 or more sends), and says nothing on a quiet day.
+# Was weekly (Mondays 01:00 UTC) until 2026-10-14, when Adrien ordered every check to run once a day.
 # Bar: STATE/benchmarks/slack-alerts-2026-10-12.md in starfire-core (one screen, decisions first).
 #
-# Mondays 01:00 UTC. The script is scripts/oj-weekly-funnel-report.py in starfire-core.
+# Every day 01:00 UTC. The script is scripts/oj-weekly-funnel-report.py in starfire-core.
 name: core-oj-weekly-funnel
 on:
   schedule:
-    - cron: "0 1 * * 1"
+    - cron: "0 1 * * *"
   workflow_dispatch: {}
 
 permissions:
