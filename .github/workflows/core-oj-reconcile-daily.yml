@@ -11,11 +11,12 @@
 name: core-oj-reconcile-daily
 on:
   schedule:
-    # Root cause (measured 2026-10-13..15): GitHub's schedule event is starved in this whole repo. Every
-    # scheduled workflow fires 5 to 8 hours late and about half of the slots never fire; this file, its cron
-    # and its permissions are valid (a workflow with the same cron, Token Probe, fires late the same way).
+    # Root cause: GitHub's schedule event is best effort and starved in this whole repo. Measured by the
+    # judge: the daily jobs fired 15 of 15, 15 of 15 and 7 of 7 days, every one of them late; hourly jobs fire
+    # only 3 to 6 of their 24 slots a day; the one drop on a daily job was this reconcile on 2026-10-14, when
+    # its cron was `0 6`. This file, its cron and its permissions are valid (Token Probe, same cron, fires).
     # The on-time clock is the Cloudflare cron Worker cf-workers/oj-reconcile-trigger in starfire-core, which
-    # dispatches this workflow; these lines stay as a fallback.
+    # dispatches this workflow at 06:17Z and checks at 08:00Z that a run started; these lines stay as a fallback.
     # Three off-peak slots a day. GitHub documents that scheduled runs "can be delayed during periods of high
     # loads" and "some queued jobs may be dropped"; one drop left a day unchecked (2026-10-14). The check is
     # read-only and idempotent, so a second or third run on the same day is harmless.
@@ -26,6 +27,7 @@ on:
 
 permissions:
   contents: read
+  actions: read   # to find the last green run of this workflow
 
 concurrency:
   group: core-oj-reconcile-daily
@@ -48,6 +50,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The window reaches back to the last green run (an hour of overlap), never under 48 h and never over
+      # 14 days, so a day GitHub dropped or a run that went red is inside the next run's window.
+      - name: Window since the last green run
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/core-oj-reconcile-daily.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].run_started_at // ""')
+          hours=$(python3 scripts/oj-reconcile-events.py --last-good "$last" --print-window)
+          echo "HOURS=$hours" >> "$GITHUB_ENV"
+          echo "last green run started: ${last:-none}; window: $hours hours"
+
       - name: Reconcile the vendors against oj_events
         working-directory: core
         env:
@@ -58,9 +72,9 @@ jobs:
           scripts/with-vault-env.sh \
             OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
             OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
-            python3 scripts/oj-reconcile-events.py --hours 48 | tee "$RUNNER_TEMP/reconcile.txt"
+            python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
           rc=${PIPESTATUS[0]}
-          { echo '### Reconcile, last 48 hours'; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### Reconcile, last $HOURS hours"; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
       # A red reconcile with a Cal booking missing replays it from the Cal API through the signed Worker
@@ -80,5 +94,18 @@ jobs:
           fi
           scripts/with-vault-env.sh \
             CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
-            python3 scripts/oj-cal-webhook-setup.py --backfill-missing --hours 48 | tee "$RUNNER_TEMP/backfill.txt"
+            python3 scripts/oj-cal-webhook-setup.py --backfill-missing --hours "$HOURS" | tee "$RUNNER_TEMP/backfill.txt"
           { echo '### Cal backfill'; echo '```'; cat "$RUNNER_TEMP/backfill.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # The same morning, not the 22:00Z digest: ids and counts only (the log of this repo is public).
+      # Posts through the alert relay every job in this repo hands its message to.
+      - name: Tell Slack the reconcile is red
+        if: failure()
+        run: |
+          lines=$(grep -E '^(MISSING|UNREADABLE) ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null | cut -c1-200 | head -25)
+          [ -n "$lines" ] || lines="the reconcile step failed before it printed a result; see the run"
+          text=$(printf 'core-oj-reconcile-daily is RED (window %s h).\n%s\n%s/%s/actions/runs/%s' \
+            "${HOURS:-?}" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLX2UMM9Q", text: $text}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
