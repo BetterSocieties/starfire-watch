@@ -1,0 +1,62 @@
+# Fail when an OpsJuice page, email or free asset carries a bare approved-tool URL, an
+# affiliate link with no disclosure sentence, or names an approved tool with no link.
+# Script and approved list live in starfire-core (scripts/check-oj-affiliate-links.py,
+# ventures/opsjuice/affiliate-partner-links.md). Weekdays 13:17 UTC. Alert only: on failure
+# one Slack message to C0BLV397CH4, and the run fails if Slack answers ok false.
+name: core-oj-affiliate-links-daily
+on:
+  schedule:
+    - cron: "17 13 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-affiliate-links-daily
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Self-test, then check
+        id: check
+        working-directory: core
+        run: |
+          python3 scripts/check-oj-affiliate-links.py --self-test
+          set +e
+          python3 scripts/check-oj-affiliate-links.py | tee "$RUNNER_TEMP/aff.txt"
+          rc=${PIPESTATUS[0]}
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          { echo '### OpsJuice affiliate links'; echo '```'; cat "$RUNNER_TEMP/aff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Alert Slack on failure
+        if: steps.check.outputs.rc != '0'
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -eo pipefail
+          python3 core/scripts/vault-get.py OPEN_BRAIN_SUPABASE_SLACK_BOT_TOKEN --into SLACK_BOT_TOKEN -- bash -c '
+            text=$(printf "OpsJuice affiliate link check failed (run %s). Fix: python3 scripts/check-oj-affiliate-links.py\n%s" "$GITHUB_RUN_ID" "$(head -15 "$RUNNER_TEMP/aff.txt")")
+            resp=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+              -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+              --data-urlencode "channel=C0BLV397CH4" \
+              --data-urlencode "text=$text")
+            echo "$resp"
+            echo "$resp" | python3 -c "import json,sys; sys.exit(0 if json.load(sys.stdin).get(\"ok\") else 1)"'
+      - name: Fail the run
+        if: steps.check.outputs.rc != '0'
+        run: exit 1
