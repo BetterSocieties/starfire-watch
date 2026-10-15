@@ -120,7 +120,7 @@ jobs:
           [ -n "$lines" ] || lines="the reconcile step failed before it printed a result; see the run"
           text=$(printf 'core-oj-reconcile-daily is RED (window %s h).\n%s\n%s/%s/actions/runs/%s' \
             "${HOURS:-?}" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
-          jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLX2UMM9Q", text: $text, repeat_ok: $repeat}' |
+          jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLV397CH4", text: $text, repeat_ok: $repeat}' |
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
 
@@ -138,7 +138,7 @@ jobs:
           retention-days: 14
 
       # Dead-man switch, outside GitHub and Cloudflare: a success-only ping to Healthchecks.io (check
-      # oj-cal-ledger, period 26 h, grace 8 h: the grace covers the measured GitHub schedule lag, 273 to 347 min over the last 14 daily runs, 480 min worst on record). A Worker that never dispatches, a schedule GitHub
+      # oj-cal-ledger, period 26 h, grace 10 h: the grace covers the measured GitHub schedule lag, 234 to 347 min over the last 14 daily runs, 557 min worst on record, token-probe.yml 2026-10-12; 26 h + 10 h = 36 h also holds a 10h05m lag). A Worker that never dispatches, a schedule GitHub
       # drops and a run that goes red all stop the ping, and Healthchecks alerts on its own. The URL is the
       # secret HEALTHCHECKS_CAL_LEDGER_URL; never write it in this file. A check nobody has pinged stays "new" and
       # never goes down, so the first green run after merge arms it (the manager triggers workflow_dispatch once).
