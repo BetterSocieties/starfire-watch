@@ -54,6 +54,11 @@ jobs:
             python3 "scripts/$g.py" || echo "WARN $g failed, keeping committed feed"
           done
 
+      - name: Regenerate Floor feed
+        run: |
+          python3 scripts/write-the-floor-feed.py
+          python3 scripts/write-the-floor-feed.py --self-test
+
       - name: Build app
         working-directory: apps/starfire-os
         run: |
@@ -71,4 +76,16 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 87f2dc2c8ff70d0d68099a12e06a5894
-        run: npx wrangler pages deploy dist --project-name=starfireos --branch main --commit-dirty=true
+        run: |
+          python3 ../../scripts/write-the-floor-feed.py --check-public dist
+          npx wrangler pages deploy dist --project-name=starfireos --branch main --commit-dirty=true
+
+      - name: Verify deployed version
+        working-directory: apps/starfire-os
+        run: |
+          python3 ../../scripts/verify-os-deployment.py dist/build-stamp.json https://starfireos.pages.dev
+          home_status="$(curl -q --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code}' --url https://starfireos.pages.dev)"
+          if [[ "$home_status" != "200" ]]; then
+            printf '[os-deploy] homepage returned HTTP %s, expected 200\n' "$home_status" >&2
+            exit 1
+          fi
