@@ -37,3 +37,40 @@ run 404 0 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=0 absent=1'
 run 500 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'
 run 401 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'
 run 403 1 'NEVER-ACTIVATE GUARD: checked=1 corrected=0 failed=1 absent=0'
+
+# Regression: qvpWsiLdpnb55vtt (OJ ReplyJudge, held 2026-10-15) must be skipped when inactive and
+# have its automatic triggers forced disabled when active. The guard must never activate it.
+t2="$(mktemp -d "${TMPDIR:-/tmp}/n8n-qvp-test.XXXXXXXX")"
+trap 'rm -rf -- "$t" "$t2"' EXIT
+mkdir -p "$t2/bin" "$t2/project/scripts" "$t2/project/config" "$t2/project/data" "$t2/project/core/STATE"
+cp "$repo/scripts/n8n-activate.sh" "$t2/project/scripts/"
+grep -E '^qvpWsiLdpnb55vtt  ' "$repo/config/never-activate.txt" > "$t2/project/config/never-activate.txt" \
+  || { echo "FAIL qvpWsiLdpnb55vtt missing from config/never-activate.txt"; exit 1; }
+cat > "$t2/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+out=/dev/null; method=GET; body=""
+while [ "$#" -gt 0 ]; do case "$1" in -o) out="$2"; shift 2 ;; -X) method="$2"; shift 2 ;; --data-binary) body="$2"; shift 2 ;; -H|-w|--data-urlencode) shift 2 ;; *) url="$1"; shift ;; esac; done
+echo "$method $url" >> "$QVP_CALLS"
+case "$method $url" in
+  "GET "*/workflows/qvpWsiLdpnb55vtt) cat "$QVP_STATE" > "$out"; printf 200 ;;
+  "PUT "*/workflows/qvpWsiLdpnb55vtt) python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["id"]="qvpWsiLdpnb55vtt"; json.dump(d,open(sys.argv[2],"w"))' "${body#@}" "$QVP_STATE"; cat "$QVP_STATE" > "$out"; printf 200 ;;
+  *"/activate"*) echo "ACTIVATED $url" >> "$QVP_CALLS"; printf '{}' > "$out"; printf 200 ;;
+  "GET "*/workflows*) printf '{"data":[{"id":"qvpWsiLdpnb55vtt","name":"PROD-OJ-ReplyJudge-WriteVerdict-v1.1","active":false}],"nextCursor":null}' > "$out"; printf 200 ;;
+  *) printf '{}' > "$out"; printf 599 ;;
+esac
+STUB
+chmod +x "$t2/bin/curl"
+qvp_run() {
+  : > "$t2/calls"; printf '%s' "$1" > "$t2/state.json"
+  (cd "$t2/project" && QVP_CALLS="$t2/calls" QVP_STATE="$t2/state.json" PATH="$t2/bin:$PATH" N8N_URL=https://invalid.example N8N_API_KEY=fake \
+    GITHUB_RUN_ID=t2 GITHUB_RUN_ATTEMPT=1 N8N_PUBLIC_REPORT="$t2/project/data/s.json" \
+    N8N_PRIVATE_REPORT="$t2/project/core/STATE/r.json" bash scripts/n8n-activate.sh) > "$t2/log" 2>&1 || true
+  ! grep -q ACTIVATED "$t2/calls" || { echo "FAIL qvpWsiLdpnb55vtt was activated"; cat "$t2/calls"; exit 1; }
+}
+INACTIVE='{"id":"qvpWsiLdpnb55vtt","name":"PROD-OJ-ReplyJudge-WriteVerdict-v1.1","active":false,"nodes":[{"id":"n1","name":"Every 5 minutes","type":"n8n-nodes-base.scheduleTrigger","disabled":false},{"id":"n2","name":"Manual fire (webhook)","type":"n8n-nodes-base.webhook","disabled":false}],"connections":{},"settings":{}}'
+qvp_run "$INACTIVE"
+grep -qF 'NEVER-ACTIVATE GUARD: checked=1 corrected=1 failed=0 absent=0' "$t2/log" || { echo "FAIL qvp inactive: guard did not check it"; cat "$t2/log"; exit 1; }
+grep -q '^PUT .*qvpWsiLdpnb55vtt' "$t2/calls" || { echo "FAIL qvp inactive: triggers not forced disabled (no PUT)"; cat "$t2/log" "$t2/calls"; exit 1; }
+grep -qF 'never_activate_policy=1' "$t2/log" || { echo "FAIL qvp not skipped by policy"; cat "$t2/log"; exit 1; }
+python3 -c 'import json,sys; n=json.load(open(sys.argv[1]))["nodes"]; assert all(x["disabled"] is True for x in n), n' "$t2/state.json" || { echo "FAIL qvp triggers not disabled"; exit 1; }
+echo "PASS qvpWsiLdpnb55vtt: guard checks it, forces triggers disabled, never activates it"
