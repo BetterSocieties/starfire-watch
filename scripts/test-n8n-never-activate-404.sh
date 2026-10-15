@@ -55,14 +55,14 @@ case "$method $url" in
   "GET "*/workflows/qvpWsiLdpnb55vtt) cat "$QVP_STATE" > "$out"; printf 200 ;;
   "PUT "*/workflows/qvpWsiLdpnb55vtt) python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["id"]="qvpWsiLdpnb55vtt"; json.dump(d,open(sys.argv[2],"w"))' "${body#@}" "$QVP_STATE"; cat "$QVP_STATE" > "$out"; printf 200 ;;
   *"/activate"*) echo "ACTIVATED $url" >> "$QVP_CALLS"; printf '{}' > "$out"; printf 200 ;;
-  "GET "*/workflows*) printf '{"data":[{"id":"qvpWsiLdpnb55vtt","name":"PROD-OJ-ReplyJudge-WriteVerdict-v1.1","active":false}],"nextCursor":null}' > "$out"; printf 200 ;;
+  "GET "*/workflows*) printf '{"data":[{"id":"qvpWsiLdpnb55vtt","name":"PROD-OJ-ReplyJudge-WriteVerdict-v1.1","active":%s}],"nextCursor":null}' "$QVP_ACTIVE" > "$out"; printf 200 ;;
   *) printf '{}' > "$out"; printf 599 ;;
 esac
 STUB
 chmod +x "$t2/bin/curl"
 qvp_run() {
   : > "$t2/calls"; printf '%s' "$1" > "$t2/state.json"
-  (cd "$t2/project" && QVP_CALLS="$t2/calls" QVP_STATE="$t2/state.json" PATH="$t2/bin:$PATH" N8N_URL=https://invalid.example N8N_API_KEY=fake \
+  (cd "$t2/project" && QVP_CALLS="$t2/calls" QVP_STATE="$t2/state.json" QVP_ACTIVE="${2:-false}" PATH="$t2/bin:$PATH" N8N_URL=https://invalid.example N8N_API_KEY=fake \
     GITHUB_RUN_ID=t2 GITHUB_RUN_ATTEMPT=1 N8N_PUBLIC_REPORT="$t2/project/data/s.json" \
     N8N_PRIVATE_REPORT="$t2/project/core/STATE/r.json" bash scripts/n8n-activate.sh) > "$t2/log" 2>&1 || true
   ! grep -q ACTIVATED "$t2/calls" || { echo "FAIL qvpWsiLdpnb55vtt was activated"; cat "$t2/calls"; exit 1; }
@@ -74,3 +74,9 @@ grep -q '^PUT .*qvpWsiLdpnb55vtt' "$t2/calls" || { echo "FAIL qvp inactive: trig
 grep -qF 'never_activate_policy=1' "$t2/log" || { echo "FAIL qvp not skipped by policy"; cat "$t2/log"; exit 1; }
 python3 -c 'import json,sys; n=json.load(open(sys.argv[1]))["nodes"]; assert all(x["disabled"] is True for x in n), n' "$t2/state.json" || { echo "FAIL qvp triggers not disabled"; exit 1; }
 echo "PASS qvpWsiLdpnb55vtt: guard checks it, forces triggers disabled, never activates it"
+ACTIVE="${INACTIVE/\"active\":false/\"active\":true}"
+qvp_run "$ACTIVE" true
+grep -qF 'NEVER-ACTIVATE GUARD: checked=1 corrected=1 failed=0 absent=0' "$t2/log" || { echo "FAIL qvp active: guard did not correct it"; cat "$t2/log"; exit 1; }
+grep -qF 'never_activate_policy=1' "$t2/log" || { echo "FAIL qvp active: not skipped by policy"; cat "$t2/log"; exit 1; }
+python3 -c 'import json,sys; n=json.load(open(sys.argv[1]))["nodes"]; assert all(x["disabled"] is True for x in n), n' "$t2/state.json" || { echo "FAIL qvp active: triggers not disabled"; exit 1; }
+echo "PASS qvpWsiLdpnb55vtt active=true: no activate call, triggers forced disabled"
