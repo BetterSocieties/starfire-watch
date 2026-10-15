@@ -145,9 +145,5 @@ jobs:
         if: success()
         env:
           HEALTHCHECKS_CAL_LEDGER_URL: ${{ secrets.HEALTHCHECKS_CAL_LEDGER_URL }}
-        run: |
-          if [ -z "${HEALTHCHECKS_CAL_LEDGER_URL:-}" ]; then
-            echo "::warning::HEALTHCHECKS_CAL_LEDGER_URL is not set, so the external dead-man check is NOT armed"
-            exit 0
-          fi
-          curl -fsS -m 10 --retry 5 --retry-all-errors "$HEALTHCHECKS_CAL_LEDGER_URL" > /dev/null
+        working-directory: core
+        run: bash scripts/reconcile-heartbeat.sh
