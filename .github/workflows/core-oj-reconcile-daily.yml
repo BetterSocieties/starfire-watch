@@ -1,4 +1,4 @@
-# Name every vendor event of the last 48 hours that is missing from the oj_events ledger.
+# Name every vendor event since the last green run (never under 48 hours, never over 14 days) that is missing from the oj_events ledger.
 # Decision: GitHub issue #4956 item 5.
 #
 # 06:17 UTC daily (never :00: GitHub delays or drops top-of-hour schedules; the 06:00 run of 2026-10-13 started 7.5 h late and 2026-10-14 had none). scripts/oj-reconcile-events.py lists Resend emails, Stripe charges, Cal.com
@@ -11,11 +11,23 @@
 name: core-oj-reconcile-daily
 on:
   schedule:
+    # Root cause: GitHub's schedule event is best effort and starved in this whole repo. Measured by the
+    # judge: the daily jobs fired 15 of 15, 15 of 15 and 7 of 7 days, every one of them late; hourly jobs fire
+    # only 3 to 6 of their 24 slots a day; the one drop on a daily job was this reconcile on 2026-10-14, when
+    # its cron was `0 6`. This file, its cron and its permissions are valid (Token Probe, same cron, fires).
+    # The on-time clock is the Cloudflare cron Worker cf-workers/oj-reconcile-trigger in starfire-core, which
+    # dispatches this workflow at 06:17Z and checks at 08:00Z that a run started; these lines stay as a fallback.
+    # Three off-peak slots a day. GitHub documents that scheduled runs "can be delayed during periods of high
+    # loads" and "some queued jobs may be dropped"; one drop left a day unchecked (2026-10-14). The check is
+    # read-only and idempotent, so a second or third run on the same day is harmless.
     - cron: "17 6 * * *"
+    - cron: "43 12 * * *"
+    - cron: "23 18 * * *"
   workflow_dispatch: {}
 
 permissions:
   contents: read
+  actions: read   # to find the last green run of this workflow
 
 concurrency:
   group: core-oj-reconcile-daily
@@ -38,6 +50,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The window reaches back to the last green run (an hour of overlap), never under 48 h and never over
+      # 14 days, so a day GitHub dropped or a run that went red is inside the next run's window.
+      - name: Window since the last green run
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/core-oj-reconcile-daily.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].run_started_at // ""')
+          hours=$(python3 scripts/oj-reconcile-events.py --last-good "$last" --print-window)
+          echo "HOURS=$hours" >> "$GITHUB_ENV"
+          echo "last green run started: ${last:-none}; window: $hours hours"
+
       - name: Reconcile the vendors against oj_events
         working-directory: core
         env:
@@ -48,7 +72,79 @@ jobs:
           scripts/with-vault-env.sh \
             OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
             OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
-            python3 scripts/oj-reconcile-events.py --hours 48 | tee "$RUNNER_TEMP/reconcile.txt"
+            python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
           rc=${PIPESTATUS[0]}
-          { echo '### Reconcile, last 48 hours'; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### Reconcile, last $HOURS hours"; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
+
+      # A red reconcile with a Cal booking missing replays it from the Cal API through the signed Worker
+      # door (insert or ignore, so safe to repeat). The job stays red so the loss is still reported; the
+      # next run is green once the rows are there.
+      - name: Backfill the Cal bookings the reconcile found missing
+        if: failure()
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          if ! grep -q '^MISSING cal ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null; then
+            echo "no Cal booking missing; nothing to replay"
+            exit 0
+          fi
+          scripts/with-vault-env.sh \
+            CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/oj-cal-webhook-setup.py --backfill-missing --hours "$HOURS" | tee "$RUNNER_TEMP/backfill.txt"
+          { echo '### Cal backfill'; echo '```'; cat "$RUNNER_TEMP/backfill.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # The same morning, not the 22:00Z digest: ids and counts only (the log of this repo is public).
+      # Posts through the alert relay every job in this repo hands its message to. The relay drops a message
+      # whose first 300 normalized characters it sent in the last 36 h, so a booking that goes missing today
+      # must not be swallowed as a repeat of yesterday's red: the newest ids come first, and repeat_ok is true
+      # whenever the set of missing ids differs from the previous run's (kept as an artifact, see the last steps).
+      - name: Tell Slack the reconcile is red
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          grep -E '^(MISSING|UNREADABLE) ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null | sed 's/ created .*//' | sort > "$RUNNER_TEMP/missing-now.txt" || true
+          [ -s "$RUNNER_TEMP/missing-now.txt" ] || echo "NO-RESULT-PRINTED" > "$RUNNER_TEMP/missing-now.txt"
+          : > "$RUNNER_TEMP/missing-prev.txt"
+          art=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=reconcile-missing-set&per_page=1" --jq '.artifacts[0] | select(.expired == false) | .id' 2>/dev/null || true)
+          if [ -n "$art" ] && gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${art}/zip" > "$RUNNER_TEMP/prev.zip" 2>/dev/null; then
+            unzip -p "$RUNNER_TEMP/prev.zip" missing-set.txt > "$RUNNER_TEMP/missing-prev.txt" 2>/dev/null || : > "$RUNNER_TEMP/missing-prev.txt"
+          fi
+          if cmp -s "$RUNNER_TEMP/missing-now.txt" "$RUNNER_TEMP/missing-prev.txt"; then repeat=false; else repeat=true; fi
+          echo "missing set changed since the previous run (repeat_ok): $repeat"
+          lines=$(grep -E '^(MISSING|UNREADABLE) ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
+          [ -n "$lines" ] || lines="the reconcile step failed before it printed a result; see the run"
+          text=$(printf 'core-oj-reconcile-daily is RED (window %s h).\n%s\n%s/%s/actions/runs/%s' \
+            "${HOURS:-?}" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLV397CH4", text: $text, repeat_ok: $repeat}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
+
+      # Remember this run's missing set for the next run's repeat_ok test. A green run records an empty set,
+      # so the same ids missing again after a heal count as new.
+      - name: Record the missing set
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/missing-now.txt" ]; then cp "$RUNNER_TEMP/missing-now.txt" "$RUNNER_TEMP/missing-set.txt"; else : > "$RUNNER_TEMP/missing-set.txt"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reconcile-missing-set
+          path: ${{ runner.temp }}/missing-set.txt
+          retention-days: 14
+
+      # Dead-man switch, outside GitHub and Cloudflare: a success-only ping to Healthchecks.io (check
+      # oj-cal-ledger, period 26 h, grace 10 h: the grace covers the measured GitHub schedule lag, 234 to 347 min over the last 14 daily runs, 557 min worst on record, token-probe.yml 2026-10-12; 26 h + 10 h = 36 h also holds a 10h05m lag). A Worker that never dispatches, a schedule GitHub
+      # drops and a run that goes red all stop the ping, and Healthchecks alerts on its own. The URL is the
+      # secret HEALTHCHECKS_CAL_LEDGER_URL; never write it in this file. A check nobody has pinged stays "new" and
+      # never goes down, so the first green run after merge arms it (the manager triggers workflow_dispatch once).
+      - name: Ping the dead-man monitor (green runs only)
+        if: success()
+        env:
+          HEALTHCHECKS_CAL_LEDGER_URL: ${{ secrets.HEALTHCHECKS_CAL_LEDGER_URL }}
+        working-directory: core
+        run: bash scripts/reconcile-heartbeat.sh
