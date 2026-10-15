@@ -138,9 +138,10 @@ jobs:
           retention-days: 14
 
       # Dead-man switch, outside GitHub and Cloudflare: a success-only ping to Healthchecks.io (check
-      # cal-ledger-reconcile, period 26 h, grace 2 h). A Worker that never dispatches, a schedule GitHub
+      # oj-cal-ledger, period 26 h, grace 8 h: the grace covers the measured GitHub schedule lag, 273 to 347 min over the last 14 daily runs, 480 min worst on record). A Worker that never dispatches, a schedule GitHub
       # drops and a run that goes red all stop the ping, and Healthchecks alerts on its own. The URL is the
-      # secret HEALTHCHECKS_CAL_LEDGER_URL; never write it in this file.
+      # secret HEALTHCHECKS_CAL_LEDGER_URL; never write it in this file. A check nobody has pinged stays "new" and
+      # never goes down, so the first green run after merge arms it (the manager triggers workflow_dispatch once).
       - name: Ping the dead-man monitor (green runs only)
         if: success()
         env:
