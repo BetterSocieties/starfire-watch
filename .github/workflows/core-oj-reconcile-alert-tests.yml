@@ -10,7 +10,12 @@ on:
       - ".github/workflows/core-oj-reconcile-daily.yml"
       - ".github/workflows/core-oj-reconcile-alert-tests.yml"
       - "scripts/tests/test-reconcile-workflow-inject-gap.py"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref holding the tests (until PR 5214 merges, its branch)"
+        type: string
+        default: main
 
 permissions:
   contents: read
@@ -25,6 +30,7 @@ jobs:
         with:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
           path: core
           fetch-depth: 1
       - uses: actions/setup-python@v5

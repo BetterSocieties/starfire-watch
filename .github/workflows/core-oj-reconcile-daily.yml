@@ -29,6 +29,10 @@ on:
         description: "TEST: run the script's --inject-gap (synthetic gap, no vendor or ledger call) so the run fails and the real Slack step posts a TEST message"
         type: boolean
         default: false
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
 
 permissions:
   contents: read
@@ -48,6 +52,7 @@ jobs:
         with:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
           path: core
           fetch-depth: 1
 

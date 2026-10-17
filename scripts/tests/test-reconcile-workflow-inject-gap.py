@@ -22,7 +22,11 @@ def main() -> int:
     record = steps.get("Record the missing set", {})
     steps_by_uses_upload = next((x for x in doc["jobs"]["reconcile"]["steps"] if str(x.get("uses", "")).startswith("actions/upload-artifact")), {})
     ping = steps.get("Ping the dead-man monitor (green runs only)", {})
+    core_ref = on.get("workflow_dispatch", {}).get("inputs", {}).get("core_ref", {})
+    checkout = next((x for x in doc["jobs"]["reconcile"]["steps"] if str(x.get("name", "")).startswith("Checkout starfire-core")), {})
     checks = {
+        "core_ref is a string dispatch input defaulting main": core_ref.get("type") == "string" and core_ref.get("default") == "main",
+        "core checkout uses core_ref, main when empty (scheduled runs)": "inputs.core_ref" in str(checkout.get("with", {}).get("ref")) and "main" in str(checkout.get("with", {}).get("ref")),
         "inject_gap is a boolean dispatch input defaulting false": inp.get("type") == "boolean" and inp.get("default") is False,
         "reconcile step runs --inject-gap when set": "--inject-gap" in reconcile.get("run", "") and INJECT in reconcile.get("run", "") + str(reconcile.get("env", "")),
         "real run still uses the vault wrapper when not injecting": "with-vault-env.sh" in reconcile.get("run", ""),
