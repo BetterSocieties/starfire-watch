@@ -1,0 +1,76 @@
+# Fail when an OpsJuice page, email or free asset carries a bare approved-tool URL, an
+# affiliate link with no disclosure in its own paragraph, or names an approved tool with
+# no link. Script and approved list live in starfire-core (scripts/check-oj-affiliate-links.py,
+# ventures/opsjuice/affiliate-partner-links.md). Weekdays 13:17 UTC.
+#
+# Two checks per run: the tree scan (what git holds) and --live (every URL in
+# https://opsjuice.com/sitemap.xml, fetched as a visitor gets it, same page rules, and the shared
+# disclosure stylesheet must answer 200). --live needs starfire-core PR 5175 on main; merge it first.
+#
+# Alert routing: a drifted link is mine to fix, not Adrien's, so it goes to the record
+# channel through the same relay the actions failure report uses (channel "log"), never
+# to needs_you. It posts only when the check goes red after a green run, not every
+# weekday while it stays red; the run itself still fails every time.
+name: core-oj-affiliate-links-daily
+on:
+  schedule:
+    - cron: "17 13 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: core-oj-affiliate-links-daily
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Self-test, then check
+        id: check
+        working-directory: core
+        run: |
+          python3 scripts/check-oj-affiliate-links.py --self-test
+          set +e
+          python3 scripts/check-oj-affiliate-links.py | tee "$RUNNER_TEMP/aff.txt"
+          rc=${PIPESTATUS[0]}
+          python3 scripts/check-oj-affiliate-links.py --live | tee -a "$RUNNER_TEMP/aff.txt"
+          [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          { echo '### OpsJuice affiliate links'; echo '```'; cat "$RUNNER_TEMP/aff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Tell the record channel when it turns red
+        if: steps.check.outputs.rc != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eo pipefail
+          prev=$(gh run list -R "$GITHUB_REPOSITORY" --workflow core-oj-affiliate-links-daily.yml \
+            --status completed --limit 1 --json conclusion -q '.[0].conclusion // "success"')
+          if [ "$prev" != "success" ]; then
+            echo "previous run was $prev: already red, not posting again"
+            exit 0
+          fi
+          text=$(printf 'OpsJuice affiliate link check turned red (run %s). Fix: python3 scripts/check-oj-affiliate-links.py in starfire-core.\n%s' "$GITHUB_RUN_ID" "$(head -15 "$RUNNER_TEMP/aff.txt")")
+          resp=$(python3 -c 'import json,sys; print(json.dumps({"channel":"log","text":sys.argv[1]}))' "$text" \
+            | curl -sS -X POST https://n8n.opsjuice.com/webhook/starfire-alert-relay \
+                -H "Content-Type: application/json; charset=utf-8" --data-binary @-)
+          echo "$resp"
+          echo "$resp" | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("ok") else 1)'
+      - name: Fail the run
+        if: steps.check.outputs.rc != '0'
+        run: exit 1
