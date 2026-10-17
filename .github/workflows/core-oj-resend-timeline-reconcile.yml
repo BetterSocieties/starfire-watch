@@ -44,9 +44,10 @@ jobs:
           fetch-depth: 1
       - name: This copy is byte-identical to its twin in starfire-core
         run: |
-          # the same check starfire-core runs from its side (scripts/check-oj-resend-watch-twin.py); a twin that is not on the ref yet is a notice, a difference is a failure
+          # the same check starfire-core runs from its side (scripts/check-oj-resend-watch-twin.py); a twin that is not on the ref is a failure, because
+          # a scheduler copy nobody compares against could drift unseen, and so is a difference
           twin=core/ops/watch-twin/core-oj-resend-timeline-reconcile.yml
-          if [ ! -f "$twin" ]; then echo "::notice::no twin at this starfire-core ref yet; nothing to compare"; exit 0; fi
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref ${{ inputs.core_ref || 'main' }}: merge the starfire-core PR that carries the twin first"; exit 1; fi
           diff -u "$twin" .github/workflows/core-oj-resend-timeline-reconcile.yml
       - uses: actions/setup-python@v5
         with:
