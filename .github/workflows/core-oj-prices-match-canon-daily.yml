@@ -3,14 +3,22 @@
 # Decision: plan oj-stage1-plus-now item R2 (2026-10-12).
 #
 # 06:30 UTC daily. scripts/check-oj-prices-match-canon.py (in starfire-core) reads the closing kit
-# and every page of the live sitemap. Exit 1 is drift, exit 2 is "live site unreadable"; either
-# fails the run and posts to Slack. Output is file, line and figure only, safe in a public log.
-# It needs no secret beyond the checkout token.
+# and every page of the live sitemap, and (PR 5241, 2026-10-17) reads Stripe, GET only: it fails
+# on any active payment link, main item or add-on, that sells a price STATE/CANON-PRICES.md does
+# not name, and on any product holding a retired $497 price that is active again. The Stripe key
+# is the vault entry OPSJUICE_STRIPE_SECRET_KEY, fetched with VAULT_BEARER and never printed.
+# Exit 1 is drift, exit 2 is "live site or Stripe unreadable"; either fails the run and posts to
+# Slack through the alert relay. Output is file, line, price and link ids only, safe in a public log.
 name: core-oj-prices-match-canon-daily
 on:
   schedule:
     - cron: "30 6 * * *"
   workflow_dispatch: {}
+  # A pull request that edits this file runs the self-tests only (no vault, no Stripe), so the PR
+  # carries a real green check. The live read stays on the schedule and the manual run.
+  pull_request:
+    paths:
+      - ".github/workflows/core-oj-prices-match-canon-daily.yml"
 
 permissions:
   contents: read
@@ -20,7 +28,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Self-tests only, no network
+        working-directory: core
+        run: |
+          python3 scripts/check-oj-prices-match-canon.py --self-test
+          python3 scripts/deploy-retire-the-off-ladder-opsjuice-prices.py --self-test
+
   check:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -36,12 +68,30 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Self-test, then check the docs and the live site
+      - name: Self-test, then check the docs, the live site and the live Stripe links
         working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           set -uo pipefail
           python3 scripts/check-oj-prices-match-canon.py --self-test
-          python3 scripts/check-oj-prices-match-canon.py | tee "$RUNNER_TEMP/prices.txt"
+          python3 scripts/deploy-retire-the-off-ladder-opsjuice-prices.py --self-test
+          scripts/with-vault-env.sh OPSJUICE_STRIPE_SECRET_KEY -- \
+            python3 scripts/check-oj-prices-match-canon.py | tee "$RUNNER_TEMP/prices.txt"
           rc=${PIPESTATUS[0]}
           { echo '### OpsJuice prices against canon'; echo '```'; cat "$RUNNER_TEMP/prices.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
+
+      # Alert through the relay every job in this repo hands its message to. Lines are file, price and
+      # link ids only. repeat_ok is true so a second red day is not swallowed as a repeat of the first.
+      - name: Tell Slack the prices drifted from canon
+        if: failure()
+        run: |
+          lines=$(grep -E '^(stripe:|ventures/|cf-workers/|https://|UNREADABLE)' "$RUNNER_TEMP/prices.txt" 2>/dev/null | cut -c1-200 | head -20)
+          [ -n "$lines" ] || lines="the check failed before it printed a result; see the run"
+          text=$(printf 'core-oj-prices-match-canon-daily is RED.\n%s\n%s/%s/actions/runs/%s' \
+            "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: true}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
