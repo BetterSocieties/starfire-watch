@@ -1,0 +1,81 @@
+# Reads every OpsJuice reply the poller did not call an unsubscribe with the Claude CLI and binds the ones that ask to stop (dnc_list and Resend's
+# suppression list) in the same step that reads each one, so nobody who asked to stop waits for the daily reconcile. Sends nothing. Counts only in the log.
+# It replaced a Mac launchd job that was never installed. Replies carry personal data, so the model is Claude (never a free host), signed in by
+# CLAUDE_CODE_OAUTH_TOKEN when it exists; without it the bare opt-outs are still bound with no model. scripts/oj-reply-unsubscribe-sweep.py has the rules.
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-reply-unsub-sweep.yml (the repo that gets scheduled runners).
+# Off-peak minutes, never :00 (GitHub delays or drops top-of-hour schedules; see core-oj-reconcile-daily.yml).
+name: core-oj-reply-unsub-sweep
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "read and report counts only, write nothing"
+        type: boolean
+        default: false
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+# Same group name as the starfire-watch cron (groups are per repository). A sweep stamps every reply it reads, so two overlapping runs read each reply once.
+concurrency:
+  group: oj-reply-unsub-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # the same check starfire-core runs from its side (scripts/check-oj-resend-watch-twin.py); a twin that is not on the ref is a failure, because
+          # a scheduler copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-oj-reply-unsub-sweep.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref ${{ inputs.core_ref || 'main' }}: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-reply-unsub-sweep.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fixture tests
+        working-directory: core
+        run: python3 scripts/test-oj-reply-unsubscribe-sweep.py
+      - name: Claude CLI (only when the token exists)
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: npm install -g @anthropic-ai/claude-code@2.1.302 >/dev/null 2>&1 && claude --version
+      - name: Sweep
+        working-directory: core
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -uo pipefail
+          # No token is not a failure: the bare opt-outs (stop, unsubscribe, remove me ...) are bound with no model, and the script alerts once a day for the rest.
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || echo "::warning::CLAUDE_CODE_OAUTH_TOKEN is not set: only bare opt-out replies are classified"
+          ARGS="--apply"; [ "$DRY_RUN" = "true" ] && ARGS=""
+          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
+            python3 scripts/oj-reply-unsubscribe-sweep.py $ARGS | tee "$RUNNER_TEMP/sweep.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Reply unsubscribe sweep'; echo '```'; cat "$RUNNER_TEMP/sweep.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
