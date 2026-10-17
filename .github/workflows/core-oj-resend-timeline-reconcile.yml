@@ -1,0 +1,70 @@
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-resend-timeline-reconcile.yml (the repo that gets scheduled runners).
+# Daily: every Resend email and every real inbound reply onto oj_events with its prospect_id, the out_of_gate flag, and the heartbeat row
+# (source reconcile, kind reconcile_heartbeat) the gate reads. Sends nothing. scripts/oj-resend-timeline-reconcile.py in starfire-core has the rules.
+# Alerting: the script exits 1 only when a red set is new or has not been alerted for 24 h, so this step posts at most once a day per set.
+# Off-peak minutes, never :00 (GitHub delays or drops top-of-hour schedules; see core-oj-reconcile-daily.yml). Idempotent, so extra runs are harmless.
+name: core-oj-resend-timeline-reconcile
+on:
+  schedule:
+    - cron: "37 6 * * *"
+    - cron: "41 13 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "read and report only, write nothing"
+        type: boolean
+        default: false
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-resend-timeline-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fixture tests
+        working-directory: core
+        run: python3 scripts/test-oj-resend-timeline-reconcile.py
+      - name: Reconcile
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -uo pipefail
+          ARGS=""; [ "$DRY_RUN" = "true" ] && ARGS="--dry-run"
+          scripts/with-vault-env.sh RESEND_API_KEY OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/oj-resend-timeline-reconcile.py $ARGS | tee "$RUNNER_TEMP/rtl.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Resend timeline reconcile'; echo '```'; cat "$RUNNER_TEMP/rtl.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+      - name: Tell Slack
+        if: failure()
+        run: |
+          lines=$(grep -E '^(GAP|MISSING|UNREADABLE) ' "$RUNNER_TEMP/rtl.txt" 2>/dev/null | cut -c1-200 | head -20)
+          [ -n "$lines" ] || lines="the reconcile failed before it printed a result; see the run"
+          text=$(printf 'core-oj-resend-timeline-reconcile is RED.\n%s\n%s/%s/actions/runs/%s' "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
