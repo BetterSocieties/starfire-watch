@@ -14,6 +14,11 @@ on:
   schedule:
     - cron: "30 6 * * *"
   workflow_dispatch: {}
+  # A pull request that edits this file runs the self-tests only (no vault, no Stripe), so the PR
+  # carries a real green check. The live read stays on the schedule and the manual run.
+  pull_request:
+    paths:
+      - ".github/workflows/core-oj-prices-match-canon-daily.yml"
 
 permissions:
   contents: read
@@ -23,7 +28,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Self-tests only, no network
+        working-directory: core
+        run: |
+          python3 scripts/check-oj-prices-match-canon.py --self-test
+          python3 scripts/deploy-retire-the-off-ladder-opsjuice-prices.py --self-test
+
   check:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
