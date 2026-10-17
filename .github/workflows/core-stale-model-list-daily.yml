@@ -1,0 +1,101 @@
+# THE LIVE COPY OF stale-model-list-daily. The one in starfire-core is dispatch-only and inert.
+#
+# WHY IT LIVES HERE: scheduled workflows in the private starfire-core get no runner (private
+# repositories on this account are metered; the last scheduled run there was 2026-08-23).
+# This repository is public, so its runners are free. Same arrangement as core-canon-drift.yml
+# and core-learning-daily.yml. Keep the steps identical to the starfire-core copy.
+#
+# WHAT IT DOES, zero LLM calls and no Anthropic key: reads Anthropic's own docs pages
+#   https://platform.claude.com/docs/en/about-claude/models/overview.md
+#   https://platform.claude.com/docs/en/about-claude/model-deprecations.md
+# and compares them with MODELS in scripts/stale_model_names.py and every model name in
+# starfire-core. Drift in the rows opens ONE pull request in starfire-core with the rebuilt
+# rows (deduped by branch name); any failure keeps ONE open issue there, updated in place.
+# Nothing is ever merged by this job.
+#
+# WHY THE LOGS ARE QUIET: this repository's Actions logs are public and the check reads a
+# private repository. The report goes to a file and only the exit code is printed.
+#
+# ORDER: the scripts live in starfire-core, so a core_ref that does not carry them fails
+# at the first test step. Merge starfire-core PR #5234 first, or dispatch with
+# core_ref=fix/stale-model-list-5-5 to run it before the merge.
+name: core-stale-model-list-daily
+on:
+  schedule:
+    - cron: "40 5 * * *"   # 05:40 UTC daily, after canon-drift (05:10) and learning-daily (05:30)
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core branch or sha to check out"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-stale-model-list-daily
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+    steps:
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Unit tests
+        working-directory: core
+        run: |
+          for t in names api docs; do
+            python3 scripts/tests/test-stale-model-$t.py > /dev/null || { echo "test-stale-model-$t failed"; exit 1; }
+          done
+          echo "unit tests pass"
+
+      - name: Full scan, strict about an expired list
+        id: scan
+        continue-on-error: true
+        working-directory: core
+        run: |
+          rc=0; python3 scripts/scan-stale-model-names.py --strict-list > "$RUNNER_TEMP/scan.log" 2>&1 || rc=$?
+          echo "exit=$rc"; exit $rc
+
+      - name: Compare with the vendor pages, open a refresh PR on drift
+        id: check
+        continue-on-error: true
+        working-directory: core
+        run: |
+          git config user.name "starfire-model-list"
+          git config user.email "info@bettersocieties.world"
+          rc=0; python3 scripts/check-model-list-against-api.py --open-pr --report "$RUNNER_TEMP/report.md" > "$RUNNER_TEMP/check.log" 2>&1 || rc=$?
+          echo "exit=$rc"
+          # Only the refresh PR line is public: it is a link into the private repository.
+          grep -E '^Refresh PR:' "$RUNNER_TEMP/report.md" 2>/dev/null || true
+          exit $rc
+
+      - name: Open or update the one issue in starfire-core
+        if: steps.scan.outcome == 'failure' || steps.check.outcome == 'failure'
+        working-directory: core
+        run: |
+          title='Model list expired or drifted from the Anthropic model pages'
+          [ -f "$RUNNER_TEMP/report.md" ] || { cat "$RUNNER_TEMP/scan.log" "$RUNNER_TEMP/check.log" 2>/dev/null; echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; } > "$RUNNER_TEMP/report.md"
+          n=$(gh issue list -R BetterSocieties/starfire-core --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then gh issue edit "$n" -R BetterSocieties/starfire-core --body-file "$RUNNER_TEMP/report.md" > /dev/null; else gh issue create -R BetterSocieties/starfire-core --title "$title" --body-file "$RUNNER_TEMP/report.md" > /dev/null; fi
+          echo "issue updated"
+
+      - name: Fail the run if either check failed
+        if: steps.scan.outcome == 'failure' || steps.check.outcome == 'failure'
+        run: exit 1
