@@ -23,11 +23,9 @@
 # THIS WORKFLOW IS DISABLED. To turn the ramp on, once the DKIM verdict file is on starfire-core main:
 #   gh workflow enable core-oj-free-asset-daily -R BetterSocieties/starfire-watch
 name: core-oj-free-asset-daily
+# The three schedule triggers (14:30, 16:30, 18:30 UTC weekdays) were removed 2026-10-17: the letters go to
+# scraped addresses, which the Resend and cold-mail rails here must not feed. Manual dispatch only.
 on:
-  schedule:
-    - cron: "30 14 * * 1-5"
-    - cron: "30 16 * * 1-5"
-    - cron: "30 18 * * 1-5"
   workflow_dispatch: {}
 permissions:
   contents: read
