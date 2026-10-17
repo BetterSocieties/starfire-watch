@@ -22,8 +22,10 @@ on:
 permissions:
   contents: read
 
+# Same group name as the fallback cron in starfire-core. GitHub groups are per repository, so this only serializes runs here; what stops
+# the two crons from both paging is the claim row the script inserts (kind alert_claim), so only the run that inserted it posts.
 concurrency:
-  group: core-oj-resend-timeline-reconcile
+  group: oj-resend-timeline-reconcile
   cancel-in-progress: false
 
 jobs:
@@ -44,7 +46,9 @@ jobs:
           python-version: "3.12"
       - name: Fixture tests
         working-directory: core
-        run: python3 scripts/test-oj-resend-timeline-reconcile.py
+        run: |
+          python3 scripts/test-oj-resend-timeline-reconcile.py
+          python3 scripts/mutants-oj-resend-timeline-reconcile.py
       - name: Reconcile
         working-directory: core
         env:
@@ -62,6 +66,8 @@ jobs:
       - name: Tell Slack
         if: failure()
         run: |
+          # the script posts to Slack itself and writes alerted_at only after the relay accepts; this step is the fallback
+          grep -q '^SLACK posted' "$RUNNER_TEMP/rtl.txt" 2>/dev/null && exit 0
           lines=$(grep -E '^(GAP|MISSING|UNREADABLE) ' "$RUNNER_TEMP/rtl.txt" 2>/dev/null | cut -c1-200 | head -20)
           [ -n "$lines" ] || lines="the reconcile failed before it printed a result; see the run"
           text=$(printf 'core-oj-resend-timeline-reconcile is RED.\n%s\n%s/%s/actions/runs/%s' "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
