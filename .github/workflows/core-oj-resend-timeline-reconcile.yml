@@ -1,0 +1,84 @@
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-resend-timeline-reconcile.yml (the repo that gets scheduled runners).
+# Daily: every Resend email and every real inbound reply onto oj_events with its prospect_id, the out_of_gate flag, and the heartbeat row
+# (source reconcile, kind reconcile_heartbeat) the gate reads. Sends nothing. scripts/oj-resend-timeline-reconcile.py in starfire-core has the rules.
+# Alerting: the script exits 1 only when a red set is new or has not been alerted for 24 h, and only the run whose claim row insert won posts. A crash pages through the same claim.
+# Off-peak minutes, never :00 (GitHub delays or drops top-of-hour schedules; see core-oj-reconcile-daily.yml). Idempotent, so extra runs are harmless.
+name: core-oj-resend-timeline-reconcile
+on:
+  schedule:
+    - cron: "37 6 * * *"
+    - cron: "41 13 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "read and report only, write nothing"
+        type: boolean
+        default: false
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+# Same group name as the fallback cron in starfire-core. GitHub groups are per repository, so this only serializes runs here; what stops
+# the two crons from both paging is the claim row the script inserts (kind alert_claim), so only the run that inserted it posts.
+concurrency:
+  group: oj-resend-timeline-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # the same check starfire-core runs from its side (scripts/check-oj-resend-watch-twin.py); a twin that is not on the ref is a failure, because
+          # a scheduler copy nobody compares against could drift unseen, and so is a difference
+          twin=core/ops/watch-twin/core-oj-resend-timeline-reconcile.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref ${{ inputs.core_ref || 'main' }}: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-resend-timeline-reconcile.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fixture tests
+        working-directory: core
+        run: |
+          python3 scripts/test-oj-resend-timeline-reconcile.py
+          python3 scripts/mutants-oj-resend-timeline-reconcile.py
+      - name: Reconcile
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -uo pipefail
+          ARGS=""; [ "$DRY_RUN" = "true" ] && ARGS="--dry-run"
+          scripts/with-vault-env.sh RESEND_API_KEY OJ_WORKER_SEND_TOKEN OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/oj-resend-timeline-reconcile.py $ARGS | tee "$RUNNER_TEMP/rtl.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Resend timeline reconcile'; echo '```'; cat "$RUNNER_TEMP/rtl.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+      - name: Page Slack if the run failed
+        if: failure()
+        working-directory: core
+        run: |
+          # the script posts its own alert and writes alerted_at only after the relay accepts; if it did, nothing more to do
+          grep -q '^SLACK posted' "$RUNNER_TEMP/rtl.txt" 2>/dev/null && exit 0
+          # a crash or an unreadable source pages through the SAME claim table as the alert, so the 3 crons page once a day between them;
+          # if the vault or the ledger is down the second form still posts, because silence is worse than a duplicate
+          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/oj-resend-timeline-reconcile.py --page-failure "$RUNNER_TEMP/rtl.txt" ||
+            python3 scripts/oj-resend-timeline-reconcile.py --page-failure "$RUNNER_TEMP/rtl.txt"
