@@ -29,8 +29,9 @@
 # runtime through scripts/vault-get.py; none is stored for these jobs.
 name: core-oj-source-daily
 on:
-  # MERGE ONLY AFTER migrations 20261017115900, 20261017120000 and 20261017130100 are applied to the OpsJuice database:
-  # the import refuses (exit 3) while prospects_outreach_state_check does not admit 'unscreened'.
+  # MERGE ONLY AFTER migrations 20261017115900, 20261017120000, 20261017130100 and 20261017130200 are applied to the
+  # OpsJuice database: the import refuses (exit 3) while prospects_outreach_state_check does not admit 'unscreened',
+  # and every read below has a 10 s statement timeout that only the 130200 partial indexes keep it under.
   # A scheduled run applies. A manual run is a dry run unless apply=true: every step reads and prints, and not one of
   # the six writes a row.
   schedule:
@@ -77,7 +78,8 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # import: --pool-over-sql reads the held pool with one \copy (REST offset paging 500s past ~150k rows);
+          # import: --pool-over-sql reads the held pool on ONE connection in physical-order ctid ranges of 256 pages, each
+          # statement under a 10 s timeout (REST offset paging 500s past ~150k rows; a keyset on the uuid key is random IO);
           # --apply also makes the importer read the live constraint and refuse unless it admits 'unscreened'.
           flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY OJ_SUPABASE_DB_PASSWORD -- sh -c '
@@ -96,7 +98,8 @@ jobs:
           rc=0
           niches="$(python3 -c "import sys; sys.path.insert(0, 'scripts'); import oj_icp_canon as c; print(','.join(next(e for e in c.cold_screen_entries() if e['slug'] == 'home-services')['sourcing']['store_niches']))")"
           flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
-          # the worklist is read over SQL (the REST form answered HTTP 500, statement timeout, on 2026-10-17)
+          # the worklist is read over SQL on one connection, 10 s timeout, through prospects_email_worklist_open_idx
+          # (the REST form answered HTTP 500, statement timeout, on 2026-10-17)
           scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c '
             PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-discover-emails-from-website.py --niche "'"$niches"'" --limit 120 '"$flag" \
             > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
@@ -151,16 +154,12 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # The stamper reads at most 1000 rows a pass (the REST page size), so repeat until it has nothing left.
-          # A dry run reads once and writes nothing (without --apply a second pass would see the same rows).
-          flag=""; passes=1
-          if [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ]; then flag="--apply"; passes=20; fi
-          for pass in $(seq 1 $passes); do
-            # rows come over SQL (PGPASSWORD); a gateway 5xx on one write is retried and, if it persists, deferred a day
-            scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c 'PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-stamp-icp-verdict.py --from-store '"$flag" > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
-            echo "stamp pass $pass: $(grep -E '^(wrote|nothing to stamp)' "$RUNNER_TEMP/stamp.log" | cut -c1-40)"
-            grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && break
-          done
+          # One process, one connection: the stamper reads 500 rows a statement (after the last id it saw, through
+          # prospects_icp_stamp_owed_idx) and repeats until none are left. A dry run reads one batch and writes nothing.
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          # rows come over SQL (PGPASSWORD); a gateway 5xx on one write is retried and, if it persists, deferred a day
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c 'PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-stamp-icp-verdict.py --from-store '"$flag" > "$RUNNER_TEMP/stamp.log" 2>&1 || rc=$?
+          grep -E '^(wrote|nothing to stamp|database connections)' "$RUNNER_TEMP/stamp.log" | cut -c1-60 || true
           echo "stamp exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
