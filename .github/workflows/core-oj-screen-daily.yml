@@ -13,7 +13,7 @@
 # The order that matters is screen BEFORE verify: the mailbox pass of core-oj-verify-daily reads only
 # ICP-passed rows.
 #
-# BOUNDED. At most 10 passes of 500 rows. Each pass reads the whole unscreened set and cuts it to
+# BOUNDED. At most 10 passes of 500 rows and no new pass after 60 minutes. Each pass reads the whole unscreened set and cuts it to
 # --limit before writing (see fetch_rows), so a pass costs one full read; the loop stops when a pass
 # screens fewer than 500 rows. A day with more than 5,000 unscreened rows leaves the rest for the next
 # run, which is the intended ceiling.
@@ -76,6 +76,9 @@ jobs:
           rc=0
           : > "$RUNNER_TEMP/screened-all.md"
           for pass in 1 2 3 4 5 6 7 8 9 10; do
+            # A pass can take many minutes (a dry run of 25 rows from a laptop took about 13), so no
+            # new pass starts after 60 minutes and the job timeout of 90 is never what ends a run.
+            if [ "$SECONDS" -gt 3600 ]; then echo "time budget spent; the rest waits for the next run"; break; fi
             rc=0
             rm -f "$RUNNER_TEMP/screened.md"
             scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
