@@ -186,6 +186,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
+      - name: Alert on database read pressure (cache hit under 99% or disk reads near the baseline)
+        if: always()
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          # one connection, 10 s timeout, two counter reads 20 s apart; posts to Slack through ea-slack-update.py only when over a bar
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c 'PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-db-io-alert.py'
+
   verify:
     needs: source
     uses: ./.github/workflows/core-oj-verify-daily.yml
