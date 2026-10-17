@@ -1,0 +1,25 @@
+# Runs the offline require-env test on every pull request that touches it or the drain it guards,
+# so a change that lets a missing variable pass green fails before it can merge.
+name: require-env-tests
+on:
+  pull_request:
+    paths:
+      - scripts/require-env.sh
+      - scripts/test-require-env.sh
+      - .github/workflows/core-warm-wave-drain.yml
+      - .github/workflows/core-oj-screen-daily.yml
+      - .github/workflows/core-oj-source-daily.yml
+      - .github/workflows/core-oj-verify-daily.yml
+      - .github/workflows/require-env-tests.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  require-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: require-env test
+        run: bash scripts/test-require-env.sh

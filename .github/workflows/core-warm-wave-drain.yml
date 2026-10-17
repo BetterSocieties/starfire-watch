@@ -62,6 +62,15 @@
 # repositories, which left OpsJuice's only live sending channel with no scheduler at all
 # for 6 days.
 #
+# A TECHNICAL FAILURE IS RED, added for starfire-core issue 4763. The step below needs N8N_URL: the
+# sender's undeliverable screen reads the prospects table through the n8n pod, and with the variable
+# absent it raised KeyError, which the sender then reported as exit 3, so a broken screen looked like
+# a rail holding letters back and the run went green. Three changes close it: N8N_URL is supplied
+# here as a plain, non-secret value (the same address core-oj-free-asset-daily and
+# core-oj-record-free-users use; the API key comes from the vault through scripts/n8n_key.py, never
+# from this file), scripts/require-env.sh fails the step red if any required variable is empty, and
+# the sender now exits 4 when the screening read fails. Only exit 3 is green.
+#
 # THE VAULT SECRET IS NAMED DIFFERENTLY IN EACH REPOSITORY. starfire-core's copy reads
 # secrets.STARFIRE_VAULT_BEARER. This repository holds it as secrets.VAULT_BEARER, which
 # is what echo-session-brief.yml, free-model-worker.yml and sync-pod-key-to-vault.yml all
@@ -84,6 +93,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Checkout this repository's scripts (the required-variable check lives here)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/require-env.sh
+          sparse-checkout-cone-mode: false
+
       - name: Checkout starfire-core (the repository the sender lives in)
         uses: actions/checkout@v4
         with:
@@ -96,13 +111,26 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prove no scraped, unscreened or unverified row can be sent
+        # Resend's acceptable use policy forbids sending to scraped lists, and this wave's list is
+        # scraped. The sender's own offline tests, stubbed end to end, must pass BEFORE the sender
+        # runs: a failing proof fails the job red and nothing is sent. No secret or network is used.
+        working-directory: core
+        run: |
+          set -eo pipefail
+          python3 -B scripts/tests/test-warm-never-sends-unscreened-or-scraped.py | tail -n 1
+          python3 -B scripts/tests/test-warm-screen-failure.py | tail -n 1
+
       - name: Send whatever the allowance permits
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          N8N_URL: https://n8n.opsjuice.com
         run: |
           set -o pipefail
+          # A missing variable is a red run, before anything is read or sent (starfire-core issue 4763).
+          bash "$GITHUB_WORKSPACE/scripts/require-env.sh" N8N_URL STARFIRE_VAULT_URL STARFIRE_VAULT_BEARER
           mkdir -p agent
           rc=0
           python3 ventures/opsjuice/warm-wave/send-warm-wave.py --send > agent/warm-wave-drain.log 2>&1 || rc=$?

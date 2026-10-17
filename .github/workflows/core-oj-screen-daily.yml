@@ -1,0 +1,115 @@
+# Screen the OpsJuice prospect pool against the owner-operator ICP, in bounded batches, on free tiers only.
+# The screen reads fields already on each row; it never calls a service and never fetches a page.
+# Nothing here sends mail and nothing here touches n8n.
+#
+# WHY THIS IS ITS OWN WORKFLOW. The screen used to be the last step of core-oj-source-daily, so a
+# failure in any earlier source step (Overture, site read, stamp) skipped it, and core-oj-verify-daily
+# (`needs: source`) was skipped with it. Source failed 2026-10-14, 10-15 and 10-16; verify last ran
+# 2026-10-12. Now there are three entry points, all running the one copy of the steps below:
+#   1. core-oj-source-daily calls this as a reusable workflow right after its source job, and runs it
+#      even when the source job failed (`!cancelled()`), because rows that already exist are owed a screen.
+#   2. This file's own cron, a catch-up for a day on which source-daily never started.
+#   3. workflow_dispatch.
+# The order that matters is screen BEFORE verify: the mailbox pass of core-oj-verify-daily reads only
+# ICP-passed rows.
+#
+# BOUNDED. At most 3 passes of 2000 rows, none starting after 50 minutes, each pass under 30 minutes.
+# Each pass reads the whole unscreened set and cuts it to --limit before writing (see fetch_rows), so a
+# pass costs one full read. The screen itself costs under a millisecond a row (the script's 81 assertions
+# over about a thousand rows run in 0.24 s) and writes 500 rows per merge, so the read, not the batch
+# size, is the time: about 13 minutes from a laptop for a 25 row limit, one data point. Each pass checks
+# a 25 minute budget inside the script (--max-seconds 1500, between read requests and between rows) and
+# is killed by `timeout` at 29 minutes. The loop stops when a pass screens fewer than the batch or says
+# its budget was spent. Rows left over wait for the next run.
+#
+# SCHEDULE. GitHub documents that `schedule` runs only from the default branch, is in UTC, can be
+# delayed at high load (the start of every hour is the busiest), and is disabled in a public repository
+# after 60 days without repository activity
+# (docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+# So the minute is :17, not :00. core-oj-source-daily's own runs have started between 09:34 and 12:31
+# UTC against a 05:00 cron on 2026-10-13 to 10-16, so this catch-up sits at 10:17 and verify's at 11:17,
+# which finishes inside its 150 minute timeout before the 14:30 sender.
+#
+# CONCURRENCY. `group: core-oj-screen-daily` with cancel-in-progress false: at most one run and one
+# pending run per group, a newer pending run replaces an older pending one, and a running screen is
+# never cancelled halfway through its writes
+# (docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+# A cron run that lands while the chained run is still screening waits, then finds nothing to screen.
+#
+# THE LOG IS WORLD READABLE. Counts only; the screened list goes to the step summary as before.
+name: core-oj-screen-daily
+on:
+  schedule:
+    - cron: "17 10 * * 1-5"
+  workflow_call: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-screen-daily
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Screen every unscreened row against the owner-operator ICP, 2000 at a time
+        working-directory: core
+        run: |
+          set -uo pipefail
+          batch=2000
+          total=0
+          rc=0
+          : > "${RUNNER_TEMP:?}/screened-all.md"
+          for pass in 1 2 3; do
+            # A pass is one full read of the unscreened set plus a screen that costs under a
+            # millisecond a row and a write of 500 rows per merge, so the read is the time and the
+            # batch size is not. The read took about 13 minutes from a laptop (25 row limit). Each
+            # pass checks a 25 minute budget inside the script (between read requests and between
+            # rows) and is killed at 29 minutes, so no pass runs 30. No new pass starts after
+            # 50 minutes, so three passes end by 80, inside the 100 minute job timeout.
+            if [ "$SECONDS" -gt 3000 ]; then echo "time budget spent; the rest waits for the next run"; break; fi
+            rc=0
+            : > "${RUNNER_TEMP:?}/screened.md"
+            timeout 1740 scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
+              OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
+                --unscreened --write --limit '"$batch"' --max-seconds 1500 --summary-md "$RUNNER_TEMP/screened.md"' \
+              > "$RUNNER_TEMP/screen-$pass.log" 2>&1 || rc=$?
+            n="$(sed -n 's/^Total rows screened: \([0-9][0-9]*\)$/\1/p' "$RUNNER_TEMP/screen-$pass.log" | head -1)"
+            echo "pass $pass exit=$rc screened=${n:-none}"
+            if [ "$rc" -ne 0 ]; then
+              # The script prints only counts and its own failure sentence, never a row or a key.
+              tail -n 3 "$RUNNER_TEMP/screen-$pass.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+              break
+            fi
+            [ -n "$n" ] || { echo "the screen printed no row count; failing rather than guessing"; rc=1; break; }
+            total=$((total + n))
+            cat "$RUNNER_TEMP/screened.md" >> "$RUNNER_TEMP/screened-all.md"
+            grep -q '^time budget spent' "$RUNNER_TEMP/screen-$pass.log" && break
+            [ "$n" -lt "$batch" ] && break
+          done
+          echo "rows screened in this run: $total"
+          {
+            echo "### Screened today ($total rows)"
+            echo ""
+            if [ -s "$RUNNER_TEMP/screened-all.md" ]; then cat "$RUNNER_TEMP/screened-all.md"; else echo "No list was written."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc

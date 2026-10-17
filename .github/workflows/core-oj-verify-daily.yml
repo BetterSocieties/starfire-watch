@@ -1,9 +1,14 @@
 # Verify the addresses of newly sourced OpsJuice prospects, every weekday, on free tiers only.
 # Benchmark and why: starfire-core STATE/benchmarks/oj-sourcing-2026-10-12.md.
 #
-# Runs as the second job of core-oj-source-daily.yml (05:00 UTC Monday to Friday), after the
-# screen, so the rows screened today are verified before the sender (core-oj-free-asset-daily,
-# 14:30) looks for them. It has no schedule of its own; workflow_dispatch runs it alone.
+# Runs as the last job of core-oj-source-daily.yml, after the screen, so the rows screened today are
+# verified before the sender (core-oj-free-asset-daily, 14:30) looks for them. It also has its own cron,
+# 11:17 UTC Monday to Friday, a catch-up for a day on which source-daily never started; the screen's own
+# catch-up is core-oj-screen-daily.yml at 10:17. Both crons are off the top of the hour because GitHub
+# documents that `schedule` can be delayed at the start of every hour, and run in UTC from the default
+# branch only. A cron run that overlaps the chained run waits in the concurrency group below (cancel-in-
+# progress is false, so a running pass is never cut off) and then finds little left to do.
+# 150 minutes at most, so a 11:17 start ends before the 14:30 sender.
 #
 # Order, cheapest first:
 #   1. address kind (named, role, general), local rule, no network
@@ -19,6 +24,8 @@
 # script's output goes to a file on the runner and only counts are echoed.
 name: core-oj-verify-daily
 on:
+  schedule:
+    - cron: "17 11 * * 1-5"
   workflow_call: {}
   workflow_dispatch: {}
 
