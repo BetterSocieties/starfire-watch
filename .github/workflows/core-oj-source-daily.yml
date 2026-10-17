@@ -1,3 +1,4 @@
+# Copy of BetterSocieties/starfire-watch .github/workflows/core-oj-source-daily.yml as shipped by the watch PR for #5223.
 # The OpsJuice W1 to W3 chain, one run every weekday: source new prospects, read the website of the
 # unmeasured ones best-ranked first (home services, then law, then med spas), find public contact
 # addresses for home services, stamp the fit verdict, screen against the owner-operator ICP, then
@@ -28,9 +29,19 @@
 # runtime through scripts/vault-get.py; none is stored for these jobs.
 name: core-oj-source-daily
 on:
+  # MERGE ONLY AFTER migrations 20261017115900, 20261017120000, 20261017130100 and 20261017130200 are applied to the
+  # OpsJuice database: the import refuses (exit 3) while prospects_outreach_state_check does not admit 'unscreened',
+  # and every read below has a 10 s statement timeout that only the 130200 partial indexes keep it under.
+  # A scheduled run applies. A manual run is a dry run unless apply=true: every step reads and prints, and not one of
+  # the six writes a row.
   schedule:
     - cron: "0 5 * * 1-5"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "true inserts and writes; anything else is a dry run"
+        default: "false"
+
 
 permissions:
   contents: read
@@ -67,8 +78,12 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
-            python3 scripts/oj-source-overture.py --rotate --apply \
+          # import: --pool-over-sql reads the held pool on ONE connection in physical-order ctid ranges of 256 pages, each
+          # statement under a 10 s timeout (REST offset paging 500s past ~150k rows; a keyset on the uuid key is random IO);
+          # --apply also makes the importer read the live constraint and refuse unless it admits 'unscreened'.
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY OJ_SUPABASE_DB_PASSWORD -- sh -c '
+            PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-source-overture.py --rotate --pool-over-sql '"$flag"'' \
             > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
@@ -82,7 +97,11 @@ jobs:
           set -uo pipefail
           rc=0
           niches="$(python3 -c "import sys; sys.path.insert(0, 'scripts'); import oj_icp_canon as c; print(','.join(next(e for e in c.cold_screen_entries() if e['slug'] == 'home-services')['sourcing']['store_niches']))")"
-          python3 scripts/oj-discover-emails-from-website.py --niche "$niches" --limit 120 --apply \
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          # the worklist is read over SQL on one connection, 10 s timeout, through prospects_email_worklist_open_idx
+          # (the REST form answered HTTP 500, statement timeout, on 2026-10-17)
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c '
+            PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-discover-emails-from-website.py --niche "'"$niches"'" --limit 120 '"$flag" \
             > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
           echo "discover exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/discover.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
@@ -97,13 +116,34 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
-            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
-              --apply --limit 6000' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          # the rows owed a read come over SQL with PGPASSWORD (the REST keyset read answered HTTP 500 on 10-15 and 10-16)
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY OJ_SUPABASE_DB_PASSWORD -- sh -c '
+            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-enrich-home-services-booking-signal.py \
+              '"$flag"' --limit 6000' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
           echo "site signals exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/signals.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           sed -n '/^--- run summary ---/,$p' "$RUNNER_TEMP/signals.log" || true
           grep -E '^(queued home-services rows|measured, or tried|rows to check)' "$RUNNER_TEMP/signals.log" || true
+          exit $rc
+
+      - name: Quote each new row's published phone and hours (criterion 4 needs the quote)
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          rc=0
+          # The screen answers ring_out only from a stored quote. Without this step a freshly sourced row can never
+          # match, so it would sit unscreened for ever.
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c '
+            PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-quote-the-published-phone-and-hours.py \
+              --scope unscreened --limit 3000 '"$flag"'' > "$RUNNER_TEMP/quote.log" 2>&1 || rc=$?
+          echo "quote exit=$rc"
+          [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/quote.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          grep -E '^rows ' "$RUNNER_TEMP/quote.log" || true
           exit $rc
 
       - name: Stamp the fit verdict the sender's pool reads
@@ -114,12 +154,12 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # The stamper reads at most 1000 rows a pass (the REST page size), so repeat until it has nothing left.
-          for pass in $(seq 1 20); do
-            python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
-            echo "stamp pass $pass: $(grep -E '^(wrote|nothing to stamp)' "$RUNNER_TEMP/stamp.log" | cut -c1-40)"
-            grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && break
-          done
+          # One process, one connection: the stamper reads 500 rows a statement (after the last id it saw, through
+          # prospects_icp_stamp_owed_idx) and repeats until none are left. A dry run reads one batch and writes nothing.
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
+          # rows come over SQL (PGPASSWORD); a gateway 5xx on one write is retried and, if it persists, deferred a day
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c 'PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-stamp-icp-verdict.py --from-store '"$flag" > "$RUNNER_TEMP/stamp.log" 2>&1 || rc=$?
+          grep -E '^(wrote|nothing to stamp|database connections)' "$RUNNER_TEMP/stamp.log" | cut -c1-60 || true
           echo "stamp exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
@@ -132,9 +172,11 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
-            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
-              --unscreened --write --summary-md "$RUNNER_TEMP/screened.md"' > "$RUNNER_TEMP/screen.log" 2>&1 || rc=$?
+          # screen: --write also runs oj_promote_screened.py (psql, needs PGPASSWORD): a passing US row goes to queued
+          flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--write"
+          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY OJ_SUPABASE_DB_PASSWORD -- sh -c '
+            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
+              --unscreened '"$flag"' --summary-md "$RUNNER_TEMP/screened.md"' > "$RUNNER_TEMP/screen.log" 2>&1 || rc=$?
           echo "screen exit=$rc"
           cat "$RUNNER_TEMP/screen.log"
           {
@@ -143,6 +185,17 @@ jobs:
             if [ -f "$RUNNER_TEMP/screened.md" ]; then cat "$RUNNER_TEMP/screened.md"; else echo "No list was written."; fi
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
+
+      - name: Alert on database read pressure (cache hit under 99% or disk reads near the baseline)
+        if: always()
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          # one connection, 10 s timeout, two counter reads 20 s apart; posts to Slack through ea-slack-update.py only when over a bar
+          scripts/with-vault-env.sh OJ_SUPABASE_DB_PASSWORD -- sh -c 'PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-db-io-alert.py'
 
   verify:
     needs: source
