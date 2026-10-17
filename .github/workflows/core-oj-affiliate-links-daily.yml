@@ -3,6 +3,10 @@
 # no link. Script and approved list live in starfire-core (scripts/check-oj-affiliate-links.py,
 # ventures/opsjuice/affiliate-partner-links.md). Weekdays 13:17 UTC.
 #
+# Two checks per run: the tree scan (what git holds) and --live (every URL in
+# https://opsjuice.com/sitemap.xml, fetched as a visitor gets it, same page rules, and the shared
+# disclosure stylesheet must answer 200). --live needs starfire-core PR 5175 on main; merge it first.
+#
 # Alert routing: a drifted link is mine to fix, not Adrien's, so it goes to the record
 # channel through the same relay the actions failure report uses (channel "log"), never
 # to needs_you. It posts only when the check goes red after a green run, not every
@@ -24,7 +28,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout starfire-core
         uses: actions/checkout@v4
@@ -45,6 +49,8 @@ jobs:
           set +e
           python3 scripts/check-oj-affiliate-links.py | tee "$RUNNER_TEMP/aff.txt"
           rc=${PIPESTATUS[0]}
+          python3 scripts/check-oj-affiliate-links.py --live | tee -a "$RUNNER_TEMP/aff.txt"
+          [ "${PIPESTATUS[0]}" -eq 0 ] || rc=1
           echo "rc=$rc" >> "$GITHUB_OUTPUT"
           { echo '### OpsJuice affiliate links'; echo '```'; cat "$RUNNER_TEMP/aff.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Tell the record channel when it turns red
