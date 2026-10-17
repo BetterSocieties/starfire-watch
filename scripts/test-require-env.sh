@@ -29,5 +29,19 @@ send_line="$(grep -n 'send-warm-wave.py --send' "$wf" | head -1 | cut -d: -f1)"
 [ "$req_line" -lt "$send_line" ]; check "the requirement runs before the sender" "$?" 0
 check "only exit 3 is mapped to green" "$(grep -c 'if \[ "\$rc" -eq 3 \]' "$wf")" 1
 
+# The drain proves, before it sends, that the sender cannot send to a scraped, unscreened or unverified
+# row (Resend's acceptable use policy forbids scraped lists). The proof is the sender's own offline test
+# in starfire-core, run as a step that comes BEFORE the sender step, so a failing proof fails the job
+# red and nothing is sent.
+proof_line="$(grep -n 'test-warm-never-sends-unscreened-or-scraped.py' "$wf" | head -1 | cut -d: -f1)"
+[ -n "$proof_line" ] && [ "$proof_line" -lt "$send_line" ]; check "the drain runs the no-scraped-sends proof before the sender" "$?" 0
+grep -q 'test-warm-screen-failure.py' "$wf"; check "the drain also runs the screen-failure proof" "$?" 0
+
+# The screen workflow: every pass is time boxed inside the pass and by a hard timeout, under 30 minutes.
+sw="$repo/.github/workflows/core-oj-screen-daily.yml"
+grep -q -- '--max-seconds 1500' "$sw"; check "each screen pass carries a 25 minute budget inside the script" "$?" 0
+grep -q 'timeout 1740 ' "$sw"; check "each screen pass has a 29 minute hard timeout" "$?" 0
+grep -q 'for pass in 1 2 3; do' "$sw"; check "at most 3 passes" "$?" 0
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

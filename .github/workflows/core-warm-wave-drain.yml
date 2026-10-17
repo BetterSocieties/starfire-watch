@@ -111,6 +111,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prove no scraped, unscreened or unverified row can be sent
+        # Resend's acceptable use policy forbids sending to scraped lists, and this wave's list is
+        # scraped. The sender's own offline tests, stubbed end to end, must pass BEFORE the sender
+        # runs: a failing proof fails the job red and nothing is sent. No secret or network is used.
+        working-directory: core
+        run: |
+          set -eo pipefail
+          python3 -B scripts/tests/test-warm-never-sends-unscreened-or-scraped.py | tail -n 1
+          python3 -B scripts/tests/test-warm-screen-failure.py | tail -n 1
+
       - name: Send whatever the allowance permits
         working-directory: core
         env:

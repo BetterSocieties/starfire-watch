@@ -13,10 +13,14 @@
 # The order that matters is screen BEFORE verify: the mailbox pass of core-oj-verify-daily reads only
 # ICP-passed rows.
 #
-# BOUNDED. At most 10 passes of 500 rows and no new pass after 60 minutes. Each pass reads the whole unscreened set and cuts it to
-# --limit before writing (see fetch_rows), so a pass costs one full read; the loop stops when a pass
-# screens fewer than 500 rows. A day with more than 5,000 unscreened rows leaves the rest for the next
-# run, which is the intended ceiling.
+# BOUNDED. At most 3 passes of 2000 rows, none starting after 50 minutes, each pass under 30 minutes.
+# Each pass reads the whole unscreened set and cuts it to --limit before writing (see fetch_rows), so a
+# pass costs one full read. The screen itself costs under a millisecond a row (the script's 81 assertions
+# over about a thousand rows run in 0.24 s) and writes 500 rows per merge, so the read, not the batch
+# size, is the time: about 13 minutes from a laptop for a 25 row limit, one data point. Each pass checks
+# a 25 minute budget inside the script (--max-seconds 1500, between read requests and between rows) and
+# is killed by `timeout` at 29 minutes. The loop stops when a pass screens fewer than the batch or says
+# its budget was spent. Rows left over wait for the next run.
 #
 # SCHEDULE. GitHub documents that `schedule` runs only from the default branch, is in UTC, can be
 # delayed at high load (the start of every hour is the busiest), and is disabled in a public repository
@@ -50,7 +54,7 @@ concurrency:
 jobs:
   screen:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     env:
       STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
       STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
@@ -67,23 +71,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Screen every unscreened row against the owner-operator ICP, 500 at a time
+      - name: Screen every unscreened row against the owner-operator ICP, 2000 at a time
         working-directory: core
         run: |
           set -uo pipefail
-          batch=500
+          batch=2000
           total=0
           rc=0
-          : > "$RUNNER_TEMP/screened-all.md"
-          for pass in 1 2 3 4 5 6 7 8 9 10; do
-            # A pass can take many minutes (a dry run of 25 rows from a laptop took about 13), so no
-            # new pass starts after 60 minutes and the job timeout of 90 is never what ends a run.
-            if [ "$SECONDS" -gt 3600 ]; then echo "time budget spent; the rest waits for the next run"; break; fi
+          : > "${RUNNER_TEMP:?}/screened-all.md"
+          for pass in 1 2 3; do
+            # A pass is one full read of the unscreened set plus a screen that costs under a
+            # millisecond a row and a write of 500 rows per merge, so the read is the time and the
+            # batch size is not. The read took about 13 minutes from a laptop (25 row limit). Each
+            # pass checks a 25 minute budget inside the script (between read requests and between
+            # rows) and is killed at 29 minutes, so no pass runs 30. No new pass starts after
+            # 50 minutes, so three passes end by 80, inside the 100 minute job timeout.
+            if [ "$SECONDS" -gt 3000 ]; then echo "time budget spent; the rest waits for the next run"; break; fi
             rc=0
-            rm -f "$RUNNER_TEMP/screened.md"
-            scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
+            : > "${RUNNER_TEMP:?}/screened.md"
+            timeout 1740 scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
               OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
-                --unscreened --write --limit '"$batch"' --summary-md "$RUNNER_TEMP/screened.md"' \
+                --unscreened --write --limit '"$batch"' --max-seconds 1500 --summary-md "$RUNNER_TEMP/screened.md"' \
               > "$RUNNER_TEMP/screen-$pass.log" 2>&1 || rc=$?
             n="$(sed -n 's/^Total rows screened: \([0-9][0-9]*\)$/\1/p' "$RUNNER_TEMP/screen-$pass.log" | head -1)"
             echo "pass $pass exit=$rc screened=${n:-none}"
@@ -94,7 +102,8 @@ jobs:
             fi
             [ -n "$n" ] || { echo "the screen printed no row count; failing rather than guessing"; rc=1; break; }
             total=$((total + n))
-            [ -f "$RUNNER_TEMP/screened.md" ] && cat "$RUNNER_TEMP/screened.md" >> "$RUNNER_TEMP/screened-all.md"
+            cat "$RUNNER_TEMP/screened.md" >> "$RUNNER_TEMP/screened-all.md"
+            grep -q '^time budget spent' "$RUNNER_TEMP/screen-$pass.log" && break
             [ "$n" -lt "$batch" ] && break
           done
           echo "rows screened in this run: $total"
