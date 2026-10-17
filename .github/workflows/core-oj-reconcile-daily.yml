@@ -23,7 +23,12 @@ on:
     - cron: "17 6 * * *"
     - cron: "43 12 * * *"
     - cron: "23 18 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      inject_gap:
+        description: "TEST: run the script's --inject-gap (synthetic gap, no vendor or ledger call) so the run fails and the real Slack step posts a TEST message"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -67,12 +72,18 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          INJECT_GAP: ${{ inputs.inject_gap }}
         run: |
           set -uo pipefail
-          scripts/with-vault-env.sh \
-            OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
-            OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
-            python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
+          # inject_gap (manual dispatch only): a synthetic gap on all four vendors, no vendor, ledger or vault call.
+          if [ "$INJECT_GAP" = "true" ]; then
+            python3 scripts/oj-reconcile-events.py --inject-gap | tee "$RUNNER_TEMP/reconcile.txt"
+          else
+            scripts/with-vault-env.sh \
+              OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
+              OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
+              python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
+          fi
           rc=${PIPESTATUS[0]}
           { echo "### Reconcile, last $HOURS hours"; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
@@ -81,7 +92,7 @@ jobs:
       # door (insert or ignore, so safe to repeat). The job stays red so the loss is still reported; the
       # next run is green once the rows are there.
       - name: Backfill the Cal bookings the reconcile found missing
-        if: failure()
+        if: failure() && inputs.inject_gap != true
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -106,6 +117,7 @@ jobs:
         if: failure()
         env:
           GH_TOKEN: ${{ github.token }}
+          INJECT_GAP: ${{ inputs.inject_gap }}
         run: |
           grep -E '^(MISSING|UNREADABLE) ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null | sed 's/ created .*//' | sort > "$RUNNER_TEMP/missing-now.txt" || true
           [ -s "$RUNNER_TEMP/missing-now.txt" ] || echo "NO-RESULT-PRINTED" > "$RUNNER_TEMP/missing-now.txt"
@@ -118,8 +130,10 @@ jobs:
           echo "missing set changed since the previous run (repeat_ok): $repeat"
           lines=$(grep -E '^(MISSING|UNREADABLE) ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
           [ -n "$lines" ] || lines="the reconcile step failed before it printed a result; see the run"
-          text=$(printf 'core-oj-reconcile-daily is RED (window %s h).\n%s\n%s/%s/actions/runs/%s' \
-            "${HOURS:-?}" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          label=""
+          if [ "$INJECT_GAP" = "true" ]; then label="TEST (inject_gap, synthetic gap, ignore) "; repeat=true; fi
+          text=$(printf '%score-oj-reconcile-daily is RED (window %s h).\n%s\n%s/%s/actions/runs/%s' \
+            "$label" "${HOURS:-?}" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
           jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLV397CH4", text: $text, repeat_ok: $repeat}' |
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
@@ -127,11 +141,11 @@ jobs:
       # Remember this run's missing set for the next run's repeat_ok test. A green run records an empty set,
       # so the same ids missing again after a heal count as new.
       - name: Record the missing set
-        if: always()
+        if: always() && inputs.inject_gap != true
         run: |
           if [ -f "$RUNNER_TEMP/missing-now.txt" ]; then cp "$RUNNER_TEMP/missing-now.txt" "$RUNNER_TEMP/missing-set.txt"; else : > "$RUNNER_TEMP/missing-set.txt"; fi
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && inputs.inject_gap != true
         with:
           name: reconcile-missing-set
           path: ${{ runner.temp }}/missing-set.txt

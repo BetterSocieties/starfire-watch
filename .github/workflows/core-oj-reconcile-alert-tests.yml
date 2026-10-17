@@ -1,0 +1,39 @@
+# Proves the reconcile can go red: the script's own --self-test, the --inject-gap dry run (starfire-core
+# scripts/tests/test-oj-reconcile-inject-gap.py) and the shape of core-oj-reconcile-daily.yml's inject_gap path
+# (scripts/tests/test-reconcile-workflow-inject-gap.py). Runs only when the reconcile workflow or its tests change.
+# The output is synthetic ids only (no vendor, ledger or vault call), so it is safe in this public repo's log.
+# Needs starfire-core PR 5214 merged: the core test file does not exist on main before that.
+name: core-oj-reconcile-alert-tests
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/core-oj-reconcile-daily.yml"
+      - ".github/workflows/core-oj-reconcile-alert-tests.yml"
+      - "scripts/tests/test-reconcile-workflow-inject-gap.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Script self-test
+        run: python3 core/scripts/oj-reconcile-events.py --self-test
+      - name: Inject-gap dry run exits red on all four vendors
+        run: python3 core/scripts/tests/test-oj-reconcile-inject-gap.py
+      - name: Workflow carries the inject_gap path
+        run: python3 scripts/tests/test-reconcile-workflow-inject-gap.py
