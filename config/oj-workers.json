@@ -1,0 +1,21 @@
+{
+  "_note": "Workers this repo may deploy from starfire-core main. A Worker not listed here is never touched: core holds 1000+ cf-workers dirs and most are not deployed by anyone. Add a Worker only after its wrangler.toml is complete and its token scope is proven.",
+  "relay": "https://n8n.opsjuice.com/webhook/starfire-alert-relay",
+  "relay_channel": "log",
+  "workers": [
+    {
+      "name": "oj-events",
+      "dir": "cf-workers/oj-events",
+      "also_hash": ["cf-workers/shared"],
+      "verify": { "kind": "http", "method": "GET", "url": "https://opsjuice.com/api/stripe", "expect": [405] },
+      "requires_vars": []
+    },
+    {
+      "name": "opsjuice-email-receiver",
+      "dir": "cf-workers/opsjuice-email-receiver",
+      "also_hash": [],
+      "verify": { "kind": "deployed-hash" },
+      "requires_vars": ["SUPABASE_URL"]
+    }
+  ]
+}
