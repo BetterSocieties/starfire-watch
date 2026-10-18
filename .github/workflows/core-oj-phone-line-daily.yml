@@ -1,0 +1,76 @@
+# Ask the voice provider whether anybody who rang the OpsJuice assessment line got an answer, and tell Slack when not.
+# Decision: STATE/AUTONOMY-DECISIONS.md 2026-10-19 (OJ paid assessment: one call path, Annie via Retell), tripwire 1.
+# This file lives in starfire-watch (.github/workflows/); the copy under config/watch-twins/ in starfire-core is the
+# reviewed source, so a change is made in both. Actions on starfire-core are billing-stopped until 2026-11-01, which is
+# why the schedule runs from this repo, the same way as every other core-*.yml twin.
+#
+# scripts/check-the-assessment-phone-line-still-answers.py reads the provider's own call list (Retell list-calls) and
+# exits 1 when the provider refused a caller at a billing wall and no call has connected since. It prints our own line
+# numbers, the provider's reason string, dates and counts; never a caller's number. "COULD NOT TELL" is a failure of the
+# check, not a verdict about the line, and exits 0 on its own, so this job turns it into a red run too: a check that
+# cannot look must not read as silence.
+# 3 off-peak slots a day because GitHub's schedule event is best effort (see core-oj-reconcile-daily); the check is
+# read only and idempotent.
+name: core-oj-phone-line-daily
+on:
+  schedule:
+    - cron: "11 7 * * *"
+    - cron: "41 13 * * *"
+    - cron: "23 19 * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the script is checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-phone-line-daily
+  cancel-in-progress: false
+
+jobs:
+  line:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Self-test, then ask the provider
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          python3 scripts/check-the-assessment-phone-line-still-answers.py --self-test || exit 4
+          python3 scripts/check-the-assessment-phone-line-still-answers.py | tee "$RUNNER_TEMP/line.txt"
+          rc=${PIPESTATUS[0]}
+          if grep -q '^COULD NOT TELL' "$RUNNER_TEMP/line.txt"; then rc=3; fi
+          { echo '### OpsJuice assessment phone line'; echo '```'; cat "$RUNNER_TEMP/line.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      # Same relay every job in this repo hands its message to. Counts and the provider's reason only.
+      - name: Tell Slack the line is red or could not be read
+        if: failure()
+        run: |
+          lines=$(head -c 1200 "$RUNNER_TEMP/line.txt" 2>/dev/null || true)
+          [ -n "$lines" ] || lines="the check failed before it printed a result; see the run"
+          text=$(printf 'core-oj-phone-line-daily is RED. A buyer who pays $250 is told to ring Annie.\n%s\n%s/%s/actions/runs/%s' \
+            "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: true}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
