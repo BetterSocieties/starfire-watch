@@ -1,4 +1,3 @@
-# Copy of BetterSocieties/starfire-watch .github/workflows/core-oj-source-daily.yml as shipped by the watch PR for #5223.
 # The OpsJuice W1 to W3 chain, one run every weekday: source new prospects, read the website of the
 # unmeasured ones best-ranked first (home services, then law, then med spas), find public contact
 # addresses for home services, stamp the fit verdict, screen against the owner-operator ICP, then
@@ -6,7 +5,7 @@
 # Decisions: GitHub issue map BetterSocieties/starfire-core#4953 (#4957 for what is sendable).
 #
 # 05:00 UTC Monday to Friday, so the whole chain has finished before the sender (14:30). Overture Maps
-# Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate), then
+# Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate --date <cursor day>), then
 # scripts/oj-enrich-home-services-booking-signal.py reads up to 6000 unmeasured sites (0.8 s a row
 # observed on 2026-10-13, so about 80 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
 # reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
@@ -54,7 +53,15 @@ jobs:
   source:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    outputs:
+      io_stopped: ${{ steps.iostop.outputs.stopped }}
     steps:
+      - name: Checkout this repository (the rotation cursor script)
+        uses: actions/checkout@v4
+        with:
+          path: self
+          sparse-checkout: scripts/oj-rotation-cursor.py
+
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
         with:
@@ -78,7 +85,34 @@ jobs:
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --snapshot "$RUNNER_TEMP/io-before.json"
 
-      - name: Source today's metros from Overture
+      - name: IO gate 0 of 6, before the import (memory and swap only; no earlier reading to compare)
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
+      - name: Restore the rotation cursor (which day's metros the next import works)
+        id: cursor
+        if: env.OJ_IO_STOP != '1'
+        uses: actions/cache/restore@v4
+        with:
+          path: rotation-cursor
+          key: oj-rotation-cursor-miss-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: oj-rotation-cursor-
+
+      - name: Work out the rotation date
+        id: rotation
+        if: env.OJ_IO_STOP != '1'
+        run: |
+          # the cursor moves only after an import that completed, so metros an IO-gated run never reached carry over
+          echo "day=$(python3 self/scripts/oj-rotation-cursor.py day rotation-cursor/n)" >> "$GITHUB_OUTPUT"
+
+      - name: Source the cursor's metros from Overture
+        id: import
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -91,12 +125,33 @@ jobs:
           # --apply also makes the importer read the live constraint and refuse unless it admits 'unscreened'.
           flag=""; [ "${{ github.event_name == 'schedule' || inputs.apply == 'true' }}" = "true" ] && flag="--apply"
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY OJ_SUPABASE_DB_PASSWORD -- sh -c '
-            PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-source-overture.py --rotate --pool-over-sql '"$flag"'' \
+            PGPASSWORD="$OJ_SUPABASE_DB_PASSWORD" python3 scripts/oj-source-overture.py --rotate --date '"${{ steps.rotation.outputs.day }}"' --pool-over-sql '"$flag"'' \
             > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
+      - name: Advance the rotation cursor (only an import that completed moves it)
+        if: steps.import.outcome == 'success' && (github.event_name == 'schedule' || inputs.apply == 'true')
+        run: python3 self/scripts/oj-rotation-cursor.py advance rotation-cursor/n
+
+      - name: Save the rotation cursor
+        if: steps.import.outcome == 'success' && (github.event_name == 'schedule' || inputs.apply == 'true')
+        uses: actions/cache/save@v4
+        with:
+          path: rotation-cursor
+          key: oj-rotation-cursor-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: IO gate 1 of 6, after the import
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Discover public addresses from the websites of home-services rows
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -116,7 +171,17 @@ jobs:
           grep -E '^(suppression:|worklist:|found=)' "$RUNNER_TEMP/discover.log" || true
           exit $rc
 
+      - name: IO gate 2 of 6, after the address discovery
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Read each new row's own website (booking widget, service area phrases)
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -135,7 +200,17 @@ jobs:
           grep -E '^(queued home-services rows|measured, or tried|rows to check)' "$RUNNER_TEMP/signals.log" || true
           exit $rc
 
+      - name: IO gate 3 of 6, after the site read
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Quote each new row's published phone and hours (criterion 4 needs the quote)
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -154,7 +229,17 @@ jobs:
           grep -E '^rows ' "$RUNNER_TEMP/quote.log" || true
           exit $rc
 
+      - name: IO gate 4 of 6, after the phone and hours quote
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Stamp the fit verdict the sender's pool reads
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -172,7 +257,17 @@ jobs:
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
+      - name: IO gate 5 of 6, after the verdict stamp
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Screen every unscreened row against the owner-operator ICP
+        if: env.OJ_IO_STOP != '1'
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -194,6 +289,15 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
+      - name: IO gate 6 of 6, after the screen (decides whether the verify job runs)
+        if: env.OJ_IO_STOP != '1'
+        continue-on-error: true  # a reading that cannot be taken never stops sourcing
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --check "$RUNNER_TEMP/io-last.json"
+
       - name: Alert on database IO pressure (disk operations vs the compute baseline, swap) over this job
         if: always()
         working-directory: core
@@ -205,7 +309,15 @@ jobs:
           # the second Metrics API sample, compared with the one taken before the job; posts to Slack only when over a bar
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- python3 scripts/oj-db-io-alert.py --compare "$RUNNER_TEMP/io-before.json"
 
+      - name: Record whether the IO gate stopped this run (the verify job reads it)
+        id: iostop
+        if: always()
+        run: |
+          echo "stopped=${OJ_IO_STOP:-0}" >> "$GITHUB_OUTPUT"
+          [ "${OJ_IO_STOP:-0}" != "1" ] || echo "### Stopped early by the database IO gate. The next scheduled run resumes: every step reads its own worklist of rows still owed work, and the rotation cursor moves only after a completed import, so a day the gate stopped before the import is worked next run." >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     needs: source
+    if: needs.source.outputs.io_stopped != '1'
     uses: ./.github/workflows/core-oj-verify-daily.yml
     secrets: inherit
