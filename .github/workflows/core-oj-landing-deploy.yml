@@ -1,21 +1,19 @@
 # Cloud twin of starfire-core's oj-landing-deploy (Cloudflare Pages project opsjuice-ai-assessment, opsjuice.com).
-# Why it lives here: since 2026-10-17 ~19:30Z the PRIVATE repo starfire-core cannot start any Actions job ("recent account
-# payments have failed or your spending limit needs to be increased"): its 2,000 free private-repo minutes for the
-# month were spent. Public repos run free, so the deploy runs from this public repo and checks core out with GH_PAT,
-# the same way every core-*.yml twin here does. Log safety: the steps print page names and HTTP codes only (no
-# `set -x`, no env dump); GH_PAT and CLOUDFLARE_PAGES_TOKEN are masked by Actions.
-# Triggers: workflow_dispatch (core_ref selectable) and an off-peak poll that deploys only when core main changed a
-# landing input since the last green run of THIS workflow, standing in for core's push trigger.
+# Why it lives here: since 2026-10-17 ~19:30Z the PRIVATE repo starfire-core cannot start any Actions job (billing
+# stopped until 2026-11-01). Public repos run free, so the deploy runs from this public repo and reads core main with
+# the read-only CORE_READ_TOKEN.
+# THIS REPO'S LOGS ARE PUBLIC. Every step that touches core runs through quiet(), which writes all output to a file
+# under RUNNER_TEMP that is never echoed; the log carries pass/fail counts and the live HTTP code only. Core is checked
+# out shallow, main only, without a persisted credential, and no ref name is ever listed.
+# Triggers: workflow_dispatch (always core main, only when run from this repo's main) and an off-peak poll that deploys
+# only when a landing input reached core main since the last green run of THIS workflow (scripts/oj-landing-gate.sh).
+# Retirement: once core's own oj-landing-deploy has a successful run on or after 2026-11-01, this twin stops, so two
+# deployers never race.
 name: core-oj-landing-deploy
 on:
   schedule:
     - cron: "11 */2 * * *"
-  workflow_dispatch:
-    inputs:
-      core_ref:
-        description: "starfire-core ref (branch, tag or SHA) to build and publish; scheduled runs use main"
-        type: string
-        default: main
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -25,109 +23,130 @@ concurrency:
   group: core-oj-landing-deploy
   cancel-in-progress: false
 
+env:
+  CORE_REPO: BetterSocieties/starfire-core
+  RETIRE_AFTER: "2026-11-01T00:00:00Z"
+
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout starfire-core
+      - uses: actions/checkout@v4
+
+      - name: Retire when core's own deploy is back
+        id: retire
+        env:
+          GH_TOKEN: ${{ secrets.CORE_READ_TOKEN }}
+        run: |
+          # Probe on every run so a broken read shows up before the cutoff, not on it.
+          if ! runs=$(gh api "repos/${CORE_REPO}/actions/workflows/oj-landing-deploy.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // ""' 2>/dev/null); then
+            echo "core deployer probe: unreadable"
+            if [ "$(date -u +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ]; then
+              echo "after the cutoff an unreadable probe fails the run rather than risk two deployers"; exit 1
+            fi
+            echo "retire=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "core deployer probe: readable"
+          retire=false
+          if [ -n "$runs" ] && [ "$(date -u -d "$runs" +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ]; then retire=true; fi
+          echo "core deployer back after cutoff: $retire"
+          echo "retire=$retire" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout starfire-core main (shallow, read-only, no stored credential)
+        if: steps.retire.outputs.retire != 'true'
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
-          token: ${{ secrets.GH_PAT }}
-          ref: ${{ inputs.core_ref || 'main' }}
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          ref: main
           path: core
-          fetch-depth: 0
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Gate (a scheduled run publishes only when a landing input changed since the last green run)
+      - name: Gate (a scheduled run publishes only when a landing input reached main since the last green run)
         id: gate
-        working-directory: core
+        if: steps.retire.outputs.retire != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
+          CORE_TOKEN: ${{ secrets.CORE_READ_TOKEN }}
         run: |
           skip=false
           if [ "$EVENT" = "schedule" ]; then
             last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/core-oj-landing-deploy.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].run_started_at // ""')
             if [ -n "$last" ]; then
-              n=$(git log --since="$last" --oneline -- \
-                scripts/build-oj-webinar-page.py scripts/build-oj-welcome-pages.py ops/oj-post-payment-pages.json \
-                scripts/oj-apply-site-chrome.py scripts/oj-place-affiliate-disclosure.py ventures/opsjuice/generators/affiliate \
-                config/oj-webinar.json ventures/opsjuice/oj-icp-canonical.json ventures/opsjuice/webinar-pages \
-                ventures/opsjuice/landing scripts/deploy-oj-landing.sh scripts/deploy-cf-pages.sh | wc -l)
-              echo "landing-input commits on core since $last: $n"
+              tip=$(git -C core log -1 --format=%cI)
+              if [ "$(date -u -d "$tip" +%s)" -le "$(date -u -d "$last" +%s)" ]; then
+                n=0
+              else
+                auth=$(printf 'x-access-token:%s' "$CORE_TOKEN" | base64 -w0)
+                echo "::add-mask::$auth"
+                # main only, history back to the last green run only, nothing listed.
+                git -C core -c http.extraheader="AUTHORIZATION: basic $auth" fetch --quiet --no-tags --shallow-since="$last" origin main >/dev/null 2>&1 \
+                  || { echo "gate: history fetch failed"; exit 1; }
+                n=$(bash scripts/oj-landing-gate.sh core "$last")
+              fi
+              echo "landing-input changes on core main since the last green run: $n"
               [ "$n" = "0" ] && skip=true
             fi
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-node@v4
-        if: steps.gate.outputs.skip != 'true'
+        if: steps.retire.outputs.retire != 'true' && steps.gate.outputs.skip != 'true'
         with:
           node-version: 22
       - uses: actions/setup-python@v5
-        if: steps.gate.outputs.skip != 'true'
+        if: steps.retire.outputs.retire != 'true' && steps.gate.outputs.skip != 'true'
         with:
           python-version: "3.12"
 
-      - name: Install dev dependencies and run the landing tests
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          npm ci --include=dev --ignore-scripts
-          node --test scripts/tests/test-nps-open.mjs scripts/tests/test-landing-pages.mjs scripts/tests/test-oj-nps-fires-referral-ask.mjs
-
-      - name: Generate the webinar pages
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          python3 scripts/build-oj-webinar-page.py --self-test
-          python3 scripts/build-oj-webinar-page.py
-
-      - name: Generate the post-payment welcome pages
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          python3 scripts/build-oj-welcome-pages.py --self-test
-          python3 scripts/build-oj-welcome-pages.py
-
-      - name: Place the affiliate disclosure page and stylesheet
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          python3 scripts/oj-place-affiliate-disclosure.py --self-test
-          python3 scripts/oj-place-affiliate-disclosure.py
-
-      - name: Apply the shared site header and footer
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          python3 scripts/oj-apply-site-chrome.py --self-test
-          python3 scripts/oj-apply-site-chrome.py
-
-      - name: Refuse to publish a tree that is missing a page the live site lists
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: core
-        run: |
-          python3 - <<'PY'
-          import os, re, sys, urllib.request
-          req = urllib.request.Request("https://opsjuice.com/sitemap.xml", headers={"User-Agent": "Mozilla/5.0 (oj-landing-deploy)"})
-          live = urllib.request.urlopen(req, timeout=30).read().decode()
-          missing = []
-          for loc in re.findall(r"<loc>https://opsjuice.com(/[^<]*)</loc>", live):
-              path = loc.strip("/") or "index"
-              base = "ventures/opsjuice/landing/" + path
-              if not (os.path.exists(base + ".html") or os.path.exists(base + "/index.html") or os.path.exists(base)):
-                  missing.append(loc)
-          print(f"live sitemap pages missing from the tree: {len(missing)}")
-          print("\n".join(missing[:40]))
-          sys.exit(1 if missing else 0)
-          PY
-
-      - name: Publish
-        if: steps.gate.outputs.skip != 'true'
+      - name: Build, test and publish (output of every core command goes to a file that is never printed)
+        if: steps.retire.outputs.retire != 'true' && steps.gate.outputs.skip != 'true'
         working-directory: core
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 87f2dc2c8ff70d0d68099a12e06a5894
-        run: bash scripts/deploy-oj-landing.sh
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          Q="$RUNNER_TEMP/quiet.log"; : > "$Q"
+          steps_ok=0; steps_fail=0
+          quiet() {  # quiet <label> <cmd...>: output to $Q only, one pass/fail line to the log
+            local label="$1"; shift
+            if "$@" >> "$Q" 2>&1; then steps_ok=$((steps_ok+1)); echo "step $label: pass"
+            else steps_fail=$((steps_fail+1)); echo "step $label: FAIL"; echo "passed=$steps_ok failed=$steps_fail"; exit 1; fi
+          }
+          quiet install npm ci --include=dev --ignore-scripts
+          node --test --test-reporter=tap scripts/tests/test-nps-open.mjs scripts/tests/test-landing-pages.mjs scripts/tests/test-oj-nps-fires-referral-ask.mjs > "$RUNNER_TEMP/node-test.log" 2>&1 || true
+          tp=$(grep -E '^# pass ' "$RUNNER_TEMP/node-test.log" | awk '{print $3}' | tail -1); tf=$(grep -E '^# fail ' "$RUNNER_TEMP/node-test.log" | awk '{print $3}' | tail -1)
+          echo "landing node tests: pass=${tp:-0} fail=${tf:-unknown}"
+          [ "${tp:-0}" -gt 0 ] && [ "${tf:-1}" = "0" ] || { echo "landing node tests: FAIL"; exit 1; }
+          quiet webinar-selftest python3 scripts/build-oj-webinar-page.py --self-test
+          quiet webinar-build python3 scripts/build-oj-webinar-page.py
+          quiet welcome-selftest python3 scripts/build-oj-welcome-pages.py --self-test
+          quiet welcome-build python3 scripts/build-oj-welcome-pages.py
+          quiet affiliate-selftest python3 scripts/oj-place-affiliate-disclosure.py --self-test
+          quiet affiliate-place python3 scripts/oj-place-affiliate-disclosure.py
+          quiet chrome-selftest python3 scripts/oj-apply-site-chrome.py --self-test
+          quiet chrome-apply python3 scripts/oj-apply-site-chrome.py
+          # The tree must contain every page the live sitemap lists; only the COUNT is printed.
+          missing=$(python3 - <<'PY' 2>>"$Q"
+          import os, re, urllib.request
+          req = urllib.request.Request("https://opsjuice.com/sitemap.xml", headers={"User-Agent": "Mozilla/5.0 (oj-landing-deploy)"})
+          live = urllib.request.urlopen(req, timeout=30).read().decode()
+          n = 0
+          for loc in re.findall(r"<loc>https://opsjuice.com(/[^<]*)</loc>", live):
+              base = "ventures/opsjuice/landing/" + (loc.strip("/") or "index")
+              if not (os.path.exists(base + ".html") or os.path.exists(base + "/index.html") or os.path.exists(base)):
+                  n += 1
+          print(n)
+          PY
+          )
+          echo "live sitemap pages missing from the tree: ${missing:-unreadable}"
+          [ "$missing" = "0" ] || exit 1
+          # deploy-oj-landing.sh runs its own tests and wrangler; everything it prints goes to the file.
+          if bash scripts/deploy-oj-landing.sh >> "$Q" 2>&1; then rc=0; else rc=$?; fi
+          grep -E '^\[deploy-cf-pages\] (live address answered [0-9]{3}|server-side code carried: yes|done\.)$' "$Q" || true
+          echo "publish: exit=$rc steps_passed=$steps_ok"
+          exit $rc
