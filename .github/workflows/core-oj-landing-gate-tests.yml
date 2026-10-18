@@ -1,0 +1,18 @@
+# Runs the landing-deploy change-gate regression (merge commits must count). Touches no secret and no private repo.
+name: core-oj-landing-gate-tests
+on:
+  pull_request:
+    paths:
+      - "scripts/oj-landing-gate.sh"
+      - "scripts/tests/test-oj-landing-gate.sh"
+      - ".github/workflows/core-oj-landing-gate-tests.yml"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/tests/test-oj-landing-gate.sh
