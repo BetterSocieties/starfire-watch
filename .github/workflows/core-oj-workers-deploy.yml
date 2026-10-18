@@ -1,0 +1,84 @@
+# Cloud twin of starfire-core's oj-events-deploy (and the missing deploy of opsjuice-email-receiver).
+# Why it lives here: since 2026-10-17 the PRIVATE repo starfire-core cannot start any Actions job (billing stopped
+# until 2026-11-01), so Worker changes merged to core main deploy nowhere. This public repo runs free.
+# THIS REPO'S LOGS ARE PUBLIC: scripts/oj-workers-deploy.py prints only Worker names, hashes, counts and HTTP codes.
+# Which Workers: config/oj-workers.json (a Worker not listed is never touched).
+# Change detection: the Worker carries a DEPLOY_HASH var (hash of its source on core main); equal = no deploy.
+# Secrets: CLOUDFLARE_WORKERS_TOKEN is read from the vault with VAULT_BEARER and handed to the script as an env var
+# only. Worker secrets are never set here; `wrangler deploy --keep-vars` leaves live vars and secrets in place.
+# Retirement: from 2026-11-01 this twin stops by itself (core's own deploy resumes); repo variable
+# OJ_WORKERS_TWIN_KEEP=true overrides it while core's Actions is still blocked.
+name: core-oj-workers-deploy
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the plan only, deploy nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-workers-deploy
+  cancel-in-progress: false
+
+env:
+  RETIRE_AFTER: "2026-11-01T00:00:00Z"
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Retire at the cutoff
+        id: retire
+        env:
+          KEEP: ${{ vars.OJ_WORKERS_TWIN_KEEP }}
+        run: |
+          retire=false
+          if [ "$(date -u +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ] && [ "$KEEP" != "true" ]; then retire=true; fi
+          echo "retired (cutoff passed, no keep flag): $retire"
+          echo "retire=$retire" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout starfire-core main (shallow, read-only, no stored credential)
+        if: steps.retire.outputs.retire != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.CORE_READ_TOKEN }}
+          ref: main
+          path: core
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        if: steps.retire.outputs.retire != 'true'
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        if: steps.retire.outputs.retire != 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Self-test the deploy script
+        if: steps.retire.outputs.retire != 'true'
+        run: bash scripts/tests/test-oj-workers-deploy.sh
+
+      - name: Plan, test, deploy, verify (scheduled runs deploy; a manual run is a dry run unless dry_run is unticked)
+        if: steps.retire.outputs.retire != 'true'
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          set -eo pipefail
+          flags=""; [ "$DRY" = "true" ] && flags="--dry-run"
+          python3 core/scripts/vault-get.py CLOUDFLARE_WORKERS_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-workers-deploy.py --core core $flags
