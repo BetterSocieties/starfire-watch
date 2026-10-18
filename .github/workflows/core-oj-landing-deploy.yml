@@ -7,8 +7,8 @@
 # out shallow, main only, without a persisted credential, and no ref name is ever listed.
 # Triggers: workflow_dispatch (always core main, only when run from this repo's main) and an off-peak poll that deploys
 # only when a landing input reached core main since the last green run of THIS workflow (scripts/oj-landing-gate.sh).
-# Retirement: once core's own oj-landing-deploy has a successful run on or after 2026-11-01, this twin stops, so two
-# deployers never race.
+# Retirement: from 2026-11-01 this twin stops by itself (core's own oj-landing-deploy resumes then), so two deployers
+# never race; repo variable OJ_LANDING_TWIN_KEEP=true overrides it while core's Actions is still blocked.
 name: core-oj-landing-deploy
 on:
   schedule:
@@ -35,23 +35,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Retire when core's own deploy is back
+      - name: Retire at the cutoff (core's own deploy takes over; two deployers must not race)
         id: retire
         env:
-          GH_TOKEN: ${{ secrets.CORE_READ_TOKEN }}
+          KEEP: ${{ vars.OJ_LANDING_TWIN_KEEP }}
         run: |
-          # Probe on every run so a broken read shows up before the cutoff, not on it.
-          if ! runs=$(gh api "repos/${CORE_REPO}/actions/workflows/oj-landing-deploy.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // ""' 2>/dev/null); then
-            echo "core deployer probe: unreadable"
-            if [ "$(date -u +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ]; then
-              echo "after the cutoff an unreadable probe fails the run rather than risk two deployers"; exit 1
-            fi
-            echo "retire=false" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          echo "core deployer probe: readable"
+          # CORE_READ_TOKEN reads contents only (the Actions API answers 403, proven 2026-10-18), so the run
+          # state of core's own deploy cannot be read from here. The stop is therefore the date. If core's
+          # Actions is still blocked at the cutoff, set the repo variable OJ_LANDING_TWIN_KEEP=true to keep
+          # this twin publishing until core's oj-landing-deploy has a green run, then delete the variable.
           retire=false
-          if [ -n "$runs" ] && [ "$(date -u -d "$runs" +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ]; then retire=true; fi
-          echo "core deployer back after cutoff: $retire"
+          if [ "$(date -u +%s)" -ge "$(date -u -d "$RETIRE_AFTER" +%s)" ] && [ "$KEEP" != "true" ]; then retire=true; fi
+          echo "retired (cutoff passed, no keep flag): $retire"
           echo "retire=$retire" >> "$GITHUB_OUTPUT"
 
       - name: Checkout starfire-core main (shallow, read-only, no stored credential)
