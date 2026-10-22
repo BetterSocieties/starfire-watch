@@ -10,7 +10,9 @@
 # observed on 2026-10-13, so about 80 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
 # reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
-# The second job is core-oj-verify-daily.yml called as a reusable workflow: address kind, MX, mailbox.
+# The second job is core-oj-screen-daily.yml and the third is core-oj-verify-daily.yml (address kind, MX,
+# mailbox), both called as reusable workflows. Both run even if an earlier job failed, because a source
+# failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
 # WHY THE SITE READ HAS NO ADDRESS FILTER. Until 2026-10-13 it ran with --email-only and the screen
 # read only rows with an address. Almost no unscreened row had one, so 1,400 of 1,500 rows came back
@@ -124,27 +126,16 @@ jobs:
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
-      - name: Screen every unscreened row against the owner-operator ICP
-        working-directory: core
-        env:
-          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
-          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
-        run: |
-          set -uo pipefail
-          rc=0
-          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
-            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
-              --unscreened --write --summary-md "$RUNNER_TEMP/screened.md"' > "$RUNNER_TEMP/screen.log" 2>&1 || rc=$?
-          echo "screen exit=$rc"
-          cat "$RUNNER_TEMP/screen.log"
-          {
-            echo "### Screened today"
-            echo ""
-            if [ -f "$RUNNER_TEMP/screened.md" ]; then cat "$RUNNER_TEMP/screened.md"; else echo "No list was written."; fi
-          } >> "$GITHUB_STEP_SUMMARY"
-          exit $rc
+  screen:
+    # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
+    # rows that already exist are owed a screen, and verify is no use without it.
+    needs: source
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/core-oj-screen-daily.yml
+    secrets: inherit
 
   verify:
-    needs: source
+    needs: screen
+    if: ${{ !cancelled() }}
     uses: ./.github/workflows/core-oj-verify-daily.yml
     secrets: inherit
