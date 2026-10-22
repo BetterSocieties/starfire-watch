@@ -15,8 +15,9 @@
 # THE LOG IS PUBLIC. The script prints counts and ids only, never an address.
 #
 # A channel that cannot be read is written ok=false and the other channels still run. Exit 1: rows written, but a
-# channel was unreadable or disagreed with our ledger; the script's ALERT lines go to the relay as one message.
-# Exit 2: the rows could not be written. The relay drops an identical repeat (repeat_ok false), so a gap that
+# channel was unreadable or disagreed with our ledger; the script's ALERT lines go to the relay as one message and
+# the run stays green, so a known open gap does not paint every hour red. Exit 2: the rows could not be written,
+# and the run is red. The relay drops an identical repeat (repeat_ok false), so a gap that
 # stays open is told once, not every hour. Freshness is checked by core-oj-truth-fresh.
 name: core-oj-truth-snapshot-hourly
 on:
@@ -55,6 +56,7 @@ jobs:
           python-version: "3.12"
 
       - name: Snapshot every channel from its own API
+        id: snap
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
@@ -68,18 +70,21 @@ jobs:
             python3 scripts/oj-truth-snapshot.py --print | tee "$RUNNER_TEMP/truth.txt"
           rc=${PIPESTATUS[0]}
           { echo '### OpsJuice truth snapshot'; echo '```'; cat "$RUNNER_TEMP/truth.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          [ "$rc" = 1 ] && exit 0  # alerts only: posted by the next step
           exit $rc
 
       - name: Tell Slack what is wrong
-        if: failure()
+        if: always()
         run: |
           if grep -q '^ALERT ' "$RUNNER_TEMP/truth.txt" 2>/dev/null; then
             # no run URL or time in the text, so the relay sees an unchanged gap as a repeat
             text=$(printf 'OpsJuice truth snapshot: a channel is unreadable or disagrees with our ledger.\n%s\n%s/%s/actions/workflows/core-oj-truth-snapshot-hourly.yml' \
               "$(grep '^ALERT ' "$RUNNER_TEMP/truth.txt")" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY")
-          else
+          elif [ "${{ steps.snap.outcome }}" != success ]; then
             text=$(printf 'core-oj-truth-snapshot-hourly is RED (rows not written).\n%s/%s/actions/runs/%s' \
               "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          else
+            exit 0
           fi
           jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
