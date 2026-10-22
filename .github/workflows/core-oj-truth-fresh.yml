@@ -1,6 +1,6 @@
 # Deadman for the OpsJuice truth layer, every 2 hours: scripts/oj-truth-latest.py reads oj_truth_snapshot and exits
-# 3 when any channel (the hourly cloud snapshot's, and LinkedIn's from the Mac) has no row newer than 2 h, 4 when the
-# table does not answer. Either posts to the alert relay. A separate schedule from the writer, so a writer that
+# 3 when any cloud channel has no row newer than 2 h, 4 when the table does not answer. LinkedIn's reading from the
+# Mac is not checked here; the hourly snapshot's linkedin_gap_lines alert checks it. Either posts to the alert relay. A separate schedule from the writer, so a writer that
 # stops running is still noticed. The code lives in starfire-core and is checked out with GH_PAT.
 name: core-oj-truth-fresh
 on:

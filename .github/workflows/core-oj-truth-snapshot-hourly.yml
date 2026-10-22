@@ -70,7 +70,8 @@ jobs:
             python3 scripts/oj-truth-snapshot.py --print | tee "$RUNNER_TEMP/truth.txt"
           rc=${PIPESTATUS[0]}
           { echo '### OpsJuice truth snapshot'; echo '```'; cat "$RUNNER_TEMP/truth.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          [ "$rc" = 1 ] && exit 0  # alerts only: posted by the next step
+          # 3 = rows written, alerts only (posted by the next step); 1 = a crash or a vault failure, so the run goes red
+          [ "$rc" = 3 ] && exit 0
           exit $rc
 
       - name: Tell Slack what is wrong
