@@ -1,0 +1,57 @@
+# Deadman for the OpsJuice truth layer, every 2 hours: scripts/oj-truth-latest.py reads oj_truth_snapshot and exits
+# 3 when any channel (the hourly cloud snapshot's, and LinkedIn's from the Mac) has no row newer than 2 h, 4 when the
+# table does not answer. Either posts to the alert relay. A separate schedule from the writer, so a writer that
+# stops running is still noticed. The code lives in starfire-core and is checked out with GH_PAT.
+name: core-oj-truth-fresh
+on:
+  schedule:
+    - cron: "11 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref the script is checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  fresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Is every channel's newest row under 2 h old
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            python3 scripts/oj-truth-latest.py --metric resend/sent_28d > "$RUNNER_TEMP/fresh.txt"
+          rc=$?
+          head -c 300 "$RUNNER_TEMP/fresh.txt"; echo
+          exit $rc
+
+      - name: Tell Slack the truth layer is stale
+        if: failure()
+        run: |
+          text=$(printf 'OpsJuice truth layer is stale or unreadable: %s\n%s/%s/actions/workflows/core-oj-truth-fresh.yml' \
+            "$(head -c 300 "$RUNNER_TEMP/fresh.txt" 2>/dev/null)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay

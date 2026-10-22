@@ -14,8 +14,10 @@
 #
 # THE LOG IS PUBLIC. The script prints counts and ids only, never an address.
 #
-# A channel that cannot be read is written ok=false and does not fail the run. The run fails (exit 2) only when
-# the rows could not be written, and that posts to the alert relay.
+# A channel that cannot be read is written ok=false and the other channels still run. Exit 1: rows written, but a
+# channel was unreadable or disagreed with our ledger; the script's ALERT lines go to the relay as one message.
+# Exit 2: the rows could not be written. The relay drops an identical repeat (repeat_ok false), so a gap that
+# stays open is told once, not every hour. Freshness is checked by core-oj-truth-fresh.
 name: core-oj-truth-snapshot-hourly
 on:
   schedule:
@@ -68,11 +70,17 @@ jobs:
           { echo '### OpsJuice truth snapshot'; echo '```'; cat "$RUNNER_TEMP/truth.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
-      - name: Tell Slack the snapshot could not be written
+      - name: Tell Slack what is wrong
         if: failure()
         run: |
-          text=$(printf 'core-oj-truth-snapshot-hourly is RED (rows not written).\n%s/%s/actions/runs/%s' \
-            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          if grep -q '^ALERT ' "$RUNNER_TEMP/truth.txt" 2>/dev/null; then
+            # no run URL or time in the text, so the relay sees an unchanged gap as a repeat
+            text=$(printf 'OpsJuice truth snapshot: a channel is unreadable or disagrees with our ledger.\n%s\n%s/%s/actions/workflows/core-oj-truth-snapshot-hourly.yml' \
+              "$(grep '^ALERT ' "$RUNNER_TEMP/truth.txt")" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY")
+          else
+            text=$(printf 'core-oj-truth-snapshot-hourly is RED (rows not written).\n%s/%s/actions/runs/%s' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          fi
           jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
