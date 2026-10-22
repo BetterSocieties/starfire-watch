@@ -14,11 +14,11 @@
 #
 # THE LOG IS PUBLIC. The script prints counts and ids only, never an address.
 #
-# A channel that cannot be read is written ok=false and the other channels still run. Exit 1: rows written, but a
-# channel was unreadable or disagreed with our ledger; the script's ALERT lines go to the relay as one message and
-# the run stays green, so a known open gap does not paint every hour red. Exit 2: the rows could not be written,
-# and the run is red. The relay drops an identical repeat (repeat_ok false), so a gap that
-# stays open is told once, not every hour. Freshness is checked by core-oj-truth-fresh.
+# A channel that cannot be read is written ok=false and the other channels still run. Exit 0: rows written, no
+# alerts, run green. Exit 3: rows written with ALERT lines, posted to the relay by the next step, run green.
+# Exit 2: the table write failed, run red. Exit 1 or any other code: a crash or a vault failure, run red.
+# The relay drops an identical repeat (repeat_ok false), so a gap that stays open is told once, not every
+# hour. Freshness is checked by core-oj-truth-fresh.
 name: core-oj-truth-snapshot-hourly
 on:
   schedule:
