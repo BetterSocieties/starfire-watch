@@ -1,0 +1,51 @@
+# One reminder to a paying OpsJuice build buyer whose 3 intake items have not arrived by business day 4 after
+# checkout. The onboarding letter promises it. Code: scripts/oj-build-intake-reminders.py in starfire-core
+# (PR 5276). Merge this file only after that PR is on starfire-core main, or the checkout below has no script.
+#
+# A reply from the buyer, an intake row, or an earlier reminder stops it. Mail leaves only through the
+# oj-events Worker send door as transactional mail; this job holds no mail key.
+#
+# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on PRIVATE repositories
+# only, and starfire-core is private. This one is PUBLIC, so the log is world readable: the job prints counts and
+# masked addresses, never a key.
+name: core-oj-build-intake-reminders
+on:
+  schedule:
+    - cron: "17 15 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-build-intake-reminders
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout starfire-core (the repository the job lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Remind build buyers whose intake items are late
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_BUILD_INTAKE_REMINDERS_SEND: "on"
+        run: |
+          set -eo pipefail
+          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
+            python3 scripts/oj-build-intake-reminders.py | tee "$RUNNER_TEMP/build-intake.txt"
+          { echo '### Build intake reminders'; echo '```'; cat "$RUNNER_TEMP/build-intake.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
