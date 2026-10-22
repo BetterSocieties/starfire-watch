@@ -1,0 +1,78 @@
+# One source of truth for OpsJuice, once an hour: read every channel from the vendor's own API
+# (Resend, Gmail Sent as getopsjuice, Stripe, Cal.com, Retell, Cloudflare, n8n) and write one row per
+# metric to oj_truth_snapshot on the OpsJuice tenant. Adrien, 2026-10-22: "one fucking source of truth
+# ... from every single channel ... for free automated".
+#
+# WHY HERE. GitHub meters Actions minutes on PRIVATE repositories only; this repository is PUBLIC, so the
+# runner is free and unlimited. The code lives in starfire-core (scripts/oj-truth-snapshot.py) and is checked
+# out with GH_PAT, the same pattern as core-oj-reconcile-daily. Secrets: only VAULT_BEARER and GH_PAT are
+# repository secrets; every vendor key is read from the vault at run time by scripts/with-vault-env.sh.
+#
+# THE SLOT, :37. GitHub documents that scheduled runs are delayed under load and may be dropped, worst at the
+# top of the hour, and this repository measured hourly jobs firing 3 to 6 of 24 slots a day. Every row carries
+# taken_at, so a skipped hour is a gap in the series, not a wrong number; a reader takes the greatest taken_at.
+#
+# THE LOG IS PUBLIC. The script prints counts and ids only, never an address.
+#
+# A channel that cannot be read is written ok=false and does not fail the run. The run fails (exit 2) only when
+# the rows could not be written, and that posts to the alert relay.
+name: core-oj-truth-snapshot-hourly
+on:
+  schedule:
+    - cron: "37 * * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the script is checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-truth-snapshot-hourly
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Snapshot every channel from its own API
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          scripts/with-vault-env.sh \
+            OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
+            OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY \
+            CLOUDFLARE_ANALYTICS_READ_TOKEN N8N_POD_API_KEY BS_WORKSPACE_IMAP_APP_PASSWORD -- \
+            python3 scripts/oj-truth-snapshot.py --print | tee "$RUNNER_TEMP/truth.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### OpsJuice truth snapshot'; echo '```'; cat "$RUNNER_TEMP/truth.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Tell Slack the snapshot could not be written
+        if: failure()
+        run: |
+          text=$(printf 'core-oj-truth-snapshot-hourly is RED (rows not written).\n%s/%s/actions/runs/%s' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
