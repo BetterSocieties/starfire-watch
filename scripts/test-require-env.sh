@@ -41,7 +41,7 @@ grep -q 'test-warm-screen-failure.py' "$wf"; check "the drain also runs the scre
 sw="$repo/.github/workflows/core-oj-screen-daily.yml"
 grep -q -- '--max-seconds 1500' "$sw"; check "each screen pass carries a 25 minute budget inside the script" "$?" 0
 grep -q 'timeout 1740 ' "$sw"; check "each screen pass has a 29 minute hard timeout" "$?" 0
-grep -q 'for pass in 1 2 3; do' "$sw"; check "at most 3 passes" "$?" 0
+grep -q 'if \[ "\$SECONDS" -gt 3000 \]; then' "$sw"; check "no new screen page starts after 50 minutes" "$?" 0
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
