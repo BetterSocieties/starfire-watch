@@ -99,7 +99,7 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
+          python3 scripts/vault-get.py OJ_SUPABASE_DB_PASSWORD --into PGPASSWORD -- scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
             OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
               --apply --limit 6000' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
           echo "site signals exit=$rc"
@@ -118,7 +118,7 @@ jobs:
           rc=0
           # The stamper reads at most 1000 rows a pass (the REST page size), so repeat until it has nothing left.
           for pass in $(seq 1 20); do
-            python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
+            python3 scripts/vault-get.py OJ_SUPABASE_DB_PASSWORD --into PGPASSWORD -- python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
             echo "stamp pass $pass: $(grep -E '^(wrote|nothing to stamp)' "$RUNNER_TEMP/stamp.log" | cut -c1-40)"
             grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && break
           done
