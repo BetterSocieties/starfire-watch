@@ -116,12 +116,14 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          # The stamper reads at most 1000 rows a pass (the REST page size), so repeat until it has nothing left.
+          drained=0
+          # The stamper reads its owed rows in STORE_BATCH batches and caps one pass, so repeat until it prints "nothing to stamp".
           for pass in $(seq 1 20); do
             python3 scripts/vault-get.py OJ_SUPABASE_DB_PASSWORD --into PGPASSWORD -- python3 scripts/oj-stamp-icp-verdict.py --from-store --apply > "$RUNNER_TEMP/stamp.log" 2>&1 || { rc=$?; break; }
             echo "stamp pass $pass: $(grep -E '^(wrote|nothing to stamp)' "$RUNNER_TEMP/stamp.log" | cut -c1-40)"
-            grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && break
+            grep -q '^nothing to stamp' "$RUNNER_TEMP/stamp.log" && { drained=1; break; }
           done
+          [ "$rc" -eq 0 ] && [ "$drained" -eq 0 ] && { echo "stamp not drained after 20 passes"; rc=1; }
           echo "stamp exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
