@@ -108,9 +108,9 @@ jobs:
             sed -n '/^what the provider said:/,/^addresses taken out/p' "$RUNNER_TEMP/mailbox-$pass.log" | grep -E '^  [a-z_]+ +[0-9]+$' || true
             n="$(grep -E '^asking about [0-9]+' "$RUNNER_TEMP/mailbox-$pass.log" | grep -oE '[0-9]+' | head -1)"
             total=$((total + ${n:-0}))
-            # exit 2 = no provider has allowance left (a normal ending); 0 with nothing asked = done
+            # exit 2 = no provider has allowance left (a normal ending); 0 with nothing asked (none or 0) = done
             [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 40 "$RUNNER_TEMP/mailbox-$pass.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; exit "$rc"; }
-            [ "$rc" -eq 0 ] && [ -z "$n" ] && break
+            [ "$rc" -eq 0 ] && [ "${n:-0}" -eq 0 ] && break
             [ "$rc" -eq 2 ] && break
           done
           echo "mailboxes asked about today: $total"
