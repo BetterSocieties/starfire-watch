@@ -17,6 +17,10 @@ on:
         description: "TEST: run the script with --self-test (no Stripe or database call) so the run can be green without keys"
         type: boolean
         default: false
+      test_alert:
+        description: "TEST: skip the check, write one synthetic gap line and fail, so the real Slack step posts a message labelled TEST"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -50,9 +54,14 @@ jobs:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
           SELF_TEST: ${{ inputs.self_test }}
+          TEST_ALERT: ${{ inputs.test_alert }}
         run: |
           set -uo pipefail
-          if [ "$SELF_TEST" = "true" ]; then
+          set +e  # keep going after a red check so the summary below is written; exit $rc ends the step
+          if [ "$TEST_ALERT" = "true" ]; then
+            echo 'TEST01 $250 2026-01-01 recorded=no call_held=no report=no' | tee "$RUNNER_TEMP/paycheck.txt"
+            false
+          elif [ "$SELF_TEST" = "true" ]; then
             python3 scripts/check-oj-paid-buyer-path.py --self-test | tee "$RUNNER_TEMP/paycheck.txt"
           else
             python3 scripts/check-oj-paid-buyer-path.py --days 90 | tee "$RUNNER_TEMP/paycheck.txt"
@@ -66,6 +75,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SELF_TEST: ${{ inputs.self_test }}
+          TEST_ALERT: ${{ inputs.test_alert }}
         run: |
           grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null > "$RUNNER_TEMP/gap-now.txt" || true
           [ -s "$RUNNER_TEMP/gap-now.txt" ] || echo "NO-RESULT-PRINTED" > "$RUNNER_TEMP/gap-now.txt"
@@ -79,7 +89,7 @@ jobs:
           lines=$(grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
           [ -n "$lines" ] || lines="the check step failed before it printed a result; see the run"
           label=""
-          if [ "$SELF_TEST" = "true" ]; then label="TEST (self_test, no external call) "; repeat=true; fi
+          if [ "$TEST_ALERT" = "true" ]; then label="TEST (test_alert, synthetic gap, ignore) "; repeat=true; fi
           text=$(printf '%score-oj-paid-buyer-path is RED.\n%s\n%s/%s/actions/runs/%s' \
             "$label" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
           jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLV397CH4", text: $text, repeat_ok: $repeat}' |
@@ -87,11 +97,11 @@ jobs:
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
 
       - name: Record the gap set
-        if: always() && inputs.self_test != true
+        if: always() && inputs.self_test != true && inputs.test_alert != true
         run: |
           if [ -f "$RUNNER_TEMP/gap-now.txt" ]; then cp "$RUNNER_TEMP/gap-now.txt" "$RUNNER_TEMP/gap-set.txt"; else : > "$RUNNER_TEMP/gap-set.txt"; fi
       - uses: actions/upload-artifact@v4
-        if: always() && inputs.self_test != true
+        if: always() && inputs.self_test != true && inputs.test_alert != true
         with:
           name: paid-buyer-gap-set
           path: ${{ runner.temp }}/gap-set.txt
