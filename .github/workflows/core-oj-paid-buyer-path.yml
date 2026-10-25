@@ -67,7 +67,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SELF_TEST: ${{ inputs.self_test }}
         run: |
-          grep -E ' no ' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null > "$RUNNER_TEMP/gap-now.txt" || true
+          grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null > "$RUNNER_TEMP/gap-now.txt" || true
           [ -s "$RUNNER_TEMP/gap-now.txt" ] || echo "NO-RESULT-PRINTED" > "$RUNNER_TEMP/gap-now.txt"
           : > "$RUNNER_TEMP/gap-prev.txt"
           art=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=paid-buyer-gap-set&per_page=1" --jq '.artifacts[0] | select(.expired == false) | .id' 2>/dev/null || true)
@@ -76,7 +76,7 @@ jobs:
           fi
           if cmp -s "$RUNNER_TEMP/gap-now.txt" "$RUNNER_TEMP/gap-prev.txt"; then repeat=false; else repeat=true; fi
           echo "gap set changed since the previous run (repeat_ok): $repeat"
-          lines=$(grep -E ' no ' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
+          lines=$(grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
           [ -n "$lines" ] || lines="the check step failed before it printed a result; see the run"
           label=""
           if [ "$SELF_TEST" = "true" ]; then label="TEST (self_test, no external call) "; repeat=true; fi
