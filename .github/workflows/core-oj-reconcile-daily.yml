@@ -80,6 +80,7 @@ jobs:
           INJECT_GAP: ${{ inputs.inject_gap }}
         run: |
           set -uo pipefail
+          set +e  # keep going after a red check so the summary below is written; exit $rc ends the step
           # inject_gap (manual dispatch only): a synthetic gap on all four vendors, no vendor, ledger or vault call.
           if [ "$INJECT_GAP" = "true" ]; then
             python3 scripts/oj-reconcile-events.py --inject-gap | tee "$RUNNER_TEMP/reconcile.txt"

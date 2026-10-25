@@ -1,0 +1,108 @@
+# Checks OpsJuice paid-buyer path: every Stripe charge with OJ metadata should appear in the OJ database.
+# Runs in this public repo because starfire-core has no Actions minutes (payment failed).
+# Output holds no names, emails or card details; last 6 of charge id, amount, date, status.
+name: core-oj-paid-buyer-path
+on:
+  schedule:
+    - cron: "11 5 * * *"
+    - cron: "37 11 * * *"
+    - cron: "53 17 * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+      self_test:
+        description: "TEST: run the script with --self-test (no Stripe or database call) so the run can be green without keys"
+        type: boolean
+        default: false
+      test_alert:
+        description: "TEST: skip the check, write one synthetic gap line and fail, so the real Slack step posts a message labelled TEST"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: core-oj-paid-buyer-path
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check paid buyer path
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          SELF_TEST: ${{ inputs.self_test }}
+          TEST_ALERT: ${{ inputs.test_alert }}
+        run: |
+          set -uo pipefail
+          set +e  # keep going after a red check so the summary below is written; exit $rc ends the step
+          if [ "$TEST_ALERT" = "true" ]; then
+            echo 'TEST01 $250 2026-01-01 recorded=no call_held=no report=no' | tee "$RUNNER_TEMP/paycheck.txt"
+            false
+          elif [ "$SELF_TEST" = "true" ]; then
+            python3 scripts/check-oj-paid-buyer-path.py --self-test | tee "$RUNNER_TEMP/paycheck.txt"
+          else
+            python3 scripts/check-oj-paid-buyer-path.py --days 90 | tee "$RUNNER_TEMP/paycheck.txt"
+          fi
+          rc=${PIPESTATUS[0]}
+          { echo "### Paid buyer path check, last 90 days"; echo '```'; cat "$RUNNER_TEMP/paycheck.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Tell Slack the paid buyer path is red
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SELF_TEST: ${{ inputs.self_test }}
+          TEST_ALERT: ${{ inputs.test_alert }}
+        run: |
+          grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null > "$RUNNER_TEMP/gap-now.txt" || true
+          [ -s "$RUNNER_TEMP/gap-now.txt" ] || echo "NO-RESULT-PRINTED" > "$RUNNER_TEMP/gap-now.txt"
+          : > "$RUNNER_TEMP/gap-prev.txt"
+          art=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=paid-buyer-gap-set&per_page=1" --jq '.artifacts[0] | select(.expired == false) | .id' 2>/dev/null || true)
+          if [ -n "$art" ] && gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${art}/zip" > "$RUNNER_TEMP/prev.zip" 2>/dev/null; then
+            unzip -p "$RUNNER_TEMP/prev.zip" gap-set.txt > "$RUNNER_TEMP/gap-prev.txt" 2>/dev/null || : > "$RUNNER_TEMP/gap-prev.txt"
+          fi
+          if cmp -s "$RUNNER_TEMP/gap-now.txt" "$RUNNER_TEMP/gap-prev.txt"; then repeat=false; else repeat=true; fi
+          echo "gap set changed since the previous run (repeat_ok): $repeat"
+          lines=$(grep -E '=no( |$)' "$RUNNER_TEMP/paycheck.txt" 2>/dev/null | tac | cut -c1-200 | head -25)
+          [ -n "$lines" ] || lines="the check step failed before it printed a result; see the run"
+          label=""
+          if [ "$TEST_ALERT" = "true" ]; then label="TEST (test_alert, synthetic gap, ignore) "; repeat=true; fi
+          text=$(printf '%score-oj-paid-buyer-path is RED.\n%s\n%s/%s/actions/runs/%s' \
+            "$label" "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" --argjson repeat "$repeat" '{channel: "C0BLV397CH4", text: $text, repeat_ok: $repeat}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
+
+      - name: Record the gap set
+        if: always() && inputs.self_test != true && inputs.test_alert != true
+        run: |
+          if [ -f "$RUNNER_TEMP/gap-now.txt" ]; then cp "$RUNNER_TEMP/gap-now.txt" "$RUNNER_TEMP/gap-set.txt"; else : > "$RUNNER_TEMP/gap-set.txt"; fi
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.self_test != true && inputs.test_alert != true
+        with:
+          name: paid-buyer-gap-set
+          path: ${{ runner.temp }}/gap-set.txt
+          retention-days: 14
