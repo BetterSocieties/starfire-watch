@@ -1,0 +1,121 @@
+# Checks outbound links on venture sites and reports broken ones.
+# Why: on 2026-10-26 the community. and accelerate. subdomains and simpleguideto.life (old Skool custom domains) had
+# broken HTTPS, and /newsletter answered 404, with nobody told. The issue plus Slack alert means the fix is owed.
+# Runs here, not in starfire-core: that repository is private and its Actions minutes ran out on 2026-10-26
+# ("recent account payments have failed or your spending limit needs to be increased"); this one is public, so
+# GitHub-hosted runners are free. The scripts still live in starfire-core and are checked out below.
+name: core-outbound-links
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: core-outbound-links
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+      - name: Build sitemap list
+        id: sitemaps
+        continue-on-error: true
+        working-directory: core
+        run: |
+          set -euo pipefail
+          # /newsletter goes in first, so a sitemap outage cannot drop it.
+          echo "https://bettersocieties.world/newsletter" > urls.txt
+          python3 scripts/sitemap-urls.py https://bettersocieties.world https://opsjuice.com https://simpleguidetolife.com https://echostudio.co >> urls.txt
+      - name: Build subdomain list
+        id: subs
+        continue-on-error: true
+        working-directory: core
+        run: |
+          set -euo pipefail
+          # pay.simpleguideto.life is an unused GoDaddy payment-link domain: its root says "Pay Link Not Found" by design and nothing links to it.
+          # assets. and render. opsjuice.com are asset hosts with no page at their root, by design.
+          # links.opsjuice.com is the email click-tracking host; its root answers 400 by design.
+          python3 scripts/subdomain-urls.py bettersocieties.world simpleguideto.life opsjuice.com echostudio.co simpleguidetolife.com --skip pay.simpleguideto.life --skip assets.opsjuice.com --skip render.opsjuice.com --skip links.opsjuice.com >> urls.txt
+      - name: Probe every input page
+        id: probe
+        working-directory: core
+        # lychee aborts the whole run when one input page cannot be fetched, so a dead page is reported here and left
+        # out of lychee. 403 is not accepted: Skool and beehiiv answer 403 to curl's default agent for pages that do
+        # not exist; with a browser agent they answer 404. The address after redirects goes to lychee, so a page
+        # that redirects (as /newsletter does to beehiiv) has its relative links resolved against the right host.
+        run: |
+          UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+          mkdir -p lychee
+          : > live.txt
+          : > lychee/dead-pages.md
+          while read -r u; do
+            out=$(curl -s -o /dev/null -L --max-time 30 -A "$UA" -w '%{http_code} %{url_effective}' "$u" || true)
+            code=${out%% *}; final=${out#* }
+            case "$code" in
+              2??|429) echo "$final" >> live.txt ;;
+              *) echo "* [$code] <$final> (the page itself did not load)" >> lychee/dead-pages.md ;;
+            esac
+          done < urls.txt
+          echo "inputs=$(grep -c . urls.txt || true)" >> "$GITHUB_OUTPUT"
+          echo "dead=$(grep -c . lychee/dead-pages.md || true)" >> "$GITHUB_OUTPUT"
+      - name: Run lychee link checker
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
+        # discord.com/user is a string in beehiiv's own page script on /newsletter, not a link we publish.
+        with:
+          fail: false
+          failIfEmpty: true
+          output: ./core/lychee/out.md
+          args: --max-retries 3 --timeout 30 --accept 200..=299,403,429 --exclude "^https?://([a-z0-9-]+\.)?(x|twitter|linkedin|instagram)\.com(/|$)" --exclude "/cdn-cgi/l/email-protection" --exclude "/api/" --exclude "\.workers\.dev(/|$)" --exclude "^https://discord\.com/user$" --format markdown --files-from core/live.txt
+      - name: Combine report
+        id: combine
+        if: ${{ always() && (failure() || steps.lychee.outputs.exit_code != 0 || steps.probe.outputs.dead != '0' || steps.sitemaps.outcome == 'failure' || steps.subs.outcome == 'failure') }}
+        working-directory: core
+        run: |
+          mkdir -p lychee
+          { echo "## Pages that did not load"; cat lychee/dead-pages.md 2>/dev/null || echo "(none)"; echo; echo "## Dead links inside pages"; cat lychee/out.md 2>/dev/null || echo "(lychee wrote no report)"; } > lychee/report.md
+          if [ "${{ steps.sitemaps.outcome }}" = "failure" ]; then echo "A sitemap could not be read, so some pages were not checked." >> lychee/report.md; fi
+          if [ "${{ steps.subs.outcome }}" = "failure" ]; then echo "crt.sh failed for at least one domain, so its subdomains were not checked." >> lychee/report.md; fi
+          echo "links=$(grep -c '^\* \[' lychee/out.md 2>/dev/null || echo 0)" >> "$GITHUB_OUTPUT"
+      - name: Find open issue
+        id: find
+        if: ${{ always() && steps.combine.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list --repo "${{ github.repository }}" --state open --label dead-links --search 'in:title "Dead outbound links"' --json number -q '.[0].number // empty')
+          echo "number=$n" >> "$GITHUB_OUTPUT"
+      - name: Create issue on failure
+        id: issue
+        if: ${{ always() && steps.combine.outcome == 'success' }}
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: Dead outbound links
+          content-filepath: ./core/lychee/report.md
+          labels: dead-links, automated issue
+          issue-number: ${{ steps.find.outputs.number }}
+      - name: Alert Slack on failure
+        if: ${{ always() && steps.combine.outcome == 'success' }}
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          issue="${{ github.server_url }}/${{ github.repository }}/issues/${{ steps.issue.outputs.issue-number }}"
+          run="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          failed=""
+          [ "${{ steps.sitemaps.outcome }}" = "failure" ] && failed="$failed sitemap"
+          [ "${{ steps.subs.outcome }}" = "failure" ] && failed="$failed crt.sh"
+          python3 scripts/notify-slack.py --channel C0BLV397CH4 "Outbound link check: ${{ steps.probe.outputs.dead }} pages did not load, ${{ steps.combine.outputs.links }} dead links inside pages, failed sources:${failed:- none}. Issue: $issue Run: $run"
