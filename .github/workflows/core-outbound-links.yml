@@ -47,7 +47,7 @@ jobs:
           # pay.simpleguideto.life is an unused GoDaddy payment-link domain: its root says "Pay Link Not Found" by design and nothing links to it.
           # assets. and render. opsjuice.com are asset hosts with no page at their root, by design.
           # links.opsjuice.com is the email click-tracking host; its root answers 400 by design.
-          python3 scripts/subdomain-urls.py bettersocieties.world simpleguideto.life opsjuice.com echostudio.co simpleguidetolife.com --skip pay.simpleguideto.life --skip assets.opsjuice.com --skip render.opsjuice.com --skip links.opsjuice.com >> urls.txt
+          python3 scripts/subdomain-urls.py bettersocieties.world simpleguideto.life opsjuice.com echostudio.co simpleguidetolife.com --skip pay.simpleguideto.life --skip assets.opsjuice.com --skip render.opsjuice.com --skip links.opsjuice.com --failures source-failures.txt >> urls.txt
       - name: Probe every input page
         id: probe
         working-directory: core
@@ -87,7 +87,8 @@ jobs:
           mkdir -p lychee
           { echo "## Pages that did not load"; cat lychee/dead-pages.md 2>/dev/null || echo "(none)"; echo; echo "## Dead links inside pages"; cat lychee/out.md 2>/dev/null || echo "(lychee wrote no report)"; } > lychee/report.md
           if [ "${{ steps.sitemaps.outcome }}" = "failure" ]; then echo "A sitemap could not be read, so some pages were not checked." >> lychee/report.md; fi
-          if [ "${{ steps.subs.outcome }}" = "failure" ]; then echo "crt.sh failed for at least one domain, so its subdomains were not checked." >> lychee/report.md; fi
+          # subdomain-urls.py names each domain crt.sh failed for; its known subdomains were still checked.
+          if [ -s source-failures.txt ]; then { echo; echo "## Sources that failed"; sed 's/^/* /' source-failures.txt; } >> lychee/report.md; fi
           echo "links=$(grep -c '^\* \[' lychee/out.md 2>/dev/null || echo 0)" >> "$GITHUB_OUTPUT"
       - name: Find open issue
         id: find
@@ -117,5 +118,5 @@ jobs:
           run="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           failed=""
           [ "${{ steps.sitemaps.outcome }}" = "failure" ] && failed="$failed sitemap"
-          [ "${{ steps.subs.outcome }}" = "failure" ] && failed="$failed crt.sh"
+          if [ -s source-failures.txt ]; then failed="$failed crt.sh($(cut -d' ' -f4 source-failures.txt | tr -d ';' | paste -sd, -))"; fi
           python3 scripts/notify-slack.py --channel C0BLV397CH4 "Outbound link check: ${{ steps.probe.outputs.dead }} pages did not load, ${{ steps.combine.outputs.links }} dead links inside pages, failed sources:${failed:- none}. Issue: $issue Run: $run"
