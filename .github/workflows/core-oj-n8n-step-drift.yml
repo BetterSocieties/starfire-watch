@@ -1,0 +1,68 @@
+# Deadman for OpsJuice n8n step drift: every scheduled run checks that every live n8n step
+# still matches its source file. The script scripts/check-live-step-matches-its-source.py in
+# starfire-core finds any drift; this workflow runs it in the cloud and alerts Slack if drift
+# is detected. The code lives in starfire-core and is checked out with GH_PAT.
+
+name: core-oj-n8n-step-drift
+
+on:
+  schedule:
+    - cron: "25 0 * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref the script is checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Does every live step match its source
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          N8N_URL: https://n8n.opsjuice.com
+        run: |
+          set -uo pipefail
+          scripts/with-vault-env.sh N8N_POD_API_KEY -- \
+            bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py' > "$RUNNER_TEMP/drift.txt" 2>&1
+          rc=$?
+          grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" | head -20
+          tail -3 "$RUNNER_TEMP/drift.txt"
+          if grep -q '^DRIFT' "$RUNNER_TEMP/drift.txt"; then exit 1; fi
+          if [ "$rc" -eq 2 ]; then echo "platform unreachable"; exit 1; fi
+          exit 0
+
+      - name: Tell Slack which steps drifted
+        if: failure()
+        run: |
+          drift_lines=$(grep -E '^DRIFT' "$RUNNER_TEMP/drift.txt" | head -5)
+          if [ -n "$drift_lines" ]; then
+            text=$(printf 'OpsJuice n8n step drift detected:\n%s\nThe next deploy of that step would overwrite the live version; write the live code back into its source file first.' "$drift_lines")
+          else
+            text='OpsJuice n8n step drift check: the automation platform could not be read'
+          fi
+          text=$(printf '%s\n%s/%s/actions/runs/%s' "$text" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
