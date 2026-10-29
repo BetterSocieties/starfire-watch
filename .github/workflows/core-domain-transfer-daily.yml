@@ -73,6 +73,20 @@ jobs:
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
 
+      - name: Remind Adrien about the GoDaddy refund (closes 2026-11-18)
+        if: always() && github.event.schedule == '17 3 * * *'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          today=$(date -u +%F)
+          [[ "$today" > "2026-11-13" && "$today" < "2026-11-19" ]] || exit 0
+          state=$(gh issue view 5678 -R BetterSocieties/starfire-core --json state --jq .state)
+          [ "$state" = "OPEN" ] || exit 0
+          text="Reminder: the \$23.19 GoDaddy refund for simpleguidetolife.com closes on 2026-11-18. Reply with the code GoDaddy texts to your phone ending 0378 (starfire-core issue 5678)."
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
+
       - name: Turn this workflow off once every domain is at Cloudflare
         if: success()
         env:
