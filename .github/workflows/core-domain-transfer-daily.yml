@@ -1,0 +1,83 @@
+# Move Adrien's 4 GoDaddy domains to Cloudflare Registrar on their approved dates, then turn itself off.
+# Plan and charge table: ~/.claude/plans/dapper-pondering-pie.md (approved 2026-10-29), script
+# scripts/domain-transfer-tick.py in starfire-core. It pays only the approved price per domain, never
+# touches DNS, and holds bettersocieties.world to a weekday after 2026-11-24 with no DNS edit in 48 h
+# (so it never lands on the Webflow to Pages cutover day). Output is domain names, states and prices
+# only, so it is safe in this public log.
+#
+# 03:17 UTC daily, plus 15:41 as a second slot because GitHub drops some scheduled runs; the script
+# is idempotent (a domain already moving is only reported). Slack hears about every start, failure
+# and the final ALL DONE, after which the workflow disables itself.
+name: core-domain-transfer-daily
+on:
+  schedule:
+    - cron: "17 3 * * *"
+    - cron: "41 15 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Reads only, starts no transfer"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  actions: write   # to disable this workflow once every domain is at Cloudflare
+
+concurrency:
+  group: core-domain-transfer-daily
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Move the domains that are due
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          set -uo pipefail
+          python3 scripts/domain-transfer-tick.py --self-test
+          scripts/with-vault-env.sh \
+            GODADDY_API_KEY GODADDY_API_SECRET CLOUDFLARE_REGISTRAR_TOKEN CLOUDFLARE_DNS_ALL_ZONES_TOKEN -- \
+            python3 scripts/domain-transfer-tick.py ${DRY:+"$DRY"} | tee "$RUNNER_TEMP/tick.txt"
+          rc=${PIPESTATUS[0]}
+          { echo '### Domain transfers'; echo '```'; cat "$RUNNER_TEMP/tick.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      - name: Tell Slack about a start, a failure or the finish
+        if: always()
+        run: |
+          lines=$(grep -E '^(STARTED|FAILED|ALL DONE)' "$RUNNER_TEMP/tick.txt" 2>/dev/null || true)
+          [ -f "$RUNNER_TEMP/tick.txt" ] || lines="FAILED the transfer script did not run"
+          [ -n "$lines" ] || exit 0
+          text=$(printf 'core-domain-transfer-daily:\n%s\n%s/%s/actions/runs/%s' "$lines" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
+
+      - name: Turn this workflow off once every domain is at Cloudflare
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if grep -q '^ALL DONE' "$RUNNER_TEMP/tick.txt"; then
+            gh workflow disable core-domain-transfer-daily.yml -R "$GITHUB_REPOSITORY"
+          fi
