@@ -116,8 +116,8 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ github.token }}
-      OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
-      OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
+    needs: source
+    if: ${{ !cancelled() }}
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -133,20 +133,29 @@ jobs:
 
       - name: Install google-maps-scraper
         working-directory: core
+        env:
+          OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+          OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
         run: bash scripts/install-gmaps-scraper.sh
+
+      - name: Install Playwright chromium
+        working-directory: core
+        run: python3 -m pip install playwright && python3 -m playwright install --with-deps chromium
 
       - name: Source today's metros from Google Maps
         working-directory: core
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+          OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
         run: |
           set -uo pipefail
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-gmaps.py --rotate --apply \
-            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; echo "gmaps exit=$rc"; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
-          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)' "$RUNNER_TEMP/gmaps.log" || true
+            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; echo "exit=$rc"; echo "Scraper exited"; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           exit $rc
 
   screen:
