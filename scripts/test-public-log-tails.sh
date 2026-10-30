@@ -47,6 +47,7 @@ gmaps_case() {  # $1 = fake log text, $2 = fake exit code; prints the step's exi
   SAFE_LINES="$gmaps_pattern" RUNNER_TEMP="$dir" FAKE="$dir/fake.sh" bash -c "$gmaps_step" >/dev/null 2>&1
   echo $?
 }
+check "gmaps: the scraper's telemetry is off" "$(python3 -c 'import sys,yaml; print(yaml.safe_load(open(sys.argv[1]))["jobs"]["gmaps"]["env"].get("DISABLE_TELEMETRY"))' "$gmaps_wf")" 1
 gmaps_pattern="$(python3 -c 'import sys,yaml; print(yaml.safe_load(open(sys.argv[1])).get("env",{}).get("SAFE_LINES",""))' "$gmaps_wf")"
 check "gmaps: empty scrape exits 4" "$(gmaps_case '{"queries": 8, "places": 0, "inserted": 0}' 0)" 4
 check "gmaps: good scrape exits 0" "$(gmaps_case '{"queries": 8, "places": 31, "inserted": 12}' 0)" 0
