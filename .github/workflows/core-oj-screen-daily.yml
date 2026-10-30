@@ -8,7 +8,8 @@
 # 2026-10-12. Now there are three entry points, all running the one copy of the steps below:
 #   1. core-oj-source-daily calls this as a reusable workflow right after its source job, and runs it
 #      even when the source job failed (`!cancelled()`), because rows that already exist are owed a screen.
-#   2. This file's own cron, hourly since 2026-10-30, so the backlog clears in days (see SITE READ).
+#   2. This file's own cron, every 4 hours since 2026-10-30 (see READ BUDGET), so the site-read backlog
+#      clears in about 2 days.
 #   3. workflow_dispatch.
 # The order that matters is screen BEFORE verify: the mailbox pass of core-oj-verify-daily reads only
 # ICP-passed rows.
@@ -44,11 +45,18 @@
 # (docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
 # A cron run that lands while the chained run is still screening waits, then finds nothing to screen.
 #
+# READ BUDGET. D1's free tier allows 5,000,000 rows read a day for the whole OJ account, reset at 00:00 UTC
+# (developers.cloudflare.com/d1/platform/pricing/). On 2026-10-30 the hourly catch-up of these steps read
+# about 2.9 million of them and the account hit the limit (error 7500) at about 14:00 UTC, which stops
+# every OJ query, the sender included. With core PR 5730's read fixes one run reads about 75,000 rows, so
+# every 4 hours is about 450,000 a day. Do not raise the cadence without re-measuring with
+# scripts/oj-d1-usage.py.
+#
 # THE LOG IS WORLD READABLE. Counts only; the screened list goes to the step summary as before.
 name: core-oj-screen-daily
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17 */4 * * *"
   workflow_call: {}
   workflow_dispatch: {}
 
