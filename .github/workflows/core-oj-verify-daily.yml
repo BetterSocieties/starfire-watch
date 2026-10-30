@@ -36,6 +36,11 @@ concurrency:
   group: core-oj-verify-daily
   cancel-in-progress: false
 
+# The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
+# error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
+env:
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning|exit)\b|HTTP [0-9]|D1 |found=|wrote [0-9]|read [0-9]|end of )'
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -65,7 +70,7 @@ jobs:
           rc=0
           python3 scripts/oj-redecide-address-kind.py --apply > "$RUNNER_TEMP/kind.log" 2>&1 || rc=$?
           echo "address kind exit=$rc"
-          tail -n 4 "$RUNNER_TEMP/kind.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 4 "$RUNNER_TEMP/kind.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
       - name: Stamp MX for every queued address that has none
@@ -78,7 +83,7 @@ jobs:
             > "$RUNNER_TEMP/mx.log" 2>&1 || rc=$?
           rm -f "$RUNNER_TEMP/ojkey"
           echo "mx exit=$rc"
-          tail -n 6 "$RUNNER_TEMP/mx.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 6 "$RUNNER_TEMP/mx.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
       - name: Hold out domains that cannot receive mail
@@ -88,7 +93,7 @@ jobs:
           rc=0
           python3 scripts/oj-verify-the-domain-can-receive-mail.py --apply --limit 500 > "$RUNNER_TEMP/domain.log" 2>&1 || rc=$?
           echo "domain check exit=$rc"
-          tail -n 6 "$RUNNER_TEMP/domain.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 6 "$RUNNER_TEMP/domain.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
       - name: Verify mailboxes of the ICP-passed pool on the free allowances
@@ -109,7 +114,7 @@ jobs:
             n="$(grep -E '^asking about [0-9]+' "$RUNNER_TEMP/mailbox-$pass.log" | grep -oE '[0-9]+' | head -1)"
             total=$((total + ${n:-0}))
             # exit 2 = no provider has allowance left (a normal ending); 0 with nothing asked (none or 0) = done
-            [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 40 "$RUNNER_TEMP/mailbox-$pass.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; exit "$rc"; }
+            [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 40 "$RUNNER_TEMP/mailbox-$pass.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; exit "$rc"; }
             [ "$rc" -eq 0 ] && [ "${n:-0}" -eq 0 ] && break
             [ "$rc" -eq 2 ] && break
           done

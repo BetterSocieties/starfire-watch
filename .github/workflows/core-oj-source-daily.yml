@@ -42,6 +42,11 @@ concurrency:
   group: core-oj-source-daily
   cancel-in-progress: false
 
+# The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
+# error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
+env:
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning|exit)\b|HTTP [0-9]|D1 |found=|wrote [0-9]|read [0-9]|end of )'
+
 jobs:
   source:
     runs-on: ubuntu-latest
@@ -74,7 +79,7 @@ jobs:
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-overture.py --rotate --apply \
-            > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+            > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
@@ -99,7 +104,7 @@ jobs:
           done
           [ "$rc" -eq 0 ] && [ "$drained" -eq 0 ] && echo "stamp not drained after 3 passes; the rest waits for the next run"
           echo "stamp exit=$rc"
-          [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
   screen:
