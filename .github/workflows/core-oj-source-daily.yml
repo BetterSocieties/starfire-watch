@@ -11,8 +11,9 @@
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
 # The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
 # 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
-# The second job is core-oj-screen-daily.yml and the third is core-oj-verify-daily.yml (address kind, MX,
-# mailbox), both called as reusable workflows. Both run even if an earlier job failed, because a source
+# Four jobs, in order: source (Overture metros), gmaps (Google Maps for today's metros), screen
+# (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX, mailbox), the last two
+# called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
 # WHY THE SITE READ HAS NO ADDRESS FILTER. Until 2026-10-13 it ran with --email-only and the screen
@@ -26,6 +27,9 @@
 # THE LOG IS WORLD READABLE. Both scripts print business names and discovered addresses as
 # they go, so their output goes to a file on the runner and only the count lines are echoed.
 # The exit codes are kept: any non-zero exit fails the run and posts to Slack.
+#
+# The gmaps job runs gosom's google-maps-scraper (pinned by scripts/install-gmaps-scraper.sh in
+# starfire-core) after Overture and beside the screen; the 4-hourly screen cron picks up its rows.
 #
 # The vault secret is named secrets.VAULT_BEARER in this repository. Secrets are read at
 # runtime through scripts/vault-get.py; none is stored for these jobs.
@@ -107,10 +111,75 @@ jobs:
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
+  gmaps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+      # The scraper's own switch for its usage report to its author.
+      DISABLE_TELEMETRY: "1"
+    needs: source
+    if: ${{ !cancelled() }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install google-maps-scraper
+        working-directory: core
+        env:
+          OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+          OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
+        run: bash scripts/install-gmaps-scraper.sh
+
+      - name: Install Playwright chromium via scraper
+        working-directory: core
+        env:
+          OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+          OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
+        run: PLAYWRIGHT_INSTALL_ONLY=1 "$OJ_GMAPS_BIN" || PLAYWRIGHT_INSTALL_ONLY=1 "$OJ_GMAPS_BIN"
+
+      - name: Source today's metros from Google Maps
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+          OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-source-gmaps.py --rotate --apply \
+            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
+          # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
+          if [ "$rc" -eq 0 ]; then
+            read -r queries places < <(python3 -c 'import json,sys; c=[l for l in open(sys.argv[1]) if l.startswith("{\"queries\"")]; d=json.loads(c[-1]) if c else {}; print(d.get("queries",0), d.get("places",0)) if c else print("none none")' "$RUNNER_TEMP/gmaps.log" || echo "none none")
+            if [ "$queries" = none ]; then
+              echo "gmaps printed no counts line" >&2
+              exit 5
+            fi
+            if [ "$queries" -gt 0 ] && [ "$places" -eq 0 ]; then
+              echo "gmaps found no places from $queries queries" >&2
+              exit 4
+            fi
+          fi
+          exit $rc
+
   screen:
     # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
     # rows that already exist are owed a screen, and verify is no use without it.
-    needs: source
+    needs: [source]
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/core-oj-screen-daily.yml
     secrets: inherit
