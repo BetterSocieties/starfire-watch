@@ -27,6 +27,9 @@
 # they go, so their output goes to a file on the runner and only the count lines are echoed.
 # The exit codes are kept: any non-zero exit fails the run and posts to Slack.
 #
+# The gmaps job runs gosom's google-maps-scraper (pinned by scripts/install-gmaps-scraper.sh in
+# starfire-core) beside Overture, and the screen waits for both.
+#
 # The vault secret is named secrets.VAULT_BEARER in this repository. Secrets are read at
 # runtime through scripts/vault-get.py; none is stored for these jobs.
 name: core-oj-source-daily
@@ -107,10 +110,49 @@ jobs:
           [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
+  gmaps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+      OJ_GMAPS_BIN_DIR: ${{ runner.temp }}/gmaps
+      OJ_GMAPS_BIN: ${{ runner.temp }}/gmaps/google-maps-scraper
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install google-maps-scraper
+        working-directory: core
+        run: bash scripts/install-gmaps-scraper.sh
+
+      - name: Source today's metros from Google Maps
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-source-gmaps.py --rotate --apply \
+            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; echo "gmaps exit=$rc"; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)' "$RUNNER_TEMP/gmaps.log" || true
+          exit $rc
+
   screen:
     # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
     # rows that already exist are owed a screen, and verify is no use without it.
-    needs: source
+    needs: [source, gmaps]
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/core-oj-screen-daily.yml
     secrets: inherit
