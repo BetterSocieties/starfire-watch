@@ -1,0 +1,48 @@
+# The D1 free tier allows 5,000,000 rows read a day and resets at 00:00 UTC.
+# The index file ventures/opsjuice/d1-migration/d1-budget-indexes.sql in starfire-core was merged on
+# 2026-10-29 but nothing ran it, so the live database had none of its indexes and the funnel report read
+# about 266,000 rows every 3 hours; this job applies the file every day at 00:07 UTC, right after the
+# allowance resets, and fails the run when an index is still missing.
+# The script only runs CREATE INDEX IF NOT EXISTS statements and refuses anything else.
+# Its output is index names and counts only.
+
+name: core-oj-d1-indexes
+on:
+  schedule:
+    - cron: "7 0 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-d1-indexes
+  cancel-in-progress: false
+
+jobs:
+  indexes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply the D1 index file
+        working-directory: core
+        run: |
+          set -uo pipefail
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-d1-apply-indexes.py --apply
