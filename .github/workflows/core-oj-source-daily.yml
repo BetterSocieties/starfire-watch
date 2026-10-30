@@ -11,8 +11,9 @@
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
 # The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
 # 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
-# The second job is core-oj-screen-daily.yml and the third is core-oj-verify-daily.yml (address kind, MX,
-# mailbox), both called as reusable workflows. Both run even if an earlier job failed, because a source
+# Four jobs, in order: source (Overture metros), gmaps (Google Maps for today's metros), screen
+# (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX, mailbox), the last two
+# called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
 # WHY THE SITE READ HAS NO ADDRESS FILTER. Until 2026-10-13 it ran with --email-only and the screen
@@ -116,6 +117,8 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ github.token }}
+      # The scraper's own switch for its usage report to its author.
+      DISABLE_TELEMETRY: "1"
     needs: source
     if: ${{ !cancelled() }}
     steps:
@@ -161,8 +164,12 @@ jobs:
           grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
           if [ "$rc" -eq 0 ]; then
-            read -r queries places < <(python3 -c 'import json,sys; c=[l for l in open(sys.argv[1]) if l.startswith("{\"queries\"")]; d=json.loads(c[-1]) if c else {}; print(d.get("queries",0), d.get("places",0))' "$RUNNER_TEMP/gmaps.log" || echo "0 0")
-            if [ "${queries:-0}" -gt 0 ] && [ "${places:-0}" -eq 0 ]; then
+            read -r queries places < <(python3 -c 'import json,sys; c=[l for l in open(sys.argv[1]) if l.startswith("{\"queries\"")]; d=json.loads(c[-1]) if c else {}; print(d.get("queries",0), d.get("places",0)) if c else print("none none")' "$RUNNER_TEMP/gmaps.log" || echo "none none")
+            if [ "$queries" = none ]; then
+              echo "gmaps printed no counts line" >&2
+              exit 5
+            fi
+            if [ "$queries" -gt 0 ] && [ "$places" -eq 0 ]; then
               echo "gmaps found no places from $queries queries" >&2
               exit 4
             fi

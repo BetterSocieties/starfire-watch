@@ -29,5 +29,35 @@ for wf in "$repo"/.github/workflows/core-oj-*.yml; do
   check "$name: the public run summary carries no row list" "$rows" 0
 done
 
+# The gmaps step's own script, run with the scraper call swapped for a fake that writes a log and exits.
+gmaps_wf="$repo/.github/workflows/core-oj-source-daily.yml"
+gmaps_step="$(python3 - "$gmaps_wf" <<'PY'
+import re, sys, yaml
+steps = yaml.safe_load(open(sys.argv[1]))["jobs"]["gmaps"]["steps"]
+run = next(s["run"] for s in steps if "oj-source-gmaps.py" in s.get("run", ""))
+fake, n = re.subn(r"python3 scripts/vault-get\.py.*?--apply", 'sh "$FAKE"', run, count=1, flags=re.S)
+assert n == 1, "scraper call not found"
+print(fake)
+PY
+)"
+gmaps_case() {  # $1 = fake log text, $2 = fake exit code; prints the step's exit code
+  local dir="$repo/.test-gmaps"; mkdir -p "$dir"
+  printf '%s\n' "$1" > "$dir/log.txt"
+  printf 'cat "%s"; exit %s\n' "$dir/log.txt" "$2" > "$dir/fake.sh"
+  SAFE_LINES="$gmaps_pattern" RUNNER_TEMP="$dir" FAKE="$dir/fake.sh" bash -c "$gmaps_step" >/dev/null 2>&1
+  echo $?
+}
+gmaps_pattern="$(python3 -c 'import sys,yaml; print(yaml.safe_load(open(sys.argv[1])).get("env",{}).get("SAFE_LINES",""))' "$gmaps_wf")"
+check "gmaps: empty scrape exits 4" "$(gmaps_case '{"queries": 8, "places": 0, "inserted": 0}' 0)" 4
+check "gmaps: good scrape exits 0" "$(gmaps_case '{"queries": 8, "places": 31, "inserted": 12}' 0)" 0
+check "gmaps: exit 0 with no counts line exits 5" "$(gmaps_case 'Metros today: 3' 0)" 5
+check "gmaps: a crash keeps the script's exit code" "$(gmaps_case 'exit=2 gmaps scraper timed out after 3600 s' 2)" 2
+# Reuses the exit-2 fake the crash case above wrote; only the log changes.
+leak="$(SAFE_LINES="$gmaps_pattern" RUNNER_TEMP="$repo/.test-gmaps" FAKE="$repo/.test-gmaps/fake.sh" bash -c \
+  "printf '%s\n' 'someone@example.invalid' 'Acme Plumbing 12 Test St' 'exit=2 gmaps scraper failed' > \"\$RUNNER_TEMP/log.txt\"; $gmaps_step" 2>&1)"
+check "gmaps: a crash prints the exit line" "$(printf '%s\n' "$leak" | grep -c '^exit=2 gmaps scraper failed$')" 1
+check "gmaps: a crash prints no name, street or address" "$(printf '%s\n' "$leak" | grep -cE 'Acme|Test St|@')" 0
+rm -rf "${repo:?}/.test-gmaps"
+
 echo "passed=$pass failed=$fail"
 [ "$fail" -eq 0 ]
