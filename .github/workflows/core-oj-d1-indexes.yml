@@ -1,10 +1,12 @@
-# The D1 free tier allows 5,000,000 rows read a day and resets at 00:00 UTC.
+# The D1 free tier allows 5,000,000 rows read and 100,000 rows written a day, and resets at 00:00 UTC.
 # The index file ventures/opsjuice/d1-migration/d1-budget-indexes.sql in starfire-core was merged on
-# 2026-10-29 but nothing ran it, so the live database had none of its indexes and the funnel report read
-# about 266,000 rows every 3 hours; this job applies the file every day at 00:07 UTC, right after the
-# allowance resets, and fails the run when an index is still missing.
-# The script only runs CREATE INDEX IF NOT EXISTS statements and refuses anything else.
-# Its output is index names and counts only.
+# 2026-10-29 but nothing ran it, so the live database lacked its indexes and the funnel report read
+# about 266,000 rows every 3 hours. This job runs every hour at minute 7. CREATE INDEX writes one row per
+# row indexed, so the script creates an index only when its table fits what is left of a 50,000-row
+# write budget today; one that does not fit waits for a later hour (exit 0), one bigger than the whole
+# budget fails the run (exit 3), and an index still missing after its CREATE fails it (exit 1).
+# The script runs only CREATE INDEX IF NOT EXISTS statements and refuses anything else (exit 2).
+# Its output is index names, row counts and fixed reason lines only.
 
 name: core-oj-d1-indexes
 on:
@@ -54,7 +56,14 @@ jobs:
             > "$RUNNER_TEMP/indexes.log" 2>&1 || rc=$?
           echo "indexes exit=$rc"
           # index names and counts only
-          grep -E '^(missing|created|deferred|indexes):' "$RUNNER_TEMP/indexes.log" || true
+          grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true
+          case "$rc" in
+            0) ;;
+            1) echo "indexes reason: an index is still missing after its CREATE ran" ;;
+            2) echo "indexes reason: the index file was refused, or D1 or the usage check failed" ;;
+            3) echo "indexes reason: an index's table is bigger than the whole daily write budget" ;;
+            *) echo "indexes reason: unexpected exit $rc" ;;
+          esac
           if [ "$rc" -ne 0 ]; then
             tail -n 3 "$RUNNER_TEMP/indexes.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
             exit "$rc"
