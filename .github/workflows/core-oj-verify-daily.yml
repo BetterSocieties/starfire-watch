@@ -8,16 +8,20 @@
 # documents that `schedule` can be delayed at the start of every hour, and run in UTC from the default
 # branch only. A cron run that overlaps the chained run waits in the concurrency group below (cancel-in-
 # progress is false, so a running pass is never cut off) and then finds little left to do.
-# 150 minutes at most, so a 11:17 start ends before the 14:30 sender.
+# 175 minutes at most, so a 11:17 start ends before the 14:30 sender.
 #
 # Order, cheapest first:
 #   1. address kind (named, role, general), local rule, no network
 #   2. MX stamp over DNS-over-HTTPS, free
 #   3. hold out domains that cannot receive mail at all, free
-#   4. mailbox depth on the sender's own pool (ICP-passed rows only), spending the free provider
-#      allowances. Only 0.3 in every 100 bad addresses are visible from DNS, and a hosted runner
-#      cannot open an SMTP session, so these allowances are the ceiling on verified mailboxes a day.
+#   4. mailbox over SMTP with Reacher, free, settles valid, catch_all and invalid;
+#      a blocked or unknown answer writes nothing
+#   5. mailbox depth on the sender's own pool (ICP-passed rows only), spending the free provider
+#      allowances. Only 0.3 in every 100 bad addresses are visible from DNS;
+#      the allowance step already skips rows that carry email_mailbox_status.
 #      One pass spends one provider (40 at most); passes repeat until no provider has allowance.
+#   Measured 2026-10-30: a GitHub-hosted runner opens TCP 25 (starfire-watch run 41061707431 got
+#   "220 mx.google.com ESMTP"), so the SMTP check runs here for free.
 #
 # Results go into prospects.enrichment (email_mx_ok, email_deliverable, email_deliverable_tier),
 # which is what the sender reads. Nothing here sends mail. The log is world readable, so each
@@ -39,17 +43,19 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued|\{"probed")'
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     # One mailbox pass of 40 addresses took about 19 minutes on 2026-10-12 (run 38271546364),
     # so 60 minutes cancelled the job inside pass 4 of 6. Six passes need about 2 hours.
-    timeout-minutes: 150
+    # The Reacher step is capped at 1200 s by --max-seconds.
+    timeout-minutes: 175
     env:
       STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
       STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -96,7 +102,42 @@ jobs:
           tail -n 6 "$RUNNER_TEMP/domain.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
+      - name: Install Reacher
+        if: ${{ !cancelled() }}
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REACHER_BIN_DIR: ${{ runner.temp }}/reacher
+        run: bash scripts/install-reacher.sh
+
+      - name: Check mailboxes over SMTP with Reacher (free)
+        if: ${{ !cancelled() }}
+        working-directory: core
+        env:
+          REACHER_BIN: ${{ runner.temp }}/reacher/check_if_email_exists
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- python3 scripts/oj-rcpt-probe.py --apply --limit 300 --max-seconds 1200 > "$RUNNER_TEMP/rcpt.log" 2>&1 || rc=$?
+          echo "reacher exit=$rc"
+          # The last line is counts only: {"probed": .., "verdicts": {..}, "written": .., "applied": ..}
+          counts="$(tail -n 1 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | { grep -E '^\{"probed"' || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g')"
+          echo "$counts"
+          # Fail if probed > 0 and written == 0 (blocked port 25 or blocklisted runner IP)
+          if [ -n "$counts" ]; then
+            read -r probed written < <(echo "$counts" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("probed",0), d.get("written",0))' || echo "0 0")
+            if [ "${probed:-0}" -gt 0 ] && [ "${written:-0}" -eq 0 ]; then
+              echo "reacher wrote nothing from $probed probes" >&2
+              exit 3
+            fi
+          fi
+          [ "$rc" -eq 0 ] || tail -n 40 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
       - name: Verify mailboxes of the ICP-passed pool on the free allowances
+        # Runs even when the Reacher step failed, so a Reacher fault never stops this check;
+        # the job still ends failed and alerts.
+        if: ${{ !cancelled() }}
         working-directory: core
         run: |
           set -uo pipefail
