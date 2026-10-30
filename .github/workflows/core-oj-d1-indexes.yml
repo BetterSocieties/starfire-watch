@@ -1,0 +1,74 @@
+# The D1 free tier allows 5,000,000 rows read and 100,000 rows written a day, and resets at 00:00 UTC.
+# The index file ventures/opsjuice/d1-migration/d1-budget-indexes.sql in starfire-core was merged on
+# 2026-10-29 but nothing ran it, so the live database lacked its indexes and the funnel report read
+# about 266,000 rows every 3 hours. This job runs every hour at minute 7. CREATE INDEX writes one row per
+# row indexed, so the script creates an index only when its table fits what is left of a 50,000-row
+# write budget today; one that does not fit waits for a later hour (exit 0), one bigger than the whole
+# budget fails the run (exit 3), and an index still missing after its CREATE fails it (exit 5).
+# Exits 1 and 4 come from vault-get.py: the vault read failed, or its key is retired.
+# The script runs only CREATE INDEX IF NOT EXISTS statements and refuses anything else (exit 2).
+# Its output is index names, row counts and fixed reason lines only.
+
+name: core-oj-d1-indexes
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-d1-indexes
+  cancel-in-progress: false
+
+# The log is world readable: a failure tail prints only lines shaped like an error or a count.
+env:
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+
+jobs:
+  indexes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply the D1 index file
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-d1-apply-indexes.py --apply \
+            > "$RUNNER_TEMP/indexes.log" 2>&1 || rc=$?
+          echo "indexes exit=$rc"
+          # index names and counts only
+          grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true
+          case "$rc" in
+            0) ;;
+            1) echo "indexes reason: the vault read failed (vault-get.py)" ;;
+            2) echo "indexes reason: the index file was refused, or D1 or the usage check failed" ;;
+            3) echo "indexes reason: an index's table is bigger than the whole daily write budget" ;;
+            4) echo "indexes reason: the vault key is retired (vault-get.py)" ;;
+            5) echo "indexes reason: an index is still missing after its CREATE ran" ;;
+            *) echo "indexes reason: unexpected exit $rc" ;;
+          esac
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/indexes.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          grep -E '^indexes:' "$RUNNER_TEMP/indexes.log" >> "$GITHUB_STEP_SUMMARY" || true
