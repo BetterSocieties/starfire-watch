@@ -4,7 +4,8 @@
 # about 266,000 rows every 3 hours. This job runs every hour at minute 7. CREATE INDEX writes one row per
 # row indexed, so the script creates an index only when its table fits what is left of a 50,000-row
 # write budget today; one that does not fit waits for a later hour (exit 0), one bigger than the whole
-# budget fails the run (exit 3), and an index still missing after its CREATE fails it (exit 1).
+# budget fails the run (exit 3), and an index still missing after its CREATE fails it (exit 5).
+# Exits 1 and 4 come from vault-get.py: the vault read failed, or its key is retired.
 # The script runs only CREATE INDEX IF NOT EXISTS statements and refuses anything else (exit 2).
 # Its output is index names, row counts and fixed reason lines only.
 
@@ -59,9 +60,11 @@ jobs:
           grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true
           case "$rc" in
             0) ;;
-            1) echo "indexes reason: an index is still missing after its CREATE ran" ;;
+            1) echo "indexes reason: the vault read failed (vault-get.py)" ;;
             2) echo "indexes reason: the index file was refused, or D1 or the usage check failed" ;;
             3) echo "indexes reason: an index's table is bigger than the whole daily write budget" ;;
+            4) echo "indexes reason: the vault key is retired (vault-get.py)" ;;
+            5) echo "indexes reason: an index is still missing after its CREATE ran" ;;
             *) echo "indexes reason: unexpected exit $rc" ;;
           esac
           if [ "$rc" -ne 0 ]; then
