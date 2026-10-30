@@ -8,7 +8,7 @@
 # documents that `schedule` can be delayed at the start of every hour, and run in UTC from the default
 # branch only. A cron run that overlaps the chained run waits in the concurrency group below (cancel-in-
 # progress is false, so a running pass is never cut off) and then finds little left to do.
-# 150 minutes at most, so a 11:17 start ends before the 14:30 sender.
+# 175 minutes at most, so a 11:17 start ends before the 14:30 sender.
 #
 # Order, cheapest first:
 #   1. address kind (named, role, general), local rule, no network
@@ -43,7 +43,7 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued|\{"probed")'
 
 jobs:
   verify:
@@ -103,6 +103,7 @@ jobs:
           exit $rc
 
       - name: Install Reacher
+        if: ${{ !cancelled() }}
         working-directory: core
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,6 +111,7 @@ jobs:
         run: bash scripts/install-reacher.sh
 
       - name: Check mailboxes over SMTP with Reacher (free)
+        if: ${{ !cancelled() }}
         working-directory: core
         env:
           REACHER_BIN: ${{ runner.temp }}/reacher/check_if_email_exists
@@ -119,7 +121,16 @@ jobs:
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- python3 scripts/oj-rcpt-probe.py --apply --limit 300 --max-seconds 1200 > "$RUNNER_TEMP/rcpt.log" 2>&1 || rc=$?
           echo "reacher exit=$rc"
           # The last line is counts only: {"probed": .., "verdicts": {..}, "written": .., "applied": ..}
-          tail -n 1 "$RUNNER_TEMP/rcpt.log" | grep -E '^\{"probed"' || true
+          counts="$(tail -n 1 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | { grep -E '^\{"probed"' || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g')"
+          echo "$counts"
+          # Fail if probed > 0 and written == 0 (blocked port 25 or blocklisted runner IP)
+          if [ -n "$counts" ]; then
+            read -r probed written < <(echo "$counts" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("probed",0), d.get("written",0))' || echo "0 0")
+            if [ "${probed:-0}" -gt 0 ] && [ "${written:-0}" -eq 0 ]; then
+              echo "reacher wrote nothing from $probed probes" >&2
+              exit 3
+            fi
+          fi
           [ "$rc" -eq 0 ] || tail -n 40 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
 
