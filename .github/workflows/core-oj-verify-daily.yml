@@ -73,7 +73,7 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --to-file "$RUNNER_TEMP/ojkey" --mode 600 > /dev/null
+          python3 scripts/vault-get.py OJ_REST_KEY --to-file "$RUNNER_TEMP/ojkey" --mode 600 > /dev/null
           OJ_KEY_FILE="$RUNNER_TEMP/ojkey" python3 scripts/oj-repair-enrichment-mx.py --apply --queued-only --limit 1500 \
             > "$RUNNER_TEMP/mx.log" 2>&1 || rc=$?
           rm -f "$RUNNER_TEMP/ojkey"
