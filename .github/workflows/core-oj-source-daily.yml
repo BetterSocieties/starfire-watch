@@ -6,10 +6,11 @@
 #
 # 05:00 UTC Monday to Friday, so the whole chain has finished before the sender (14:30). Overture Maps
 # Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate), then
-# scripts/oj-enrich-home-services-booking-signal.py reads up to 6000 unmeasured sites (0.8 s a row
-# observed on 2026-10-13, so about 80 minutes) for widgets and service-area phrases, scripts/oj-discover-emails-from-website.py
+# scripts/oj-discover-emails-from-website.py
 # reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
+# The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
+# 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
 # The second job is core-oj-screen-daily.yml and the third is core-oj-verify-daily.yml (address kind, MX,
 # mailbox), both called as reusable workflows. Both run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
@@ -89,23 +90,6 @@ jobs:
           echo "discover exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/discover.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           grep -E '^(suppression:|worklist:|found=)' "$RUNNER_TEMP/discover.log" || true
-          exit $rc
-
-      - name: Read each new row's own website (booking widget, service area phrases)
-        working-directory: core
-        env:
-          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
-          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
-        run: |
-          set -uo pipefail
-          rc=0
-          python3 scripts/vault-get.py OJ_SUPABASE_DB_PASSWORD --into PGPASSWORD -- scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- sh -c '
-            OJ_KEY="$OJ_SUPABASE_SECRET_KEY" python3 scripts/oj-enrich-home-services-booking-signal.py \
-              --apply --limit 6000' > "$RUNNER_TEMP/signals.log" 2>&1 || rc=$?
-          echo "site signals exit=$rc"
-          [ "$rc" -eq 0 ] || tail -n 3 "$RUNNER_TEMP/signals.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
-          sed -n '/^--- run summary ---/,$p' "$RUNNER_TEMP/signals.log" || true
-          grep -E '^(queued home-services rows|measured, or tried|rows to check)' "$RUNNER_TEMP/signals.log" || true
           exit $rc
 
       - name: Stamp the fit verdict the sender's pool reads
