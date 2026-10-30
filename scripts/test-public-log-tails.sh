@@ -23,6 +23,10 @@ for wf in "$repo"/.github/workflows/core-oj-*.yml; do
   kept="$(printf '%s\n' "Traceback (most recent call last):" "oj_d1.D1Error: HTTP 400: D1 error 7500 daily read limit" \
     "KeyError: 'niche'" "found=1 written=1 write_failed=0 skipped=1 dnc=1" "D1 statements this run: 4" | { grep -E "$pattern" || true; } | wc -l | tr -d ' ')"
   check "$name: error and count lines are kept" "$kept" 5
+  shapes="$(printf '%s\n' "D1 Joe" "end of Joe Smith Plumbing" "exit Joe Smith Plumbing, Mesa AZ" | { grep -E "$pattern" || true; } | wc -l | tr -d ' ')"
+  check "$name: loose shapes carrying a name are dropped" "$shapes" 0
+  rows="$(grep -cE 'cat "\$RUNNER_TEMP/screened' "$wf")"
+  check "$name: the public run summary carries no row list" "$rows" 0
 done
 
 echo "passed=$pass failed=$fail"

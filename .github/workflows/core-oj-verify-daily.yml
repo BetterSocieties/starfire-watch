@@ -39,7 +39,7 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning|exit)\b|HTTP [0-9]|D1 |found=|wrote [0-9]|read [0-9]|end of )'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
 
 jobs:
   verify:

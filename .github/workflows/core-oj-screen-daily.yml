@@ -52,7 +52,7 @@
 # every 4 hours is about 450,000 a day. Do not raise the cadence without re-measuring with
 # scripts/oj-d1-usage.py.
 #
-# THE LOG IS WORLD READABLE. Counts only; the screened list goes to the step summary as before.
+# THE LOG AND THE STEP SUMMARY ARE WORLD READABLE. Both carry counts only; which businesses passed is on D1.
 name: core-oj-screen-daily
 on:
   schedule:
@@ -70,7 +70,7 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning|exit)\b|HTTP [0-9]|D1 |found=|wrote [0-9]|read [0-9]|end of )'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
 
 jobs:
   screen:
@@ -119,7 +119,6 @@ jobs:
           total=0
           rc=0
           page=0
-          : > "${RUNNER_TEMP:?}/screened-all.md"
           while :; do
             page=$((page + 1))
             # No new page starts after 50 minutes; each command is bounded (25 minute budget inside
@@ -151,7 +150,6 @@ jobs:
             if [ -z "$n" ] && grep -q '^time budget spent before the read' "$RUNNER_TEMP/screen-$page.log"; then break; fi
             [ -n "$n" ] || { echo "the screen printed no row count; failing rather than guessing"; rc=1; break; }
             total=$((total + n))
-            cat "$RUNNER_TEMP/screened.md" >> "$RUNNER_TEMP/screened-all.md"
             if grep -q '^end of the queued' "$RUNNER_TEMP/screen-$page.log"; then break; fi
             if grep -q '^time budget spent' "$RUNNER_TEMP/screen-$page.log"; then break; fi
             next="$(sed -n 's/^next --after-id \(.*\)$/\1/p' "$RUNNER_TEMP/screen-$page.log" | head -1)"
@@ -160,9 +158,9 @@ jobs:
           done
           echo "rows screened in this run: $total"
           {
-            echo "### Screened today ($total rows)"
+            echo "### Screened today: $total rows"
             echo ""
-            if [ -s "$RUNNER_TEMP/screened-all.md" ]; then cat "$RUNNER_TEMP/screened-all.md"; else echo "No list was written."; fi
+            echo "Counts only: this page is public. Which businesses passed is in the prospects table on D1, deliberately not here."
           } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
