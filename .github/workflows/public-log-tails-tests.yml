@@ -1,0 +1,21 @@
+# Runs the offline public-log test on every pull request that touches an OJ job, so a log tail that could
+# print a business name or site into this public repo's Actions log fails before it can merge.
+name: public-log-tails-tests
+on:
+  pull_request:
+    paths:
+      - .github/workflows/core-oj-*.yml
+      - scripts/test-public-log-tails.sh
+      - .github/workflows/public-log-tails-tests.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  public-log-tails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: public log tails test
+        run: bash scripts/test-public-log-tails.sh
