@@ -1,0 +1,102 @@
+# THE OWNER SCREEN, ON A SCHEDULE. Added 2026-10-30.
+#
+# Why it exists: OJ-Prospect-Sourcing-Engine (n8n jjcd5uAmrpuettEA) saves new owners, and the
+# send gate (cf-workers/oj-events/src/d1.js, _path1Refusal) refuses any owner the 4-point screen
+# has not passed. The 4 screen steps had no scheduler at all: they ran only when a session typed
+# them, which is how 12,991 owners loaded on 2026-10-17 and 2026-10-23 were still unscreened on
+# 2026-10-30. They also still talked to Supabase, shut off 2026-10-25; they read and write D1 now.
+#
+# The 4 steps, in the order their own docstrings require:
+#   1. oj-enrich-home-services-booking-signal.py   reads each owner's website
+#   2. oj-quote-the-published-phone-and-hours.py   quotes the phone, hours and dispatch page
+#   3. oj-screen-the-pool-against-the-owner-operator-icp.py --write   scores the 4 criteria
+#      and promotes each page it writes (oj_promote_screened.run_ids): passed plus a proven US
+#      address becomes outreach_state 'queued', everything else is stamped failed.
+#
+# Hourly, because public runners are free here (see core-warm-wave-drain for why jobs whose
+# code lives in the private starfire-core run from this public repository), and each run moves
+# about 300 site reads, so the backlog clears in days instead of months.
+#
+# NOTHING ABOUT A PERSON REACHES THIS LOG. This repository's logs are world readable. Each step
+# writes its full output to a file on the runner, and the log carries only its exit code and the
+# count lines, which hold numbers and row ids, never a name, an address or an email.
+name: core-oj-screen-chain
+on:
+  schedule:
+    - cron: "20 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-screen-chain
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - name: Checkout this repository's scripts (the required-variable check lives here)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/require-env.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout starfire-core (the repository the screen lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Prove the screen steps before they touch live rows
+        working-directory: core
+        run: |
+          set -eo pipefail
+          python3 -B scripts/oj_enrichment_merge.py | tail -n 1
+          python3 -B scripts/oj_promote_screened.py | tail -n 1
+          python3 -B scripts/oj-screen-the-pool-against-the-owner-operator-icp.py --self-test | tail -n 1
+          python3 -B scripts/oj-quote-the-published-phone-and-hours.py --self-test | tail -n 1
+
+      - name: Read websites, quote, screen and promote
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+          bash "$GITHUB_WORKSPACE/scripts/require-env.sh" STARFIRE_VAULT_URL STARFIRE_VAULT_BEARER CLOUDFLARE_ACCOUNT_ID
+          d1() { python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- "$@"; }
+          mkdir -p "$RUNNER_TEMP/oj"
+          fail=0
+
+          # 1. Site reads, bounded so the run ends inside its hour. Measured 2026-10-30: 8 sites in
+          # 160 s at 10 in parallel, so 300 fit in about 10 minutes. Each row is written as it is
+          # read, so a run stopped by the time box (exit 124) keeps its work and is not a failure.
+          rc=0; d1 timeout 1500 python3 scripts/oj-enrich-home-services-booking-signal.py --apply --limit "${ENRICH_LIMIT:-300}" > "$RUNNER_TEMP/oj/enrich.log" 2>&1 || rc=$?
+          echo "site read exit=$rc"; grep -E "^(queued home-services rows|rows to check)" "$RUNNER_TEMP/oj/enrich.log" || true
+          sed -n '/^--- run summary ---$/,$p' "$RUNNER_TEMP/oj/enrich.log"
+          [ "$rc" -eq 0 ] || [ "$rc" -eq 124 ] || fail=1
+
+          # 2 and 3 walk every page of the queue by cursor; a page with nothing due costs one read.
+          walk() {  # walk <label> <script and flags...>
+            label="$1"; shift; cursor=00000000-0000-0000-0000-000000000000; pages=0
+            while [ $pages -lt 60 ]; do
+              rc=0; d1 timeout 900 python3 "$@" --batch 500 --after-id "$cursor" > "$RUNNER_TEMP/oj/$label.log" 2>&1 || rc=$?
+              grep -E "^(read |promotion:)" "$RUNNER_TEMP/oj/$label.log" | sed "s/^/$label page $pages: /" || true
+              [ "$rc" -eq 0 ] || { echo "$label exit=$rc on page $pages"; return 1; }
+              next=$(sed -n 's/^next --after-id \([0-9a-f-]\{36\}\)$/\1/p' "$RUNNER_TEMP/oj/$label.log" | tail -n 1)
+              [ -n "$next" ] || return 0
+              cursor="$next"; pages=$((pages + 1))
+            done
+          }
+          walk quote scripts/oj-quote-the-published-phone-and-hours.py --apply || fail=1
+          walk screen scripts/oj-screen-the-pool-against-the-owner-operator-icp.py --write --max-seconds 600 || fail=1
+          exit $fail
