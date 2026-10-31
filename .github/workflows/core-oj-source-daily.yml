@@ -84,7 +84,7 @@ jobs:
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-overture.py --rotate --apply \
             > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
-          grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
+          grep -E '^(Metros today|Metro:|Budget:|Held back|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
       # Email discovery runs in core-oj-screen-daily since 2026-10-30, after the screen, screened owners first.
@@ -161,7 +161,7 @@ jobs:
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-gmaps.py --rotate --apply \
             > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
-          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
+          grep -E '^(Metros today|Metro:|Budget:|Held back|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
           if [ "$rc" -eq 0 ]; then
             read -r queries places < <(python3 -c 'import json,sys; c=[l for l in open(sys.argv[1]) if l.startswith("{\"queries\"")]; d=json.loads(c[-1]) if c else {}; print(d.get("queries",0), d.get("places",0)) if c else print("none none")' "$RUNNER_TEMP/gmaps.log" || echo "none none")
