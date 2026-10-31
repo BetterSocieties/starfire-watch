@@ -118,6 +118,8 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
+          # The probe's own checks first, so a broken parser stops here instead of writing bad verdicts.
+          python3 scripts/oj-rcpt-probe.py --self-test || { echo "reacher self-test failed" >&2; exit 4; }
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- python3 scripts/oj-rcpt-probe.py --apply --limit 300 --max-seconds 1200 > "$RUNNER_TEMP/rcpt.log" 2>&1 || rc=$?
           echo "reacher exit=$rc"
           # The last line is counts only: {"probed": .., "verdicts": {..}, "written": .., "applied": ..}
