@@ -82,7 +82,7 @@ jobs:
           set -uo pipefail
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-source-overture.py --rotate --apply \
+            python3 scripts/oj-source-overture.py --rotate --apply --max-insert 2000 \
             > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
@@ -119,8 +119,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       # The scraper's own switch for its usage report to its author.
       DISABLE_TELEMETRY: "1"
-    needs: source
-    if: ${{ !cancelled() }}
+    # Runs beside Overture, not after it: on 2026-10-31 Overture's 15,138-row insert spent 94,956 of the
+    # 100,000 daily D1 writes and Google Maps got 177 rows in before error 7500. Overture is capped at 2,000.
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -179,7 +179,7 @@ jobs:
   screen:
     # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
     # rows that already exist are owed a screen, and verify is no use without it.
-    needs: [source]
+    needs: [source, gmaps]
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/core-oj-screen-daily.yml
     secrets: inherit
