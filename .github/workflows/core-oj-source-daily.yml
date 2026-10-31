@@ -34,6 +34,14 @@
 # so its dedupe pool (loaded once at start) already holds the Google Maps rows and no business is
 # inserted twice; running both at once would let each insert the other's businesses.
 #
+# WHY 1,000 AND 2,000. Both caps come from the measured write cost, not a guess. One inserted row costs
+# about 6.3 D1 writes, because every index on prospects is written too (2026-10-31: 94,956 writes for
+# 15,138 Overture rows). So Google Maps at 1,000 rows is about 6,300 writes and Overture at 2,000 is
+# about 12,600. Everything else in the chain wrote 2,521 (2026-10-29) and 3,786 (2026-10-31, leaving out
+# one-off index builds) on Cloudflare's own per-statement analytics. That totals about 23,000 a day, under
+# a quarter of the 100,000 free daily writes, so one-off index builds still fit. The shared D1 module also
+# refuses any write once the account reaches OJ_D1_WRITE_BUDGET (90,000) in a day, whatever the caps say.
+#
 # The vault secret is named secrets.VAULT_BEARER in this repository. Secrets are read at
 # runtime through scripts/vault-get.py; none is stored for these jobs.
 name: core-oj-source-daily
@@ -163,9 +171,9 @@ jobs:
           set -uo pipefail
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-source-gmaps.py --rotate --apply \
+            python3 scripts/oj-source-gmaps.py --rotate --apply --max-insert 1000 \
             > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
-          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
+          grep -E '^(Metros today|Metro:|Batch|  places:|  inserted|stopped at)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
           if [ "$rc" -eq 0 ]; then
             read -r queries places < <(python3 -c 'import json,sys; c=[l for l in open(sys.argv[1]) if l.startswith("{\"queries\"")]; d=json.loads(c[-1]) if c else {}; print(d.get("queries",0), d.get("places",0)) if c else print("none none")' "$RUNNER_TEMP/gmaps.log" || echo "none none")
