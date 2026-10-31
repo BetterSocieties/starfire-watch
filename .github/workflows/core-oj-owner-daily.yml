@@ -1,5 +1,5 @@
 # OpsJuice Stage 0 workflow 1, puts an owner name and the owner's own mailbox on every screened prospect;
-# runs after the 05:00 UTC source chain and the 4-hourly screen.
+# runs at 07:40 UTC daily, after the 05:00 UTC source chain (see SCHEDULE).
 #
 # WHY THIS IS ITS OWN WORKFLOW. The owner name/email step used to be part of core-oj-source-daily, so a
 # failure in any earlier source step (Overture, site read, stamp) skipped it, and core-oj-verify-daily
@@ -26,7 +26,7 @@
 # pending run per group, a newer pending run replaces an older pending one, and a running owner
 # job is never cancelled halfway through its writes
 # (docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
-# A cron run that lands while the chained run is still writing waits, then finds nothing to process.
+# A cron run that lands while a dispatch run is still writing waits, then picks up only the rows still owed.
 #
 # READ BUDGET. D1's free tier allows 5,000,000 rows read a day for the whole OJ account, reset at 00:00 UTC
 # (developers.cloudflare.com/d1/platform/pricing/). On 2026-10-30 the hourly catch-up of these steps read
@@ -52,7 +52,7 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|refused:|write failed:)'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|refused:|write failed:|usage: |[A-Za-z0-9_.-]+\.py: error:)'
 
 jobs:
   owner:
