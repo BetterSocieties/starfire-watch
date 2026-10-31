@@ -11,9 +11,9 @@
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
 # The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
 # 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
-# Four jobs, in order: source (Overture metros), gmaps (Google Maps for today's metros), screen
-# (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX, mailbox), the last two
-# called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
+# Four jobs, in order: gmaps (Google Maps for today's metros), then source (Overture, capped at 2,000 new
+# rows), then screen (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX,
+# mailbox), the last two called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
 # WHY THE SITE READ HAS NO ADDRESS FILTER. Until 2026-10-13 it ran with --email-only and the screen
@@ -29,7 +29,10 @@
 # The exit codes are kept: any non-zero exit fails the run and posts to Slack.
 #
 # The gmaps job runs gosom's google-maps-scraper (pinned by scripts/install-gmaps-scraper.sh in
-# starfire-core) after Overture and beside the screen; the 4-hourly screen cron picks up its rows.
+# starfire-core) FIRST. On 2026-10-31 Overture ran first, its 15,138-row insert spent 94,956 of the
+# 100,000 daily D1 writes, and Google Maps got 177 rows in before error 7500. Overture runs after it,
+# so its dedupe pool (loaded once at start) already holds the Google Maps rows and no business is
+# inserted twice; running both at once would let each insert the other's businesses.
 #
 # The vault secret is named secrets.VAULT_BEARER in this repository. Secrets are read at
 # runtime through scripts/vault-get.py; none is stored for these jobs.
@@ -55,6 +58,9 @@ jobs:
   source:
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    # After gmaps, and even when gmaps failed: one source's failure must not stop the other.
+    needs: gmaps
+    if: ${{ !cancelled() }}
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
@@ -84,7 +90,7 @@ jobs:
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-overture.py --rotate --apply --max-insert 2000 \
             > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
-          grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
+          grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Limited to|stopped at|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
       # Email discovery runs in core-oj-screen-daily since 2026-10-30, after the screen, screened owners first.
@@ -119,8 +125,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       # The scraper's own switch for its usage report to its author.
       DISABLE_TELEMETRY: "1"
-    # Runs beside Overture, not after it: on 2026-10-31 Overture's 15,138-row insert spent 94,956 of the
-    # 100,000 daily D1 writes and Google Maps got 177 rows in before error 7500. Overture is capped at 2,000.
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
