@@ -1,10 +1,10 @@
-# The OpsJuice W1 to W3 chain, one run every weekday: source new prospects, read the website of the
+# The OpsJuice W1 to W3 chain, one run every day: source new prospects, read the website of the
 # unmeasured ones best-ranked first (home services, then law, then med spas), find public contact
 # addresses for home services, stamp the fit verdict, screen against the owner-operator ICP, then
 # verify addresses. Every step writes its outcome onto the prospect row.
 # Decisions: GitHub issue map BetterSocieties/starfire-core#4953 (#4957 for what is sendable).
 #
-# 05:00 UTC Monday to Friday, so the whole chain has finished before the sender (14:30). Overture Maps
+# 05:00 UTC every day, so the whole chain has finished before the sender (14:30). Overture Maps
 # Places for today's 3 metros from config/oj-metros.json (scripts/oj-source-overture.py --rotate), then
 # scripts/oj-discover-emails-from-website.py
 # reads home-services sites for an address, scripts/oj-stamp-icp-verdict.py writes the fit verdict, and the
