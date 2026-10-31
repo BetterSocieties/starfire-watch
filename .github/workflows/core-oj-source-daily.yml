@@ -37,10 +37,16 @@
 # WHY 1,000 AND 2,000. Both caps come from the measured write cost, not a guess. One inserted row costs
 # about 6.3 D1 writes, because every index on prospects is written too (2026-10-31: 94,956 writes for
 # 15,138 Overture rows). So Google Maps at 1,000 rows is about 6,300 writes and Overture at 2,000 is
-# about 12,600. Everything else in the chain wrote 2,521 (2026-10-29) and 3,786 (2026-10-31, leaving out
-# one-off index builds) on Cloudflare's own per-statement analytics. That totals about 23,000 a day, under
-# a quarter of the 100,000 free daily writes, so one-off index builds still fit. The shared D1 module also
-# refuses any write once the account reaches OJ_D1_WRITE_BUDGET (90,000) in a day, whatever the caps say.
+# about 12,600, together about 19,000 a day. The rest of the chain on an ordinary day wrote 2,521
+# (2026-10-29) and 3,786 (2026-10-31, without one-off index builds), on Cloudflare's per-statement
+# analytics. One-off work does NOT fit inside what is left: on 2026-10-30 a single index build during the
+# cutover wrote 195,318 rows, and on 2026-10-28 index builds wrote 51,140 and a sessions insert 16,051.
+# So a one-off index build or bulk load must run on a day the sourcers are paused, never alongside them.
+# Measure again on the first run after 2026-11-01 00:00 UTC: the prospects city index added 2026-10-31
+# makes each inserted row cost about one write more.
+#
+# MERGE ORDER. starfire-core PR 5895 (which adds --max-insert to both sourcers) must merge before this
+# file does, because this job runs starfire-core main and an unknown flag fails every daily run.
 #
 # The vault secret is named secrets.VAULT_BEARER in this repository. Secrets are read at
 # runtime through scripts/vault-get.py; none is stored for these jobs.
