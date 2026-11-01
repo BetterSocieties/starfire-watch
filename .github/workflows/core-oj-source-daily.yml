@@ -12,7 +12,7 @@
 # The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
 # 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
 # Five jobs, in order: gmaps (Google Maps for today's metros), then source (Overture, capped at 2,000 new
-# rows), then more-sources (street addresses, then named decision makers for one US state a day), then screen (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX,
+# rows), then more-sources (street addresses, named decision makers for one US state a day, the hiring-signal sweep), then screen (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX,
 # mailbox), the last two called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
@@ -220,7 +220,7 @@ jobs:
           repository: BetterSocieties/starfire-core
           token: ${{ secrets.GH_PAT }}
           path: core
-          fetch-depth: 1
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -250,6 +250,34 @@ jobs:
           echo "named exit=$rc"
           [ "$rc" -eq 0 ] || tail -n 4 "$RUNNER_TEMP/named.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
           exit $rc
+
+      # The sweep keeps its state in 2 files of starfire-core (the candidate seed and one ledger line a
+      # day), so they are committed back; on a fresh runner they would otherwise be lost every day.
+      - name: Hiring-signal sweep (businesses advertising for someone to answer the phone)
+        if: ${{ !cancelled() }}
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-hiring-signal-daily-sweep.py > "$RUNNER_TEMP/hiring.log" 2>&1 || rc=$?
+          echo "hiring exit=$rc"
+          [ "$rc" -eq 0 ] || tail -n 4 "$RUNNER_TEMP/hiring.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
+      - name: Commit the sweep's seed and ledger back (tested script, as core-free-model-tick.yml does)
+        if: ${{ !cancelled() }}
+        working-directory: core
+        run: |
+          git config user.name "starfire-oj-source-daily"
+          git config user.email "info@bettersocieties.world"
+          git add ops/leads/hiring-signal-candidates.txt STATE/oj-hiring-signal-sweep-ledger.jsonl 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+            exit 0
+          fi
+          git commit -m "oj-source-daily: hiring-signal sweep state, run ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
 
   screen:
     # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
