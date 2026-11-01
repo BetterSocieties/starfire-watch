@@ -11,8 +11,8 @@
 # owner-operator screen scores every queued row, with or without an address (the LinkedIn path needs none).
 # The site read (scripts/oj-enrich-home-services-booking-signal.py) moved to core-oj-screen-daily.yml on
 # 2026-10-30, where it runs hourly ahead of the quote and screen that wait for it.
-# Four jobs, in order: gmaps (Google Maps for today's metros), then source (Overture, capped at 2,000 new
-# rows), then screen (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX,
+# Five jobs, in order: gmaps (Google Maps for today's metros), then source (Overture, capped at 2,000 new
+# rows), then more-sources (street addresses, then named decision makers for one US state a day), then screen (core-oj-screen-daily.yml) and verify (core-oj-verify-daily.yml: address kind, MX,
 # mailbox), the last two called as reusable workflows. Screen and verify run even if an earlier job failed, because a source
 # failure used to skip them (2026-10-14 to 10-16) and verify went four days without a run.
 #
@@ -194,10 +194,67 @@ jobs:
           fi
           exit $rc
 
+  more-sources:
+    # The sourcers beyond Google Maps and Overture, run after both so their dedupe reads already hold
+    # today's map rows. Street addresses fills the street line on existing rows (OpenStreetMap
+    # Nominatim, 1 call per 15 s, 80 a run). Named decision makers adds businesses from OpenStreetMap
+    # with the person read off the business's own staff page; it rotates one US state a day instead
+    # of reading Arizona every day, so the dedupe does not throw away the same state's rows daily.
+    # Its name checks use scripts/llm-router.py, which needs a free-model key (GROQ_API_KEY,
+    # OPENROUTER_API_KEY); without one it holds every business and exits 3.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    needs: [source, gmaps]
+    if: ${{ !cancelled() }}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Street address on existing rows (OpenStreetMap reverse geocode)
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-source-street-addresses.py --limit 80 > "$RUNNER_TEMP/street.log" 2>&1 || rc=$?
+          echo "street exit=$rc"
+          [ "$rc" -eq 0 ] || tail -n 4 "$RUNNER_TEMP/street.log" | { grep -E "$SAFE_LINES" || true; }
+          exit $rc
+
+      - name: Named decision makers for today's state (OpenStreetMap plus the business's own staff page)
+        if: ${{ !cancelled() }}
+        working-directory: core
+        run: |
+          set -uo pipefail
+          STATES=(Alabama Alaska Arizona Arkansas California Colorado Connecticut Delaware Florida Georgia Hawaii Idaho Illinois Indiana Iowa Kansas Kentucky Louisiana Maine Maryland Massachusetts Michigan Minnesota Mississippi Missouri Montana Nebraska Nevada "New Hampshire" "New Jersey" "New Mexico" "New York" "North Carolina" "North Dakota" Ohio Oklahoma Oregon Pennsylvania "Rhode Island" "South Carolina" "South Dakota" Tennessee Texas Utah Vermont Virginia Washington "West Virginia" Wisconsin Wyoming)
+          AREA="${STATES[$(( $(date -u +%s) / 86400 % ${#STATES[@]} ))]}"
+          echo "state today: $AREA"
+          rc=0
+          python3 scripts/oj-source-named-decision-makers.py --area "$AREA" --limit 250 --apply > "$RUNNER_TEMP/named.log" 2>&1 || rc=$?
+          echo "named exit=$rc"
+          [ "$rc" -eq 0 ] || tail -n 4 "$RUNNER_TEMP/named.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          exit $rc
+
   screen:
     # The one copy of the screen is core-oj-screen-daily.yml. It runs even when the source job failed:
     # rows that already exist are owed a screen, and verify is no use without it.
-    needs: [source, gmaps]
+    needs: [source, gmaps, more-sources]
     if: ${{ !cancelled() }}
     uses: ./.github/workflows/core-oj-screen-daily.yml
     secrets: inherit
