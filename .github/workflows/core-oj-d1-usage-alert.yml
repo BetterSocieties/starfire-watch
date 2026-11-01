@@ -49,6 +49,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # setup-python installs no pytest; without this the fixture step failed before the alert ran
+      # (run 41267683685, 2026-11-01: "No module named pytest").
+      - name: Install pytest
+        run: pip install --quiet pytest==8.3.4
       - name: Fixture tests
         working-directory: core
         run: python3 -m pytest -q -p no:cacheprovider tests/test_oj_d1_usage_alert.py
