@@ -47,7 +47,7 @@ jobs:
           scripts/with-vault-env.sh N8N_POD_API_KEY -- \
             bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py' > "$RUNNER_TEMP/drift.txt" 2>&1
           rc=$?
-          grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" | head -20
+          grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" | head -20 || true
           tail -3 "$RUNNER_TEMP/drift.txt"
           if grep -q '^DRIFT' "$RUNNER_TEMP/drift.txt"; then exit 1; fi
           if [ "$rc" -eq 2 ]; then echo "platform unreachable"; exit 1; fi
