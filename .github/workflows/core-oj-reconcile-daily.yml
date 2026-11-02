@@ -77,6 +77,7 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_REST_URL: https://oj-rest.dark-wildflower-46d6.workers.dev
           INJECT_GAP: ${{ inputs.inject_gap }}
         run: |
           set -uo pipefail
@@ -86,7 +87,7 @@ jobs:
             python3 scripts/oj-reconcile-events.py --inject-gap | tee "$RUNNER_TEMP/reconcile.txt"
           else
             scripts/with-vault-env.sh \
-              OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
+              OJ_REST_KEY OJ_WORKER_SEND_TOKEN \
               OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
               python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
           fi
@@ -103,6 +104,7 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          OJ_REST_URL: https://oj-rest.dark-wildflower-46d6.workers.dev
         run: |
           set -uo pipefail
           if ! grep -q '^MISSING cal ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null; then
@@ -110,7 +112,7 @@ jobs:
             exit 0
           fi
           scripts/with-vault-env.sh \
-            CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+            CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET OJ_REST_KEY -- \
             python3 scripts/oj-cal-webhook-setup.py --backfill-missing --hours "$HOURS" | tee "$RUNNER_TEMP/backfill.txt"
           { echo '### Cal backfill'; echo '```'; cat "$RUNNER_TEMP/backfill.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
