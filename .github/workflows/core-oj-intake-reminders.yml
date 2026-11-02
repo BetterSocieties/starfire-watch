@@ -1,6 +1,6 @@
 # Remind paying OpsJuice buyers to fill in https://opsjuice.com/intake, on day 2, 4 and 7
 # after the assessment payment, until their intake row exists. Code: scripts/oj-intake-reminders.py
-# in starfire-core.
+# in starfire-core. Reads Cloudflare D1.
 #
 # THE SEND FLAG IS OFF. Nothing is mailed unless the repository variable
 # OJ_INTAKE_REMINDERS_SEND is set to "on" (Settings, Secrets and variables, Actions, Variables).
@@ -46,9 +46,11 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OJ_INTAKE_REMINDERS_SEND: ${{ vars.OJ_INTAKE_REMINDERS_SEND }}
         run: |
           set -eo pipefail
-          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
+          scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- \
+            python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-intake-reminders.py | tee "$RUNNER_TEMP/intake.txt"
           { echo '### Intake reminders'; echo '```'; cat "$RUNNER_TEMP/intake.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
