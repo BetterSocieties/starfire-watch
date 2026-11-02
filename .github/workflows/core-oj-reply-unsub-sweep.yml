@@ -74,7 +74,8 @@ jobs:
           # No token is not a failure: the bare opt-outs (stop, unsubscribe, remove me ...) are bound with no model, and the script alerts once a day for the rest.
           [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || echo "::warning::CLAUDE_CODE_OAUTH_TOKEN is not set: only bare opt-out replies are classified"
           ARGS="--apply"; [ "$DRY_RUN" = "true" ] && ARGS=""
-          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
+          scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- \
+            python3 scripts/vault-get.py OJ_REST_KEY --into OJ_REST_KEY -- \
             python3 scripts/oj-reply-unsubscribe-sweep.py $ARGS | tee "$RUNNER_TEMP/sweep.txt"
           rc=${PIPESTATUS[0]}
           { echo '### Reply unsubscribe sweep'; echo '```'; cat "$RUNNER_TEMP/sweep.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
