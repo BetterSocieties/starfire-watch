@@ -178,7 +178,7 @@ jobs:
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-gmaps.py --rotate --apply --max-insert 1000 \
-            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | { grep -v '^exit=' || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
           grep -E '^(Metros today|Metro:|Batch|  places:|  inserted|stopped at|stopped:|exit=|depth=)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
           if [ "$rc" -eq 0 ]; then
