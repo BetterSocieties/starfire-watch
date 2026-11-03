@@ -1,0 +1,59 @@
+# oj_funnel_summary reads a stored snapshot, because recomputing it scanned about 188,000 D1 rows per
+# read. This job is the recompute, every 6 hours: about 750,000 rows a day against 5,000,000.
+# Exit 2 means refused or failed, and the old rows stay, so readers see old numbers with their
+# taken_at, never an empty funnel. Exits 1 and 4 come from vault-get.py.
+# The log is world readable: the script prints a row count and a timestamp, and only that line is shown.
+
+name: core-oj-funnel-snapshot
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-snapshot
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout starfire-core (the repository the script lives in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Store the funnel summary
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            python3 scripts/oj-funnel-snapshot-refresh.py --apply > "$RUNNER_TEMP/refresh.log" 2>&1 || rc=$?
+          echo "refresh exit=$rc"
+          grep -E '^(refreshed [0-9]+ rows at [0-9TZ:-]+|refused: the live view returned no rows)$' "$RUNNER_TEMP/refresh.log" || true
+          exit "$rc"
+
+      - name: Tell Slack the funnel snapshot failed
+        if: failure()
+        run: |
+          text=$(printf 'OpsJuice funnel snapshot failed; readers see the older numbers.\n%s/%s/actions/runs/%s' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
+            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
+              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
