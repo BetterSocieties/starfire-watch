@@ -14,7 +14,7 @@
 name: core-oj-intake-reminders
 on:
   schedule:
-    - cron: "11 15 * * *"
+    - cron: "11 15 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
