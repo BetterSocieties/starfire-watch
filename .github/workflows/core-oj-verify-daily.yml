@@ -43,7 +43,8 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued|\{"probed")'
+  SAFE_LINES: '^(Traceback [(]most recent call last[)]:|  File "([A-Za-z0-9_./-]+|<frozen [a-z_.]+>)", line [0-9]+(, in [A-Za-z0-9_<>.]+)?|[A-Za-z0-9_.]*(Error|Exception|Exit)(:.*)?|(error|fatal|warning)(:.*)?|exit=[0-9]+( gmaps scraper (failed|wrote no output|timed out after [0-9]+ s|returned 0 places for [0-9]+ queries)| bad depth)?|HTTP [0-9]{3}|D1 statements this run: [0-9]+|found=[0-9]+ written=[0-9]+ write_failed=[0-9]+ skipped=[0-9]+ dnc=[0-9]+|wrote [0-9]+ new businesses into the OpsJuice pool|read [0-9]+ rows carrying a fit and no verdict|read [0-9]+ queued rows after [A-Za-z0-9_-]*; [0-9]+ due a quote; skipped [0-9]+; (none|[a-z_]+ [0-9]+(, [a-z_]+ [0-9]+)*) [(]apply=(True|False)[)]|read [0-9]+ queued or unscreened rows after [A-Za-z0-9_-]*; [0-9]+ owed a screen; [0-9]+ held for the quote step [(]site read, quote, then screen[)]|end of the queued( and unscreened)? rows|refused: (--after-id must be a row id|--batch must be 1 to [0-9]+|this script reads only in bounded batches[.] Pass --batch N [(]1 to [0-9]+[)], and --after-id ROW_ID to continue[.] There is no full walk[.])|[{]"probed": [0-9]+, "verdicts": [{]("[a-z_]+": [0-9]+(, )?)*[}], "written": [0-9]+, "applied": (true|false)[}])$'
+  SAFE_CUT: 's/^([A-Za-z0-9_.]*(Error|Exception|Exit)): (daily (read|write) budget reached|per-run write cap reached).*/\1 \3/; s/^([A-Za-z0-9_.]*(Error|Exception|Exit)):.*/\1/; s/^(error|fatal|warning):.*/\1/'
 
 jobs:
   verify:
@@ -76,7 +77,7 @@ jobs:
           rc=0
           python3 scripts/oj-redecide-address-kind.py --apply > "$RUNNER_TEMP/kind.log" 2>&1 || rc=$?
           echo "address kind exit=$rc"
-          tail -n 4 "$RUNNER_TEMP/kind.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 4 "$RUNNER_TEMP/kind.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"
           exit $rc
 
       - name: Stamp MX for every queued address that has none
@@ -89,7 +90,7 @@ jobs:
             > "$RUNNER_TEMP/mx.log" 2>&1 || rc=$?
           rm -f "$RUNNER_TEMP/ojkey"
           echo "mx exit=$rc"
-          tail -n 6 "$RUNNER_TEMP/mx.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 6 "$RUNNER_TEMP/mx.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"
           exit $rc
 
       - name: Hold out domains that cannot receive mail
@@ -99,7 +100,7 @@ jobs:
           rc=0
           python3 scripts/oj-verify-the-domain-can-receive-mail.py --apply --limit 500 > "$RUNNER_TEMP/domain.log" 2>&1 || rc=$?
           echo "domain check exit=$rc"
-          tail -n 6 "$RUNNER_TEMP/domain.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          tail -n 6 "$RUNNER_TEMP/domain.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"
           exit $rc
 
       - name: Install Reacher
@@ -123,7 +124,7 @@ jobs:
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- python3 scripts/oj-rcpt-probe.py --apply --limit 300 --max-seconds 1200 > "$RUNNER_TEMP/rcpt.log" 2>&1 || rc=$?
           echo "reacher exit=$rc"
           # The last line is counts only: {"probed": .., "verdicts": {..}, "written": .., "applied": ..}
-          counts="$(tail -n 1 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | { grep -E '^\{"probed"' || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g')"
+          counts="$(tail -n 1 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | { grep -E '^\{"probed"' || true; } | sed -E "$SAFE_CUT")"
           echo "$counts"
           # Fail if probed > 0 and written == 0 (blocked port 25 or blocklisted runner IP)
           if [ -n "$counts" ]; then
@@ -133,7 +134,7 @@ jobs:
               exit 3
             fi
           fi
-          [ "$rc" -eq 0 ] || tail -n 40 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          [ "$rc" -eq 0 ] || tail -n 40 "$RUNNER_TEMP/rcpt.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"
           exit $rc
 
       - name: Verify mailboxes of the ICP-passed pool on the free allowances
@@ -157,7 +158,7 @@ jobs:
             n="$(grep -E '^asking about [0-9]+' "$RUNNER_TEMP/mailbox-$pass.log" | grep -oE '[0-9]+' | head -1)"
             total=$((total + ${n:-0}))
             # exit 2 = no provider has allowance left (a normal ending); 0 with nothing asked (none or 0) = done
-            [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 40 "$RUNNER_TEMP/mailbox-$pass.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; exit "$rc"; }
+            [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || { tail -n 40 "$RUNNER_TEMP/mailbox-$pass.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"; exit "$rc"; }
             [ "$rc" -eq 0 ] && [ "${n:-0}" -eq 0 ] && break
             [ "$rc" -eq 2 ] && break
           done
