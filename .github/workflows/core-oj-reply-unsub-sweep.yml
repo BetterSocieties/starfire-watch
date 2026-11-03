@@ -80,3 +80,10 @@ jobs:
           rc=${PIPESTATUS[0]}
           { echo '### Reply unsubscribe sweep'; echo '```'; cat "$RUNNER_TEMP/sweep.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
+      - name: Page Slack if the run failed
+        if: failure()
+        working-directory: core
+        run: |
+          # if the vault or the ledger is down the second form still posts, because silence is worse than a duplicate
+          scripts/with-vault-env.sh OJ_REST_KEY -- python3 scripts/oj-reply-unsubscribe-sweep.py --page-failure ||
+            python3 scripts/oj-reply-unsubscribe-sweep.py --page-failure
