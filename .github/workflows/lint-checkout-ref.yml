@@ -1,0 +1,33 @@
+name: lint-checkout-ref
+# A cross-repo checkout with no ref spends a REST call on the shared token to find the default branch.
+# On 2026-11-04 that killed every OJ sourcing job when the token ran out.
+on:
+  pull_request:
+    paths: [".github/workflows/**"]
+  push:
+    branches: [main]
+    paths: [".github/workflows/**"]
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every cross-repo checkout names its ref
+        run: |
+          pip install --quiet pyyaml==6.0.2
+          python3 - <<'PY'
+          import glob, sys, yaml
+          bad = []
+          for f in glob.glob(".github/workflows/*.y*ml"):
+              doc = yaml.safe_load(open(f)) or {}
+              for name, job in (doc.get("jobs") or {}).items():
+                  for step in job.get("steps") or []:
+                      w = step.get("with") or {}
+                      if str(step.get("uses", "")).startswith("actions/checkout@") and w.get("repository") and not w.get("ref"):
+                          bad.append(f"{f} job {name}")
+          print("\n".join(bad) or "ok")
+          sys.exit(1 if bad else 0)
+          PY

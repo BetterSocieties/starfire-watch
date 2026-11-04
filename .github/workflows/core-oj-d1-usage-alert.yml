@@ -1,0 +1,66 @@
+# Watches the Cloudflare D1 daily read limit for the OpsJuice account.
+# Cloudflare D1 free plan allows 5,000,000 rows read per day per account.
+# At 100% every D1 read fails until 00:00 UTC.
+# Each script's own guard stops at 4,500,000; reads from the Cloudflare dashboard
+# are not guarded, so browsing tables there can push the account over the limit.
+# This job runs every 30 minutes and alerts at 70%, 90% and 100% crossings.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-d1-usage-alert.yml.
+name: core-oj-d1-usage-alert
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      no_post:
+        description: "print the message without posting to Slack"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-d1-usage-alert
+  cancel-in-progress: false
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          twin=core/ops/starfire-watch/core-oj-d1-usage-alert.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref main: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-d1-usage-alert.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # setup-python installs no pytest; without this the fixture step failed before the alert ran
+      # (run 41267683685, 2026-11-01: "No module named pytest").
+      - name: Install pytest
+        run: pip install --quiet pytest==8.3.4
+      - name: Fixture tests
+        working-directory: core
+        run: python3 -m pytest -q -p no:cacheprovider tests/test_oj_d1_usage_alert.py
+      - name: Alert
+        working-directory: core
+        env:
+          NO_POST: ${{ inputs.no_post }}
+        run: |
+          set -uo pipefail
+          ARGS=""; [ "$NO_POST" = "true" ] && ARGS="--no-post"
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- python3 scripts/oj-d1-usage-alert.py $ARGS
