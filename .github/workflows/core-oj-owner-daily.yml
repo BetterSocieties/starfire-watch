@@ -52,7 +52,7 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|refused:|write failed:|usage: |[A-Za-z0-9_.-]+\.py: error:)'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|refused:|write failed:|usage: |[A-Za-z0-9_.-]+\.py: error:)'
 
 jobs:
   owner:
@@ -67,6 +67,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
+          ref: main
           token: ${{ secrets.GH_PAT }}
           path: core
           fetch-depth: 1
@@ -83,7 +84,7 @@ jobs:
           timeout 1500 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-find-owner-name.py --batch 500 --max-seconds 1380 --apply > "$RUNNER_TEMP/owner-name.log" 2>&1 || rc=$?
           echo "owner name exit=$rc"
-          grep -E '^\{' "$RUNNER_TEMP/owner-name.log" | tail -n 1 || true
+          awk '/^\{/{l=$0} END{if(l)print l}' "$RUNNER_TEMP/owner-name.log"
           # The script writes every 25 rows and stops itself at 1380 s (core PR 5902), so a timeout (124)
           # means it overran its own clock: a failure, not a normal end.
           if [ "$rc" -ne 0 ]; then
@@ -100,7 +101,7 @@ jobs:
           timeout 1620 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-find-owner-email.py --batch 200 --max-seconds 1500 --apply > "$RUNNER_TEMP/owner-email.log" 2>&1 || rc=$?
           echo "owner email exit=$rc"
-          grep -E '^\{' "$RUNNER_TEMP/owner-email.log" | tail -n 1 || true
+          awk '/^\{/{l=$0} END{if(l)print l}' "$RUNNER_TEMP/owner-email.log"
           if [ "$rc" -ne 0 ]; then
             tail -n 3 "$RUNNER_TEMP/owner-email.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
             exit "$rc"
