@@ -66,7 +66,8 @@ concurrency:
 # The Actions log of this public repo is world readable. A failure tail prints only lines shaped like an
 # error or a count summary; any other line (a business name, a site, a city) is dropped before printing.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+  SAFE_LINES: '^(Traceback [(]most recent call last[)]:|  File "([A-Za-z0-9_./-]+|<frozen [a-z_.]+>)", line [0-9]+(, in [A-Za-z0-9_<>.]+)?|[A-Za-z0-9_.]*(Error|Exception|Exit)(:.*)?|(error|fatal|warning)(:.*)?|exit=[0-9]+( gmaps scraper (failed|wrote no output|timed out after [0-9]+ s|returned 0 places for [0-9]+ queries)| bad depth)?|HTTP [0-9]{3}|D1 statements this run: [0-9]+|found=[0-9]+ written=[0-9]+ write_failed=[0-9]+ skipped=[0-9]+ dnc=[0-9]+|wrote [0-9]+ new businesses into the OpsJuice pool|read [0-9]+ rows carrying a fit and no verdict|read [0-9]+ queued rows after [A-Za-z0-9_-]*; [0-9]+ due a quote; skipped [0-9]+; (none|[a-z_]+ [0-9]+(, [a-z_]+ [0-9]+)*) [(]apply=(True|False)[)]|read [0-9]+ queued or unscreened rows after [A-Za-z0-9_-]*; [0-9]+ owed a screen; [0-9]+ held for the quote step [(]site read, quote, then screen[)]|end of the queued( and unscreened)? rows|refused: (--after-id must be a row id|--batch must be 1 to [0-9]+|this script reads only in bounded batches[.] Pass --batch N [(]1 to [0-9]+[)], and --after-id ROW_ID to continue[.] There is no full walk[.])|[{]"probed": [0-9]+, "verdicts": [{]("[a-z_]+": [0-9]+(, )?)*[}], "written": [0-9]+, "applied": (true|false)[}])$'
+  SAFE_CUT: 's/^([A-Za-z0-9_.]*(Error|Exception|Exit)): (daily (read|write) budget reached|per-run write cap reached).*/\1 \3/; s/^([A-Za-z0-9_.]*(Error|Exception|Exit)):.*/\1/; s/^(error|fatal|warning):.*/\1/'
 
 jobs:
   source:
@@ -103,7 +104,7 @@ jobs:
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-overture.py --rotate --apply --max-insert 2000 \
-            > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+            > "$RUNNER_TEMP/overture.log" 2>&1 || { rc=$?; echo "overture exit=$rc"; tail -n 3 "$RUNNER_TEMP/overture.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"; }
           grep -E '^(Metros today|Metro:|Found|After filtering|Existing hosts|After dedupe|Limited to|stopped at|Inserted|Nothing to insert)' "$RUNNER_TEMP/overture.log" || true
           exit $rc
 
@@ -128,7 +129,7 @@ jobs:
           done
           [ "$rc" -eq 0 ] && [ "$drained" -eq 0 ] && echo "stamp not drained after 3 passes; the rest waits for the next run"
           echo "stamp exit=$rc"
-          [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+          [ "$rc" -eq 0 ] || tail -n 6 "$RUNNER_TEMP/stamp.log" | { grep -E "$SAFE_LINES" || true; } | sed -E "$SAFE_CUT"
           exit $rc
 
   gmaps:
@@ -178,7 +179,7 @@ jobs:
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-source-gmaps.py --rotate --apply --max-insert 1000 \
-            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | { grep -v '^exit=' || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'; }
+            > "$RUNNER_TEMP/gmaps.log" 2>&1 || { rc=$?; tail -n 3 "$RUNNER_TEMP/gmaps.log" | { grep -E "$SAFE_LINES" || true; } | { grep -v '^exit=' || true; } | sed -E "$SAFE_CUT"; }
           grep -E '^(Metros today|Metro:|Batch|  places:|  inserted|stopped at|stopped:|exit=|depth=)|^(\{"queries")' "$RUNNER_TEMP/gmaps.log" || true
           # An empty scrape (consent wall, blocked runner) exits 0 from the script, so it is judged here.
           if [ "$rc" -eq 0 ]; then
