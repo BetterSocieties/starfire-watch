@@ -77,6 +77,7 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           INJECT_GAP: ${{ inputs.inject_gap }}
         run: |
           set -uo pipefail
@@ -85,13 +86,14 @@ jobs:
           if [ "$INJECT_GAP" = "true" ]; then
             python3 scripts/oj-reconcile-events.py --inject-gap | tee "$RUNNER_TEMP/reconcile.txt"
           else
-            scripts/with-vault-env.sh \
-              OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN \
+            python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+              scripts/with-vault-env.sh \
+              OJ_WORKER_SEND_TOKEN \
               OPSJUICE_STRIPE_LIVE_CREDENTIALS_SECRET_KEY CAL_API_API_KEY RETELL_API_KEY_API_KEY -- \
               python3 scripts/oj-reconcile-events.py --hours "$HOURS" | tee "$RUNNER_TEMP/reconcile.txt"
           fi
           rc=${PIPESTATUS[0]}
-          { echo "### Reconcile, last $HOURS hours"; echo '```'; cat "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "### Reconcile, last $HOURS hours"; echo '```'; grep -v '^::' "$RUNNER_TEMP/reconcile.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
 
       # A red reconcile with a Cal booking missing replays it from the Cal API through the signed Worker
@@ -103,16 +105,18 @@ jobs:
         env:
           STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -uo pipefail
           if ! grep -q '^MISSING cal ' "$RUNNER_TEMP/reconcile.txt" 2>/dev/null; then
             echo "no Cal booking missing; nothing to replay"
             exit 0
           fi
-          scripts/with-vault-env.sh \
-            CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            scripts/with-vault-env.sh \
+            CAL_API_API_KEY OPSJUICE_CAL_WEBHOOK_SECRET -- \
             python3 scripts/oj-cal-webhook-setup.py --backfill-missing --hours "$HOURS" | tee "$RUNNER_TEMP/backfill.txt"
-          { echo '### Cal backfill'; echo '```'; cat "$RUNNER_TEMP/backfill.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Cal backfill'; echo '```'; grep -v '^::' "$RUNNER_TEMP/backfill.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       # The same morning, not the 22:00Z digest: ids and counts only (the log of this repo is public).
       # Posts through the alert relay every job in this repo hands its message to. The relay drops a message
