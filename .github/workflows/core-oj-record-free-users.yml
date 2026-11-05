@@ -68,4 +68,4 @@ jobs:
           N8N_URL: https://n8n.opsjuice.com
         run: |
           set -eo pipefail
-          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --into OJ_SUPABASE_SECRET_KEY_VALUE -- python3 scripts/oj-mark-used-from-link-codes.py --apply
+          python3 scripts/vault-get.py OJ_REST_KEY --into OJ_REST_KEY_VALUE -- python3 scripts/oj-mark-used-from-link-codes.py --apply
