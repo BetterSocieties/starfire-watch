@@ -9,6 +9,8 @@ belongs inside the child command, for example vault-get ... -- bash -c
 --to-file and --into print those mask lines on vault-get's own stdout
 (and, for --to-file, one fingerprint line). A redirect of that stdout,
 >, >>, &>, 1> or 2>&1, to any target including /dev/null, drops the mask.
+So does a capture: $( ) or backticks take those lines into the variable,
+and GitHub never reads them.
 """
 
 import shlex
@@ -102,8 +104,86 @@ def _has_outer_redirect(text):
     return any(">" in tok and set(tok) <= set("<>&") for tok in tokens)
 
 
+_NEEDLE = "scripts/vault-get.py"
+
+
+def _vault_get_inside_substitution(command):
+    """True when the vault-get path sits inside $(...) or backticks.
+
+    Scans one command already joined by shell_commands. Single quotes hide
+    every marker. Double quotes do not. A backslash escapes the next character
+    outside quotes, and inside double quotes it escapes only $, `, ", \\, and
+    newline. $((...)) is arithmetic, not a capture. Opening $( or ` suspends
+    an enclosing double quote so the inner command is scanned on its own.
+    """
+    i = 0
+    n = len(command)
+    in_single = False
+    in_double = False
+    stack = []
+    arith = 0
+    while i < n:
+        ch = command[i]
+        if in_single:
+            if arith == 0 and stack and command.startswith(_NEEDLE, i):
+                return True
+            if ch == "'":
+                in_single = False
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            nxt = command[i + 1]
+            if not in_double or nxt in "$`\"\\\n":
+                i += 2
+                continue
+        if ch == "'":
+            in_single = True
+            i += 1
+            continue
+        if ch == '"':
+            in_double = not in_double
+            i += 1
+            continue
+        if arith:
+            if ch == "(":
+                arith += 1
+            elif ch == ")":
+                arith -= 1
+            elif stack and command.startswith(_NEEDLE, i):
+                return True
+            i += 1
+            continue
+        if ch == "`":
+            if stack and stack[-1][0] == "tick":
+                _, saved = stack.pop()
+                in_double = saved
+            else:
+                stack.append(("tick", in_double))
+                in_double = False
+            i += 1
+            continue
+        if ch == "$" and i + 1 < n and command[i + 1] == "(":
+            if i + 2 < n and command[i + 2] == "(":
+                arith = 2
+                i += 3
+                continue
+            stack.append(("cmd", in_double))
+            in_double = False
+            i += 2
+            continue
+        if ch == ")" and stack and stack[-1][0] == "cmd":
+            _, saved = stack.pop()
+            in_double = saved
+            i += 1
+            continue
+        if stack and command.startswith(_NEEDLE, i):
+            return True
+        i += 1
+    return False
+
+
 def _vault_get_violations():
-    """Return one entry per vault-get call whose stdout is redirected."""
+    """Return one entry per vault-get call whose stdout is redirected or captured."""
     violations = []
     for path in sorted(WORKFLOWS_DIR.glob("*.yml")):
         doc = yaml.safe_load(path.read_text())
@@ -118,8 +198,13 @@ def _vault_get_violations():
                 if not isinstance(run, str):
                     continue
                 for command in shell_commands(run):
-                    idx = command.find("scripts/vault-get.py")
+                    idx = command.find(_NEEDLE)
                     if idx == -1:
+                        continue
+                    if _vault_get_inside_substitution(command):
+                        violations.append(
+                            f"{path.name}: {step.get('name', '')}: {command.strip()}"
+                        )
                         continue
                     sep = command.find(" -- ", idx)
                     # A redirect after " -- " is the shell's redirect of
@@ -143,8 +228,15 @@ def _vault_get_violations():
 def test_vault_get_stdout_not_redirected():
     violations = _vault_get_violations()
     assert not violations, (
-        "vault-get stdout is redirected, so its ::add-mask:: lines never reach "
-        "the runner. Put a child redirect inside the child command. A --to-file "
-        "or --into call has no child: leave its stdout on the runner.\n"
+        "vault-get stdout never reaches the runner, so its ::add-mask:: lines "
+        "are lost. A redirect hides them. $( ) or backticks capture them. Put a "
+        "child redirect inside the child command. A --to-file or --into call has "
+        "no child: leave its stdout on the runner.\n"
         + "\n".join(violations)
     )
+
+
+def test_command_substitution_captures_vault_get_stdout():
+    text = 'k="$(python3 scripts/vault-get.py X --to-file f --mode 600)"'
+    captured = [c for c in shell_commands(text) if _vault_get_inside_substitution(c)]
+    assert captured, "a $( ) capture hides vault-get mask lines"

@@ -59,10 +59,12 @@ jobs:
         run: |
           set -eo pipefail
           load() {
-            v="$(python3 scripts/vault-get.py "$2" --into V -- sh -c 'printf %s "$V"')"
+            python3 scripts/vault-get.py "$2" --to-file "$RUNNER_TEMP/v.$1" --mode 600
+            v="$(cat "$RUNNER_TEMP/v.$1")"
             [ -n "$v" ] || { echo "vault gave nothing for $2"; exit 1; }
             echo "::add-mask::$v"
             echo "$1=$v" >> "$GITHUB_ENV"
+            rm -f "$RUNNER_TEMP/v.$1"
           }
           load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
