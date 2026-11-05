@@ -1,0 +1,77 @@
+# The D1 free tier allows 5,000,000 rows read and 100,000 rows written a day, and resets at 00:00 UTC.
+# On 2026-11-05, D1 query insights showed "SELECT * FROM oj_funnel_summary" read 2,050,224 rows in 11
+# reads (about 186,000 each), 41% of the daily read allowance, because live D1 still has the recomputing
+# view. starfire-core already has the fix: ventures/opsjuice/d1-migration/d1-funnel-snapshot.sql makes
+# oj_funnel_summary a view over oj_funnel_summary_snapshot, and scripts/oj-funnel-snapshot-refresh.py
+# recomputes into that snapshot (one live-view pass, measured at about 186,000 rows). The script exits 0 on success and 2 when it refuses or D1 errors. It
+# refuses an empty live view and a read past the daily budget. Nothing else runs it. The manager applies
+# the migration by hand after the 00:00 UTC read reset. This job runs the refresh every 6 hours at minute 23,
+# off the top-of-hour rush: 4 passes a day is about 744,000 rows (15% of the allowance), where hourly
+# would be about 4,460,000 (89%) and starve every other job.
+# Exits 1 and 4 come from vault-get.py: the vault read failed, or its key is retired.
+# The script's own summary lines are "refused: ..." and "refreshed N rows at <time>". This log is public:
+# a failure tail prints only lines shaped like an error or a count, never a prospect name, email or address.
+
+name: core-oj-funnel-snapshot
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-snapshot
+  cancel-in-progress: false
+
+# The log is world readable: a failure tail prints only lines shaped like an error or a count.
+# "D1 error:" and "usage error:" are included because core-oj-d1-indexes hides both, so its exit 2
+# on 2026-11-05 printed no cause.
+env:
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued|D1 error:|usage error:)'
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: main
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh the stored funnel snapshot
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec python3 scripts/oj-funnel-snapshot-refresh.py --apply > "$RUNNER_TEMP/snapshot.log" 2>&1' || rc=$?
+          echo "snapshot exit=$rc"
+          # summary lines the script actually prints: "refused: ..." and "refreshed N rows at <time>"
+          grep -E '^(refused:|refreshed )' "$RUNNER_TEMP/snapshot.log" || true
+          case "$rc" in
+            0) ;;
+            1) echo "snapshot reason: the vault read failed (vault-get.py)" ;;
+            2) echo "snapshot reason: refused or D1 error (the read budget, an empty live view, or D1)" ;;
+            4) echo "snapshot reason: the vault key is retired (vault-get.py)" ;;
+            *) echo "snapshot reason: unexpected exit $rc" ;;
+          esac
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/snapshot.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          grep -E '^refreshed ' "$RUNNER_TEMP/snapshot.log" >> "$GITHUB_STEP_SUMMARY" || true
