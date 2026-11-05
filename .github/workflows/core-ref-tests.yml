@@ -1,0 +1,45 @@
+name: core-ref-tests
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core branch or sha to test"
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - scripts/check-core-vault-callers.py
+      - .github/workflows/core-ref-tests.yml
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: ${{ inputs.core_ref || 'main' }}
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: pip install --quiet pytest==8.3.4
+      - name: Self-test the vault-callers checker
+        run: python3 scripts/check-core-vault-callers.py --self-test
+      - name: Check core vault callers
+        run: python3 scripts/check-core-vault-callers.py core
+      - name: Run vault-get mask tests in core
+        working-directory: core
+        run: |
+          python3 -m pytest -q -p no:cacheprovider tests/test_vault_get_mask.py
+          python3 scripts/vault-get.py --self-test

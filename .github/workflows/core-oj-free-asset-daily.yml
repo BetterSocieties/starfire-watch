@@ -80,7 +80,7 @@ jobs:
             echo "OJ_WORKER_URL=https://opsjuice.com"
             echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
           } >> "$GITHUB_ENV"
-      - name: Mask the keys the scripts read from the vault themselves
+      - name: Mask the OJ REST key
         # oj-verify-the-mailbox-before-the-letter.py read these keys inside the script, with
         # stderr going into a log file, where no ::add-mask:: line may be printed. vault-get refuses such
         # a read unless the key was masked earlier in this job, so this step masks them, with stderr on
@@ -90,9 +90,21 @@ jobs:
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
         run: |
           set -euo pipefail
-          for k in OJ_REST_KEY BS_HUNTER_API_KEY MYEMAILVERIFIER_API_KEY REOON_API_KEY EMAILVERIFY_IO_API_KEY ZEROBOUNCE_API_KEY_API_KEY MAILVALID_API_KEY EMAILAWESOME_API_KEY; do
-            python3 scripts/vault-get.py "$k" --into V -- true
+          python3 scripts/vault-get.py OJ_REST_KEY --into V -- true
+
+      - name: Mask the mailbox verifier keys
+        # One retired provider key must not stop the MX and domain steps.
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          failed=0
+          for k in BS_HUNTER_API_KEY MYEMAILVERIFIER_API_KEY REOON_API_KEY EMAILVERIFY_IO_API_KEY ZEROBOUNCE_API_KEY_API_KEY MAILVALID_API_KEY EMAILAWESOME_API_KEY; do
+            python3 scripts/vault-get.py "$k" --into V -- true || { echo "mask failed for $k"; failed=1; }
           done
+          exit $failed
 
       - name: Verify waiting mailboxes
         working-directory: core
