@@ -10,6 +10,7 @@ on:
     paths:
       - scripts/check-core-vault-callers.py
       - .github/workflows/core-ref-tests.yml
+      - ops/core-ref-tests.ref
 permissions:
   contents: read
 jobs:
@@ -20,11 +21,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Set CORE_REF
+        # The input reaches the shell through env, never pasted into the script.
+        env:
+          INPUT_CORE_REF: ${{ inputs.core_ref }}
+        run: |
+          set -euo pipefail
+          ref="${INPUT_CORE_REF:-}"
+          if [[ -z "$ref" && -f ops/core-ref-tests.ref ]]; then ref="$(head -1 ops/core-ref-tests.ref)"; fi
+          ref="${ref:-main}"
+          [[ "$ref" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "core ref is not a branch name: refusing"; exit 1; }
+          echo "CORE_REF=$ref" >> "$GITHUB_ENV"
+          echo "core ref: $ref"
       - name: Checkout starfire-core
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
-          ref: ${{ inputs.core_ref || 'main' }}
+          ref: ${{ env.CORE_REF }}
           token: ${{ secrets.GH_PAT }}
           path: core
           fetch-depth: 1
@@ -43,3 +56,40 @@ jobs:
         run: |
           python3 -m pytest -q -p no:cacheprovider tests/test_vault_get_mask.py
           python3 scripts/vault-get.py --self-test
+      - name: Runner pipe detection on this runner
+        working-directory: core
+        run: |
+          python3 -c "
+          import sys, subprocess, importlib.util, os
+          if os.path.exists('scripts/vault_mask.py'):
+              spec = importlib.util.spec_from_file_location('vault_mask', 'scripts/vault_mask.py')
+              mod = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(mod)
+          else:
+              spec = importlib.util.spec_from_file_location('vault_get', 'scripts/vault-get.py')
+              mod = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(mod)
+          child = '''
+          import importlib.util, os
+          p = 'scripts/vault_mask.py'
+          if os.path.exists(p):
+              spec = importlib.util.spec_from_file_location('vault_mask', p)
+              m = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(m)
+          else:
+              spec = importlib.util.spec_from_file_location('vault_get', 'scripts/vault-get.py')
+              m = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(m)
+          print(m._stderr_reaches_runner())
+          '''
+          inherited = bool(mod._stderr_reaches_runner())
+          b = subprocess.run([sys.executable, '-c', child], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+          captured = b.stdout.decode().strip() == 'True'
+          assert b.stdout.decode().strip() == 'False', f'child stderr=PIPE expected False, got {b.stdout!r} {b.stderr!r}'
+          tmp = os.environ.get('RUNNER_TEMP', '/tmp')
+          c = subprocess.run([sys.executable, '-c', child], stdout=subprocess.PIPE, stderr=open(os.path.join(tmp, 'stderr_probe'), 'w'))
+          file_result = c.stdout.decode().strip() == 'True'
+          assert c.stdout.decode().strip() == 'False', f'child stderr=file expected False, got {c.stdout!r} {c.stderr!r}'
+          print(f'inherited={inherited} captured={captured} file={file_result}')
+          sys.exit(0 if (inherited and not captured and not file_result) else 1)
+          "
