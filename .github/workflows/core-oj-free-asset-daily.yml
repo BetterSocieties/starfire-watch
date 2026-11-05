@@ -63,9 +63,10 @@ jobs:
             v="$(cat "$RUNNER_TEMP/v.$1")"
             [ -n "$v" ] || { echo "vault gave nothing for $2"; exit 1; }
             echo "::add-mask::$v"
-            echo "$1=$v" >> "$GITHUB_ENV"
+            { echo "$1<<__V_EOF__"; printf '%s\n' "$v"; echo "__V_EOF__"; } >> "$GITHUB_ENV"
             rm -f "$RUNNER_TEMP/v.$1"
           }
+          trap 'rm -f "$RUNNER_TEMP"/v.*' EXIT
           load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
           load OJ_UNSUBSCRIBE_SECRET OJ_UNSUBSCRIBE_SECRET
