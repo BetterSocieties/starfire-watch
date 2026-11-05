@@ -82,7 +82,7 @@ jobs:
           set -uo pipefail
           rc=0
           timeout 1500 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-find-owner-name.py --batch 500 --max-seconds 1380 --apply > "$RUNNER_TEMP/owner-name.log" 2>&1 || rc=$?
+            bash -c 'exec python3 scripts/oj-find-owner-name.py --batch 500 --max-seconds 1380 --apply > "$RUNNER_TEMP/owner-name.log" 2>&1' || rc=$?
           echo "owner name exit=$rc"
           awk '/^\{/{l=$0} END{if(l)print l}' "$RUNNER_TEMP/owner-name.log"
           # The script writes every 25 rows and stops itself at 1380 s (core PR 5902), so a timeout (124)
@@ -111,7 +111,7 @@ jobs:
           test -x "$REACHER_BIN" || { echo "error: Reacher is not installed"; exit 1; }
           rc=0
           timeout 1620 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-find-owner-email.py --batch 200 --max-seconds 1500 --apply > "$RUNNER_TEMP/owner-email.log" 2>&1 || rc=$?
+            bash -c 'exec python3 scripts/oj-find-owner-email.py --batch 200 --max-seconds 1500 --apply > "$RUNNER_TEMP/owner-email.log" 2>&1' || rc=$?
           echo "owner email exit=$rc"
           awk '/^\{/{l=$0} END{if(l)print l}' "$RUNNER_TEMP/owner-email.log"
           if [ "$rc" -ne 0 ]; then
