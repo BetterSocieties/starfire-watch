@@ -5,6 +5,10 @@ GitHub only reads workflow commands from a step's stdout, so redirecting
 vault-get itself into a RUNNER_TEMP log hides those lines. The redirect
 belongs inside the child command, for example vault-get ... -- bash -c
 'exec python3 scripts/... > "$RUNNER_TEMP/....log" 2>&1'.
+
+--to-file and --into print those mask lines on vault-get's own stdout
+(and, for --to-file, one fingerprint line). A redirect of that stdout,
+>, >>, &>, 1> or 2>&1, to any target including /dev/null, drops the mask.
 """
 
 import shlex
@@ -118,10 +122,18 @@ def _vault_get_violations():
                     if idx == -1:
                         continue
                     sep = command.find(" -- ", idx)
-                    if sep == -1:
+                    # A redirect after " -- " is the shell's redirect of
+                    # vault-get itself, unless the child keeps it inside quotes.
+                    if sep != -1 and _has_outer_redirect(command[sep + len(" -- "):]):
+                        violations.append(
+                            f"{path.name}: {step.get('name', '')}: {command.strip()}"
+                        )
                         continue
-                    after = command[sep + len(" -- "):]
-                    if _has_outer_redirect(after):
+                    # --to-file and --into have no separate stdout. The mask
+                    # lines are this invocation's own stdout, so an unquoted
+                    # redirect here (any target, /dev/null included) hides them.
+                    head = command if sep == -1 else command[:sep]
+                    if ("--to-file" in head or "--into" in head) and _has_outer_redirect(head):
                         violations.append(
                             f"{path.name}: {step.get('name', '')}: {command.strip()}"
                         )
@@ -131,7 +143,8 @@ def _vault_get_violations():
 def test_vault_get_stdout_not_redirected():
     violations = _vault_get_violations()
     assert not violations, (
-        "vault-get stdout is redirected into a log, so its ::add-mask:: lines "
-        "never reach the runner; move the redirect inside the child command:\n"
+        "vault-get stdout is redirected, so its ::add-mask:: lines never reach "
+        "the runner. Put a child redirect inside the child command. A --to-file "
+        "or --into call has no child: leave its stdout on the runner.\n"
         + "\n".join(violations)
     )
