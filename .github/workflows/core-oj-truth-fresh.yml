@@ -42,16 +42,16 @@ jobs:
         run: |
           set -uo pipefail
           scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
-            python3 scripts/oj-truth-latest.py --metric resend/sent_28d > "$RUNNER_TEMP/fresh.txt"
+            bash -c 'python3 scripts/oj-truth-latest.py --metric resend/sent_28d > "$RUNNER_TEMP/fresh.txt"'
           rc=$?
-          head -c 300 "$RUNNER_TEMP/fresh.txt"; echo
+          grep -E '^(STALE|UNREADABLE):' "$RUNNER_TEMP/fresh.txt" | grep -v '::' | head -n 3 | cut -c1-200; echo
           exit $rc
 
       - name: Tell Slack the truth layer is stale
         if: failure()
         run: |
           text=$(printf 'OpsJuice truth layer is stale or unreadable: %s\n%s/%s/actions/workflows/core-oj-truth-fresh.yml' \
-            "$(head -c 300 "$RUNNER_TEMP/fresh.txt" 2>/dev/null)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY")
+            "$(grep -E '^(STALE|UNREADABLE):' "$RUNNER_TEMP/fresh.txt" 2>/dev/null | grep -v '::' | head -n 3 | cut -c1-200)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY")
           jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
             curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
               --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay

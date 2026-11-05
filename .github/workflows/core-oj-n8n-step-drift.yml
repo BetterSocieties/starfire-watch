@@ -45,7 +45,7 @@ jobs:
         run: |
           set -uo pipefail
           scripts/with-vault-env.sh N8N_POD_API_KEY -- \
-            bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py' > "$RUNNER_TEMP/drift.txt" 2>&1
+            bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py > "$RUNNER_TEMP/drift.txt" 2>&1'
           rc=$?
           grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" | head -20
           tail -3 "$RUNNER_TEMP/drift.txt"

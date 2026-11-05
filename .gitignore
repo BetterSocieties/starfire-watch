@@ -4,3 +4,5 @@ data/n8n-fetched/
 data/n8n-staged/
 core/
 data/n8n-activate-report.json
+__pycache__/
+*.pyc

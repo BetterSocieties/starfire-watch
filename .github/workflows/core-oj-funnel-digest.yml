@@ -45,4 +45,4 @@ jobs:
         run: |
           set -eo pipefail
           scripts/with-vault-env.sh OJ_SUPABASE_SECRET_KEY -- \
-            python3 scripts/oj-daily-funnel-digest.py | grep -E '^slack ok='
+            bash -c 'set -o pipefail; python3 scripts/oj-daily-funnel-digest.py | grep -E "^slack ok="'

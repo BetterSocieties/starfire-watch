@@ -54,6 +54,21 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Mask the keys the scripts read from the vault themselves
+        # echo-session-brief.py read these keys inside the script, with
+        # stderr going into a log file, where no ::add-mask:: line may be printed. vault-get refuses such
+        # a read unless the key was masked earlier in this job, so this step masks them, with stderr on
+        # the runner. It prints the mask lines and nothing else.
+        working-directory: core
+        env:
+          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -euo pipefail
+          for k in CORE_SUPABASE_SERVICE_ROLE CAL_API_API_KEY; do
+            python3 scripts/vault-get.py "$k" --into V -- true
+          done
+
       - name: Fire the brief for any Echo booking inside the next 26 hours
         working-directory: core
         env:

@@ -59,11 +59,15 @@ jobs:
         run: |
           set -eo pipefail
           load() {
-            v="$(python3 scripts/vault-get.py "$2" --into V -- sh -c 'printf %s "$V"')"
+            python3 scripts/vault-get.py "$2" --to-file "$RUNNER_TEMP/v.$1" --mode 600
+            v="$(cat "$RUNNER_TEMP/v.$1")"
             [ -n "$v" ] || { echo "vault gave nothing for $2"; exit 1; }
             echo "::add-mask::$v"
-            echo "$1=$v" >> "$GITHUB_ENV"
+            d="V_EOF_$(openssl rand -hex 16)"
+            { echo "$1<<$d"; printf '%s\n' "$v"; echo "$d"; } >> "$GITHUB_ENV"
+            rm -f "$RUNNER_TEMP/v.$1"
           }
+          trap 'rm -f "$RUNNER_TEMP"/v.*' EXIT
           load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
           load OJ_UNSUBSCRIBE_SECRET OJ_UNSUBSCRIBE_SECRET
@@ -76,6 +80,34 @@ jobs:
             echo "OJ_WORKER_URL=https://opsjuice.com"
             echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
           } >> "$GITHUB_ENV"
+      - name: Mask the OJ REST key
+        # oj-verify-the-mailbox-before-the-letter.py read these keys inside the script, with
+        # stderr going into a log file, where no ::add-mask:: line may be printed. vault-get refuses such
+        # a read unless the key was masked earlier in this job, so this step masks them, with stderr on
+        # the runner. It prints the mask lines and nothing else.
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -euo pipefail
+          python3 scripts/vault-get.py OJ_REST_KEY --into V -- true
+          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --into V -- true
+
+      - name: Mask the mailbox verifier keys
+        id: mask_providers
+        # One retired provider key must not stop the MX and domain steps.
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          failed=0
+          for k in BS_HUNTER_API_KEY MYEMAILVERIFIER_API_KEY REOON_API_KEY EMAILVERIFY_IO_API_KEY ZEROBOUNCE_API_KEY_API_KEY MAILVALID_API_KEY EMAILAWESOME_API_KEY; do
+            python3 scripts/vault-get.py "$k" --into V -- true || { echo "mask failed for $k"; failed=1; }
+          done
+          exit $failed
+
       - name: Verify waiting mailboxes
         working-directory: core
         continue-on-error: true
@@ -143,3 +175,8 @@ jobs:
             echo ""
             echo "Recipient detail is in starfire-core at agent/oj-free-asset-daily.log, deliberately not here."
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail when mailbox verifier keys could not be masked
+        if: always() && steps.mask_providers.outcome == 'failure'
+        run: |
+          echo "one or more mailbox verifier keys could not be masked; the mailbox step ran without them"
+          exit 1
