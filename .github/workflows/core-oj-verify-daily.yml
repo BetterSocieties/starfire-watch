@@ -81,6 +81,7 @@ jobs:
           python3 scripts/vault-get.py OJ_REST_KEY --into V -- true
 
       - name: Mask the mailbox verifier keys
+        id: mask_providers
         # One retired provider key must not stop the MX and domain steps.
         working-directory: core
         continue-on-error: true
@@ -185,3 +186,9 @@ jobs:
             [ "$rc" -eq 2 ] && break
           done
           echo "mailboxes asked about today: $total"
+      - name: Fail when mailbox verifier keys could not be masked
+        # The verifier skips a provider whose key it could not read, so without this the job stays green.
+        if: always() && steps.mask_providers.outcome == 'failure'
+        run: |
+          echo "one or more mailbox verifier keys could not be masked; the mailbox step ran without them"
+          exit 1
