@@ -1,0 +1,63 @@
+# On 2026-11-05 the account read 5,037,088 rows, over the 5,000,000 free daily limit, and nothing named which statement did it. One ad hoc count read 3,101,044 rows.
+# This job prints the 10 statements that read the most rows in the last 24 hours with literal values masked.
+# The script runs the same query Wrangler D1 insights runs.
+
+name: core-oj-d1-top-reads
+on:
+  schedule:
+    - cron: "23 23 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-d1-top-reads
+  cancel-in-progress: false
+
+env:
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+
+jobs:
+  top-reads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: main
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Get top D1 reads
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec python3 scripts/oj_d1_top_reads.py > "$RUNNER_TEMP/top-reads.log" 2>&1' || rc=$?
+          echo "top-reads exit=$rc"
+          grep -E '^([0-9]+\. rows_read=|total rows_read top10=|insights error:)' "$RUNNER_TEMP/top-reads.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g' || true
+          case "$rc" in
+            0) ;;
+            1) echo "top-reads reason: the vault read failed (vault-get.py)" ;;
+            2) echo "top-reads reason: the Cloudflare analytics read failed (insights error above)" ;;
+            4) echo "top-reads reason: the vault key is retired (vault-get.py)" ;;
+            *) echo "top-reads reason: unexpected exit $rc" ;;
+          esac
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/top-reads.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          grep -E '^([0-9]+\. rows_read=|total rows_read top10=|insights error:)' "$RUNNER_TEMP/top-reads.log" | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g' >> "$GITHUB_STEP_SUMMARY" || true
