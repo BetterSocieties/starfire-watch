@@ -57,7 +57,7 @@ jobs:
             bash -c 'exec python3 scripts/oj-d1-apply-indexes.py --apply > "$RUNNER_TEMP/indexes.log" 2>&1' || rc=$?
           echo "indexes exit=$rc"
           # index names and counts only
-          grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true
+          grep -E '^(missing|created|deferred|too big|indexes|D1 error|refused):' "$RUNNER_TEMP/indexes.log" || true
           case "$rc" in
             0) ;;
             1) echo "indexes reason: the vault read failed (vault-get.py)" ;;
