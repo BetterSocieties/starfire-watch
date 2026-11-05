@@ -127,8 +127,8 @@ jobs:
             rc=0
             timeout 1740 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- sh -c '
               python3 scripts/oj-quote-the-published-phone-and-hours.py \
-                --batch '"$batch"' --after-id '"$cursor"' --apply' \
-              > "$RUNNER_TEMP/quote-$page.log" 2>&1 || rc=$?
+                --batch '"$batch"' --after-id '"$cursor"' --apply \
+                > "$RUNNER_TEMP/quote-'"$page"'.log" 2>&1' || rc=$?
             echo "page $page quote exit=$rc"
             if [ "$rc" -ne 0 ]; then
               # The scripts print only counts and their own failure sentence, never a row or a key.
@@ -138,8 +138,8 @@ jobs:
             : > "$RUNNER_TEMP/screened.md"
             timeout 1740 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- sh -c '
               python3 scripts/oj-screen-the-pool-against-the-owner-operator-icp.py \
-                --batch '"$batch"' --after-id '"$cursor"' --write --max-seconds 1500 --summary-md "$RUNNER_TEMP/screened.md"' \
-              > "$RUNNER_TEMP/screen-$page.log" 2>&1 || rc=$?
+                --batch '"$batch"' --after-id '"$cursor"' --write --max-seconds 1500 --summary-md "$RUNNER_TEMP/screened.md" \
+                > "$RUNNER_TEMP/screen-'"$page"'.log" 2>&1' || rc=$?
             n="$(sed -n 's/^Total rows screened: \([0-9][0-9]*\)$/\1/p' "$RUNNER_TEMP/screen-$page.log" | head -1)"
             echo "page $page screen exit=$rc screened=${n:-none}"
             if [ "$rc" -ne 0 ]; then

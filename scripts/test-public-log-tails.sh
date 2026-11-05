@@ -32,11 +32,60 @@ done
 # The gmaps step's own script, run with the scraper call swapped for a fake that writes a log and exits.
 gmaps_wf="$repo/.github/workflows/core-oj-source-daily.yml"
 gmaps_step="$(python3 - "$gmaps_wf" <<'PY'
-import re, sys, yaml
-steps = yaml.safe_load(open(sys.argv[1]))["jobs"]["gmaps"]["steps"]
-run = next(s["run"] for s in steps if "oj-source-gmaps.py" in s.get("run", ""))
-fake, n = re.subn(r"python3 scripts/vault-get\.py.*?--apply", 'sh "$FAKE"', run, count=1, flags=re.S)
-assert n == 1, "scraper call not found"
+import re, sys, textwrap, yaml
+
+# Cut this step from its name through the next step (or the next job), so a
+# quoted child that runs along the line is kept whole instead of being split
+# at the first --apply inside the quote.
+text = open(sys.argv[1]).read()
+lines = text.splitlines(keepends=True)
+start = next(
+    i for i, line in enumerate(lines)
+    if re.match(r"\s*- name: Source today's metros from Google Maps\s*$", line)
+)
+end = len(lines)
+for j in range(start + 1, len(lines)):
+    if re.match(r"\s*- name:\s", lines[j]) or re.match(r"  [A-Za-z0-9_-]+:\s*$", lines[j]):
+        end = j
+        break
+step = yaml.safe_load(textwrap.dedent("".join(lines[start:end])))
+run = (step[0] if isinstance(step, list) else step)["run"]
+
+needle = "python3 scripts/vault-get.py"
+i = run.find(needle)
+assert i != -1, "scraper call not found"
+j = i
+in_single = in_double = False
+while j < len(run):
+    ch = run[j]
+    if in_single:
+        if ch == "'":
+            in_single = False
+        j += 1
+        continue
+    if in_double:
+        if ch == '"':
+            in_double = False
+        j += 1
+        continue
+    if ch == "'":
+        in_single = True
+        j += 1
+        continue
+    if ch == '"':
+        in_double = True
+        j += 1
+        continue
+    if ch == "\\" and j + 1 < len(run) and run[j + 1] == "\n":
+        j += 2
+        continue
+    if run.startswith("||", j) or run.startswith("&&", j) or ch in "\n;":
+        break
+    j += 1
+end_call = j
+while end_call > i and run[end_call - 1] in " \t":
+    end_call -= 1
+fake = run[:i] + 'sh "$FAKE" > "$RUNNER_TEMP/gmaps.log" 2>&1' + run[end_call:]
 print(fake)
 PY
 )"

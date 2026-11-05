@@ -7,6 +7,7 @@ belongs inside the child command, for example vault-get ... -- bash -c
 'exec python3 scripts/... > "$RUNNER_TEMP/....log" 2>&1'.
 """
 
+import shlex
 from pathlib import Path
 
 import yaml
@@ -16,34 +17,85 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 
-def join_continued_lines(text):
-    """Join lines continued with a trailing backslash."""
-    logical_lines = []
-    buf = ""
-    for raw_line in text.splitlines():
-        line = raw_line.rstrip()
-        if line.endswith("\\"):
-            buf += line[:-1] + " "
-        else:
-            logical_lines.append(buf + line)
-            buf = ""
+def shell_commands(text):
+    """One command per entry, with continuations and quotes joined.
+
+    A backslash-newline outside quotes is removed (Bash line continuation).
+    A newline inside single or double quotes stays in the same command, so a
+    redirect that follows a quote opened on an earlier line is still visible.
+    """
+    commands = []
+    buf = []
+    i = 0
+    n = len(text)
+    in_single = False
+    in_double = False
+    while i < n:
+        ch = text[i]
+        if in_single:
+            buf.append(ch)
+            if ch == "'":
+                in_single = False
+            i += 1
+            continue
+        if in_double:
+            if ch == "\\" and i + 1 < n and text[i + 1] in ("$", "`", '"', "\\", "\n"):
+                if text[i + 1] == "\n":
+                    i += 2
+                    continue
+                buf.append(ch)
+                buf.append(text[i + 1])
+                i += 2
+                continue
+            buf.append(ch)
+            if ch == '"':
+                in_double = False
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n and text[i + 1] == "\n":
+            i += 2
+            continue
+        # A word-initial # comments out the rest of the line. An apostrophe
+        # in that comment must not open a quote, or the next line joins.
+        if ch == "#" and (not buf or buf[-1] in " \t|&;()"):
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if ch == "'":
+            in_single = True
+            buf.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_double = True
+            buf.append(ch)
+            i += 1
+            continue
+        if ch == "\n":
+            commands.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
     if buf:
-        logical_lines.append(buf)
-    return logical_lines
+        commands.append("".join(buf))
+    return commands
 
 
 def _has_outer_redirect(text):
-    """True when text has a > outside single or double quotes."""
-    in_single = False
-    in_double = False
-    for ch in text:
-        if ch == "'" and not in_double:
-            in_single = not in_single
-        elif ch == '"' and not in_single:
-            in_double = not in_double
-        elif ch == ">" and not in_single and not in_double:
-            return True
-    return False
+    """True when shlex sees a stdout redirect outside quotes.
+
+    punctuation_chars makes an unquoted > its own token. A > inside quotes
+    stays inside the word, so a child log redirect is not a hit.
+    """
+    lexer = shlex.shlex(text, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        tokens = list(lexer)
+    except ValueError:
+        return ">" in text
+    return any(">" in tok and set(tok) <= set("<>&") for tok in tokens)
 
 
 def _vault_get_violations():
@@ -61,16 +113,18 @@ def _vault_get_violations():
                 run = step.get("run")
                 if not isinstance(run, str):
                     continue
-                for line in join_continued_lines(run):
-                    idx = line.find("scripts/vault-get.py")
+                for command in shell_commands(run):
+                    idx = command.find("scripts/vault-get.py")
                     if idx == -1:
                         continue
-                    sep = line.find(" -- ", idx)
+                    sep = command.find(" -- ", idx)
                     if sep == -1:
                         continue
-                    after = line[sep + len(" -- "):]
+                    after = command[sep + len(" -- "):]
                     if _has_outer_redirect(after):
-                        violations.append(f"{path.name}: {step.get('name', '')}: {line.strip()}")
+                        violations.append(
+                            f"{path.name}: {step.get('name', '')}: {command.strip()}"
+                        )
     return violations
 
 
