@@ -91,8 +91,10 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/vault-get.py OJ_REST_KEY --into V -- true
+          python3 scripts/vault-get.py OJ_SUPABASE_SECRET_KEY --into V -- true
 
       - name: Mask the mailbox verifier keys
+        id: mask_providers
         # One retired provider key must not stop the MX and domain steps.
         working-directory: core
         env:
@@ -173,3 +175,8 @@ jobs:
             echo ""
             echo "Recipient detail is in starfire-core at agent/oj-free-asset-daily.log, deliberately not here."
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail when mailbox verifier keys could not be masked
+        if: always() && steps.mask_providers.outcome == 'failure'
+        run: |
+          echo "one or more mailbox verifier keys could not be masked; the mailbox step ran without them"
+          exit 1
