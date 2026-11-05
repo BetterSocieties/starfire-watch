@@ -56,6 +56,8 @@ env:
 
 jobs:
   owner:
+    needs: registries
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -122,9 +124,9 @@ jobs:
   # A second source of owner names, from the state registers rather than the prospect's own site:
   # the Florida DBPR construction-licence extract, the Arizona Registrar of Contractors, and the
   # Florida Division of Corporations (Sunbiz) quarterly extracts. It has its own checkout, its own
-  # D1 token, and runs beside the owner job (no needs). Each source step carries continue-on-error
-  # so one register being down does not stop the others. The log and the step summary are world
-  # readable: counts only, never a business name.
+  # D1 token, and runs before the owner job (the owner job declares needs: registries). Each source
+  # step carries continue-on-error so one register being down does not stop the others. The log and
+  # the step summary are world readable: counts only, never a business name.
   registries:
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -132,6 +134,10 @@ jobs:
       STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
       STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SUNBIZ_SFTP_USER: Public
+      SUNBIZ_SFTP_PASS: "PubAccess1845!"
+      # the state's sftp host keys, pinned; a change fails the download instead of trusting it.
+      SUNBIZ_KNOWN_HOSTS: "PINNED_KEYS_GO_HERE"
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -151,17 +157,42 @@ jobs:
         working-directory: core
         run: |
           set -uo pipefail
+          dl_rc=0
+          curl -fsSL --retry 3 --max-time 300 --connect-timeout 20 -o "$RUNNER_TEMP/fl-dbpr.csv" https://www2.myfloridalicense.com/sto/file_download/extracts/CONSTRUCTIONLICENSE_1.csv || dl_rc=$?
+          if [ "$dl_rc" -ne 0 ]; then
+            echo "fl-dbpr download exit=$dl_rc"
+            exit "$dl_rc"
+          fi
           rc=0
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/fl-dbpr.csv" https://www2.myfloridalicense.com/sto/file_download/extracts/CONSTRUCTIONLICENSE_1.csv || rc=$?
-          timeout 900 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c 'exec python3 scripts/oj-owner-from-fl-dbpr.py --file "$RUNNER_TEMP/fl-dbpr.csv" --limit 200 --apply > "$RUNNER_TEMP/fl-dbpr.log" 2>&1' || rc=$?
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec timeout 600 python3 scripts/oj-owner-from-fl-dbpr.py --file "$RUNNER_TEMP/fl-dbpr.csv" --limit 200 --apply > "$RUNNER_TEMP/fl-dbpr.log" 2>&1' || rc=$?
           echo "fl-dbpr exit=$rc"
           python3 - "$RUNNER_TEMP/fl-dbpr.log" <<'PY'
-          import json, re, sys
-          m = list(re.finditer(r"\{[^{}]*\}", open(sys.argv[1]).read(), re.S))
-          d = json.loads(m[-1].group(0)) if m else {}
-          print(json.dumps({k: v for k, v in d.items() if isinstance(v, (int, float))}))
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
           PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/fl-dbpr.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
           exit "$rc"
 
       - name: Name the owner from the Arizona Registrar of Contractors, 200 a run
