@@ -54,8 +54,7 @@ jobs:
           set -uo pipefail
           rc=0
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-d1-apply-indexes.py --apply \
-            > "$RUNNER_TEMP/indexes.log" 2>&1 || rc=$?
+            bash -c 'exec python3 scripts/oj-d1-apply-indexes.py --apply > "$RUNNER_TEMP/indexes.log" 2>&1' || rc=$?
           echo "indexes exit=$rc"
           # index names and counts only
           grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true

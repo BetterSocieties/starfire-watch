@@ -100,8 +100,7 @@ jobs:
           set -uo pipefail
           rc=0
           timeout 1500 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-enrich-home-services-booking-signal.py --apply --limit 1500 \
-            > "$RUNNER_TEMP/site-read.log" 2>&1 || rc=$?
+            bash -c 'exec python3 scripts/oj-enrich-home-services-booking-signal.py --apply --limit 1500 > "$RUNNER_TEMP/site-read.log" 2>&1' || rc=$?
           echo "site read exit=$rc"
           # counts only: the per-row lines carry business names
           grep -E '^(queued home-services rows|rows to check)' "$RUNNER_TEMP/site-read.log" || true
@@ -175,8 +174,7 @@ jobs:
           set -uo pipefail
           rc=0
           timeout 1500 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            python3 scripts/oj-discover-emails-from-website.py --limit 60 --apply --quiet \
-            > "$RUNNER_TEMP/discover.log" 2>&1 || rc=$?
+            bash -c 'exec python3 scripts/oj-discover-emails-from-website.py --limit 60 --apply --quiet > "$RUNNER_TEMP/discover.log" 2>&1' || rc=$?
           echo "email discovery exit=$rc"
           grep -E '^(suppression|worklist|found=)' "$RUNNER_TEMP/discover.log" || true
           if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then
