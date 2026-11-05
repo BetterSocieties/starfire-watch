@@ -44,5 +44,5 @@ jobs:
         run: |
           set -uo pipefail
           python3 scripts/oj-weekly-funnel-report.py --self-test
-          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE -- \
+          OJ_REST_URL=https://oj-rest.dark-wildflower-46d6.workers.dev scripts/with-vault-env.sh OJ_REST_KEY -- \
             python3 scripts/oj-weekly-funnel-report.py --post

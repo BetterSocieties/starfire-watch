@@ -64,14 +64,14 @@ jobs:
             echo "::add-mask::$v"
             echo "$1=$v" >> "$GITHUB_ENV"
           }
-          load OJ_SUPABASE_SERVICE_ROLE OJ_SUPABASE_SERVICE_ROLE
+          load OJ_REST_KEY OJ_REST_KEY
           load OJ_WORKER_SEND_TOKEN OJ_WORKER_SEND_TOKEN
           load OJ_UNSUBSCRIBE_SECRET OJ_UNSUBSCRIBE_SECRET
           load BS_WORKSPACE_IMAP_APP_PASSWORD BS_WORKSPACE_IMAP_APP_PASSWORD
           load N8N_API_KEY N8N_POD_API_KEY
           load OJ_ANSWER_SECRET OJ_ANSWER_SECRET
           {
-            echo "OJ_SUPABASE_URL=https://wwacjhkpuaiijbkqnhsi.supabase.co"
+            echo "OJ_REST_URL=https://oj-rest.dark-wildflower-46d6.workers.dev"
             echo "N8N_URL=https://n8n.opsjuice.com"
             echo "OJ_WORKER_URL=https://opsjuice.com"
             echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
