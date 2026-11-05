@@ -92,11 +92,23 @@ jobs:
             exit "$rc"
           fi
 
+      - name: Install Reacher, the mailbox prober the next step needs
+        if: ${{ !cancelled() }}
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REACHER_BIN_DIR: ${{ runner.temp }}/reacher
+        run: bash scripts/install-reacher.sh
+
       - name: Find the named owner's own mailbox, 200 a run
         if: ${{ !cancelled() }}
         working-directory: core
+        env:
+          REACHER_BIN: ${{ runner.temp }}/reacher/check_if_email_exists
         run: |
           set -uo pipefail
+          # A missing prober would stamp every row unknown and still exit 0, so refuse the run instead.
+          test -x "$REACHER_BIN" || { echo "error: Reacher is not installed"; exit 1; }
           rc=0
           timeout 1620 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             python3 scripts/oj-find-owner-email.py --batch 200 --max-seconds 1500 --apply > "$RUNNER_TEMP/owner-email.log" 2>&1 || rc=$?
