@@ -63,7 +63,8 @@ jobs:
             v="$(cat "$RUNNER_TEMP/v.$1")"
             [ -n "$v" ] || { echo "vault gave nothing for $2"; exit 1; }
             echo "::add-mask::$v"
-            { echo "$1<<__V_EOF__"; printf '%s\n' "$v"; echo "__V_EOF__"; } >> "$GITHUB_ENV"
+            d="V_EOF_$(openssl rand -hex 16)"
+            { echo "$1<<$d"; printf '%s\n' "$v"; echo "$d"; } >> "$GITHUB_ENV"
             rm -f "$RUNNER_TEMP/v.$1"
           }
           trap 'rm -f "$RUNNER_TEMP"/v.*' EXIT
@@ -79,6 +80,20 @@ jobs:
             echo "OJ_WORKER_URL=https://opsjuice.com"
             echo "STARFIRE_VAULT_URL=https://starfire-vault.dark-wildflower-46d6.workers.dev"
           } >> "$GITHUB_ENV"
+      - name: Mask the keys the scripts read from the vault themselves
+        # oj-verify-the-mailbox-before-the-letter.py read these keys inside the script, with
+        # stderr going into a log file, where no ::add-mask:: line may be printed. vault-get refuses such
+        # a read unless the key was masked earlier in this job, so this step masks them, with stderr on
+        # the runner. It prints the mask lines and nothing else.
+        working-directory: core
+        env:
+          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+        run: |
+          set -euo pipefail
+          for k in OJ_REST_KEY BS_HUNTER_API_KEY MYEMAILVERIFIER_API_KEY REOON_API_KEY EMAILVERIFY_IO_API_KEY ZEROBOUNCE_API_KEY_API_KEY MAILVALID_API_KEY EMAILAWESOME_API_KEY; do
+            python3 scripts/vault-get.py "$k" --into V -- true
+          done
+
       - name: Verify waiting mailboxes
         working-directory: core
         continue-on-error: true
