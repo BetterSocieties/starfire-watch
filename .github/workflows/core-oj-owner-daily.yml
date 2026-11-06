@@ -285,6 +285,31 @@ jobs:
           path: ~/sunbiz
           key: ${{ steps.stamp.outputs.key }}
 
+      # The quarterly zip is up to 3 months old. The state also posts each business day's filings in the
+      # same layout (doc/cor/CCYYMMDDc.txt, doc/fic/CCYYMMDDf.txt), so the files dated after each zip are
+      # fetched and the owner scripts layer them on top (--daily-dir), and an owner who filed this week
+      # is found this week. Measured 2026-11-06: about 3.6 MB (cor) and 0.9 MB (fic) a business day.
+      - name: Download the state's daily filings dated after each quarterly zip
+        id: daily
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          set -uo pipefail
+          mkdir -p ~/sunbiz-daily
+          for spec in cor:c:cordata fic:f:ficdata; do
+            IFS=: read -r dir suffix zip <<< "$spec"
+            [ -f ~/sunbiz/$zip.zip ] || { echo "sunbiz-daily $dir no quarterly zip"; exit 1; }
+            after="$(date -u -r ~/sunbiz/$zip.zip +%Y%m%d)"
+            names=$(curl -fsS --list-only --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/~/doc/$dir/") || exit $?
+            n=0
+            for f in $(printf '%s\n' "$names" | grep -E "^[0-9]{8}${suffix}\.txt$" | sort); do
+              [[ "${f:0:8}" > "$after" ]] || continue
+              curl -fsS -R --max-time 300 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz-daily/$f.part "sftp://sftp.floridados.gov/~/doc/$dir/$f" && mv ~/sunbiz-daily/$f.part ~/sunbiz-daily/$f || exit $?
+              n=$((n+1))
+            done
+            echo "sunbiz-daily $dir after=$after files=$n"
+          done
+
       - name: Name the owner from the Florida fictitious-name register, 500 a run
         continue-on-error: true
         working-directory: core
@@ -292,8 +317,10 @@ jobs:
           set -uo pipefail
           rc=0
           fic_date="$(date -u -r ~/sunbiz/ficdata.zip +%F)"
+          daily=""
+          [ "${{ steps.daily.outcome }}" = "success" ] && daily="--daily-dir $HOME/sunbiz-daily"
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c "exec timeout 900 python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
+            bash -c "exec timeout 900 python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
           echo "sunbiz-fic exit=$rc"
           python3 - "$RUNNER_TEMP/sunbiz-fic.log" <<'PY'
           import json, sys
@@ -330,8 +357,10 @@ jobs:
           set -uo pipefail
           rc=0
           cor_date="$(date -u -r ~/sunbiz/cordata.zip +%F)"
+          daily=""
+          [ "${{ steps.daily.outcome }}" = "success" ] && daily="--daily-dir $HOME/sunbiz-daily"
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c "exec timeout 1500 python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
+            bash -c "exec timeout 1500 python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
           echo "sunbiz-cor exit=$rc"
           python3 - "$RUNNER_TEMP/sunbiz-cor.log" <<'PY'
           import json, sys
