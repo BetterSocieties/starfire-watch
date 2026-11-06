@@ -18,9 +18,12 @@
 # delayed at high load (the start of every hour is the busiest), and is disabled in a public repository
 # after 60 days without repository activity
 # (docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
-# So the minute is :40, not :00. core-oj-source-daily's own runs have started between 09:34 and 12:31
-# UTC against a 05:00 cron on 2026-10-13 to 10-16, so this daily run sits at 07:40, well before the
-# 10:17 screen and 11:17 verify.
+# So the minute is :40, not :00. GitHub's delay is real here: the last scheduled run of this file on main
+# was created at 15:45 UTC on 2026-11-05 against the 07:40 cron, about 8 hours late. The owner job also
+# waits for the registries job (`needs: registries`), which took 6 minutes on dispatch run 42151602052
+# (2026-11-06, quarterly zips cached, 60 daily files fetched) and is bounded at 150. So the 10:17 screen
+# and 11:17 verify are not guaranteed to run after this job on a given day; each picks up whatever rows
+# this job has finished, and the next day's run catches the rest.
 #
 # CONCURRENCY. `group: core-oj-owner-daily` with cancel-in-progress false: at most one run and one
 # pending run per group, a newer pending run replaces an older pending one, and a running owner
@@ -31,9 +34,10 @@
 # READ BUDGET. D1's free tier allows 5,000,000 rows read a day for the whole OJ account, reset at 00:00 UTC
 # (developers.cloudflare.com/d1/platform/pricing/). On 2026-10-30 the hourly catch-up of these steps read
 # about 2.9 million of them and the account hit the limit (error 7500) at about 04:50 UTC, which stops
-# every OJ query, the sender included. This job's own read and write cost is not measured yet; it is
-# measured with scripts/oj-d1-usage.py around the first dispatch run and written here. Do not raise the
-# cadence or the batch sizes before that.
+# every OJ query, the sender included. Measured on dispatch run 42151602052 (2026-11-06 02:38 UTC), each
+# script's own d1_rows_read / d1_rows_written: FL DBPR 9,798 / 66, AZ ROC 33,707 / 0 (a full pass until
+# idx_prospects_ustate_id is built), Sunbiz fic 1,946 / 36, Sunbiz cor 2,465 / 210; about 48,000 rows
+# read in all, under 1% of the daily allowance. That run named 156 owners (105 cor, 33 DBPR, 18 fic).
 #
 # THE LOG AND THE STEP SUMMARY ARE WORLD READABLE. Both carry counts only; which businesses passed is on D1.
 name: core-oj-owner-daily
@@ -56,6 +60,8 @@ env:
 
 jobs:
   owner:
+    needs: registries
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -88,7 +94,7 @@ jobs:
           # The script writes every 25 rows and stops itself at 1380 s (core PR 5902), so a timeout (124)
           # means it overran its own clock: a failure, not a normal end.
           if [ "$rc" -ne 0 ]; then
-            tail -n 3 "$RUNNER_TEMP/owner-name.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            tail -n 3 "$RUNNER_TEMP/owner-name.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
             exit "$rc"
           fi
 
@@ -115,6 +121,330 @@ jobs:
           echo "owner email exit=$rc"
           awk '/^\{/{l=$0} END{if(l)print l}' "$RUNNER_TEMP/owner-email.log"
           if [ "$rc" -ne 0 ]; then
-            tail -n 3 "$RUNNER_TEMP/owner-email.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            tail -n 3 "$RUNNER_TEMP/owner-email.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
             exit "$rc"
           fi
+
+  # A second source of owner names, from the state registers rather than the prospect's own site:
+  # the Florida DBPR construction-licence extract, the Arizona Registrar of Contractors, and the
+  # Florida Division of Corporations (Sunbiz) quarterly extracts. It has its own checkout, its own
+  # D1 token, and runs before the owner job (the owner job declares needs: registries). Each source
+  # step carries continue-on-error so one register being down does not stop the others. The log and
+  # the step summary are world readable: counts only, never a business name.
+  registries:
+    runs-on: ubuntu-latest
+    # every step below carries its own bound; they sum to 143 minutes, so the job bound sits above it
+    timeout-minutes: 150
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SUNBIZ_SFTP_USER: Public
+      SUNBIZ_SFTP_PASS: "PubAccess1845!"
+      # the state's sftp host keys, pinned; a change fails the download instead of trusting it.
+      # read with ssh-keyscan on 2026-11-06 (ECDSA, RSA, ED25519; SHA256 TPtpEBn4, Uv7WZDtG, xTpc6X81)
+      SUNBIZ_KNOWN_HOSTS: |
+        sftp.floridados.gov ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEoTyT4Kp6MNXcKhRwwN5Je/j7HAwtWvhXKT41h0x8l0SWEuPnh0QfhMHXMMhxvAItK5y/CoUZBTeO8aVmGJ/TE=
+        sftp.floridados.gov ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCcqcmLnzD8ophR/Ox+GUXEeg/UbNw5ghGtUxKgXz9vLY9z8KFn5e9HtjOeCF9UldrcMn1uece49dYGRqOI2Xo7pDH7B3vTqH9l1QPes8rM7WK4+mpAeV5Isct+VpL6bSJyHd5wOCKWVtszeTTQUdXzDlPR6sJweHWu/4e7z1UiCJtjEYac1nK4H7dX3ZZCJ10SzvMwA/DbHOojEhKTJIwk0RdD/umSM2fa+WSw0Oi+CD9g/lKuFGzEn0OLYj5x7IQrVfcDLIYpBUuBEoDxvpnMx8Cf+SSgOsyZvgSx/70AZO8lzs+PqC2xzn2lKyiFnCYtUuQFb78U8gM7d/UaOe5x
+        sftp.floridados.gov ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIFRdq4ekBu4hkT7QRm+frcyLZFQZplBp63gRcEm0Kwq
+    steps:
+      - name: Checkout starfire-core (the repository the scripts live in)
+        timeout-minutes: 3
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: main
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        timeout-minutes: 3
+        with:
+          python-version: "3.12"
+
+      - name: Name the owner from the Florida DBPR construction-licence extract, 200 a run
+        continue-on-error: true
+        timeout-minutes: 17
+        working-directory: core
+        run: |
+          set -uo pipefail
+          dl_rc=0
+          curl -fsSL --retry 3 --max-time 300 --connect-timeout 20 -o "$RUNNER_TEMP/fl-dbpr.csv" https://www2.myfloridalicense.com/sto/file_download/extracts/CONSTRUCTIONLICENSE_1.csv || dl_rc=$?
+          if [ "$dl_rc" -ne 0 ]; then
+            echo "fl-dbpr download exit=$dl_rc"
+            exit "$dl_rc"
+          fi
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec timeout 600 python3 scripts/oj-owner-from-fl-dbpr.py --file "$RUNNER_TEMP/fl-dbpr.csv" --limit 200 --apply > "$RUNNER_TEMP/fl-dbpr.log" 2>&1' || rc=$?
+          echo "fl-dbpr exit=$rc"
+          python3 - "$RUNNER_TEMP/fl-dbpr.log" <<'PY'
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              print("::warning::the script printed no counts line")
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
+          PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/fl-dbpr.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          exit "$rc"
+
+      - name: Name the owner from the Arizona Registrar of Contractors, 200 a run
+        continue-on-error: true
+        timeout-minutes: 17
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec timeout 900 python3 scripts/oj-owner-from-az-roc.py --limit 200 --apply --cache "$RUNNER_TEMP/az-roc-cache.json" > "$RUNNER_TEMP/az-roc.log" 2>&1' || rc=$?
+          echo "az-roc exit=$rc"
+          python3 - "$RUNNER_TEMP/az-roc.log" <<'PY'
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              print("::warning::the script printed no counts line")
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
+          PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/az-roc.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          exit "$rc"
+
+      - name: Pin the state's sftp host keys
+        timeout-minutes: 1
+        run: |
+          mkdir -p ~/.ssh ~/sunbiz
+          printf '%s\n' "$SUNBIZ_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The cache key is the hash of the state's own directory listing, so a file the state posts late in the quarter is fetched again.
+      - name: Read the state's own file dates
+        id: stamp
+        timeout-minutes: 3
+        run: |
+          set -uo pipefail
+          rc=0
+          listing=""
+          for d in fic cor; do
+            body=$(curl -fsS --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/~/doc/quarterly/$d/") || { rc=$?; break; }
+            listing="$listing$body"$'\n'
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "key=sunbiz-unlisted-$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          else
+            hash=$(printf '%s' "$listing" | grep -E 'ficdata\.zip|cordata\.zip' | sha256sum | cut -c1-16)
+            echo "key=sunbiz-$hash" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore Sunbiz cache
+        id: sunbiz
+        timeout-minutes: 5
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/sunbiz
+          key: ${{ steps.stamp.outputs.key }}
+
+      - name: Download the Sunbiz quarterly extract when the cache misses
+        id: download
+        if: steps.sunbiz.outputs.cache-hit != 'true'
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          set -uo pipefail
+          rm -f ~/sunbiz/*.part
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/ficdata.zip.part "sftp://sftp.floridados.gov/~/doc/quarterly/fic/ficdata.zip" && mv ~/sunbiz/ficdata.zip.part ~/sunbiz/ficdata.zip
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/cordata.zip.part "sftp://sftp.floridados.gov/~/doc/quarterly/cor/cordata.zip" && mv ~/sunbiz/cordata.zip.part ~/sunbiz/cordata.zip
+          unzip -tq ~/sunbiz/ficdata.zip && unzip -tq ~/sunbiz/cordata.zip
+
+      - name: Save Sunbiz cache
+        timeout-minutes: 5
+        uses: actions/cache/save@v4
+        if: steps.sunbiz.outputs.cache-hit != 'true' && steps.download.outcome == 'success'
+        with:
+          path: ~/sunbiz
+          key: ${{ steps.stamp.outputs.key }}
+
+      # The quarterly zip is up to 3 months old. The state also posts each business day's filings in the
+      # same layout (doc/cor/CCYYMMDDc.txt, doc/fic/CCYYMMDDf.txt), so the files dated on or after each
+      # zip are fetched and the owner scripts layer them on top (--daily-dir), and an owner who filed
+      # this week is found this week. Measured 2026-11-06: about 3.6 MB (cor) and 0.9 MB (fic) a business
+      # day. The files are cached across runs, so a run fetches only the days it has not seen.
+      - name: Restore the daily filings already fetched
+        timeout-minutes: 5
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/sunbiz-daily
+          key: sunbiz-daily-${{ github.run_id }}
+          restore-keys: sunbiz-daily-
+
+      - name: Download the state's daily filings dated on or after each quarterly zip
+        id: daily
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          set -uo pipefail
+          D="$HOME/sunbiz-daily"
+          mkdir -p "$D"
+          have=0
+          for spec in cor:c:cordata fic:f:ficdata; do
+            IFS=: read -r dir suffix zip <<< "$spec"
+            [ -f ~/sunbiz/$zip.zip ] || { echo "sunbiz-daily $dir no quarterly zip"; continue; }
+            after="$(date -u -r ~/sunbiz/$zip.zip +%Y%m%d)"
+            # days before this zip are inside it; drop them so the cache holds one quarter at most
+            for old in "$D"/*"$suffix".txt; do
+              [ -f "$old" ] || continue
+              b=$(basename "$old"); [[ "${b:0:8}" < "$after" ]] && rm -f -- "${old:?}"
+            done
+            names=$(curl -fsS --list-only --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/~/doc/$dir/") || { echo "sunbiz-daily $dir listing exit=$?"; continue; }
+            fetched=0 cached=0 failed=0
+            for f in $(printf '%s\n' "$names" | grep -E "^[0-9]{8}${suffix}\.txt$" | sort); do
+              # same day included (>=), as daily_paths in oj_sunbiz_zip.py: a filing posted the day the zip was cut may be missing from it
+              [[ "${f:0:8}" < "$after" ]] && continue
+              if [ -s "$D/$f" ]; then cached=$((cached+1)); continue; fi
+              if curl -fsS -R --max-time 120 --connect-timeout 20 --retry 2 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o "$D/$f.part" "sftp://sftp.floridados.gov/~/doc/$dir/$f"; then
+                mv "$D/$f.part" "$D/$f"; fetched=$((fetched+1))
+              else
+                rm -f -- "${D:?}/${f:?}.part"; failed=$((failed+1))
+              fi
+            done
+            have=$((have+fetched+cached))
+            echo "sunbiz-daily $dir after=$after fetched=$fetched cached=$cached failed=$failed"
+            [ "$failed" -eq 0 ] || echo "::warning::sunbiz-daily $dir: $failed daily files failed; the rest are layered"
+          done
+          [ "$have" -gt 0 ]
+
+      - name: Save the daily filings for the next run
+        if: ${{ !cancelled() && steps.daily.outcome == 'success' }}
+        timeout-minutes: 5
+        uses: actions/cache/save@v4
+        with:
+          path: ~/sunbiz-daily
+          key: sunbiz-daily-${{ github.run_id }}
+
+      - name: Name the owner from the Florida fictitious-name register, 500 a run
+        continue-on-error: true
+        timeout-minutes: 17
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          [ -f ~/sunbiz/ficdata.zip ] || { echo "sunbiz-fic skipped: no quarterly zip"; exit 1; }
+          fic_date="$(date -u -r ~/sunbiz/ficdata.zip +%F)"
+          daily=""
+          # the flag only once the script on main reads it (core PR 6139)
+          if [ "${{ steps.daily.outcome }}" = "success" ] && python3 scripts/oj-owner-from-sunbiz-fic.py --help 2>/dev/null | grep -- --daily-dir >/dev/null; then
+            daily="--daily-dir $HOME/sunbiz-daily"
+          fi
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c "exec timeout 900 python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
+          echo "sunbiz-fic exit=$rc"
+          python3 - "$RUNNER_TEMP/sunbiz-fic.log" <<'PY'
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              print("::warning::the script printed no counts line")
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
+          PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/sunbiz-fic.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          exit "$rc"
+
+      - name: Name the owner from the Florida corporations register, 500 a run
+        continue-on-error: true
+        timeout-minutes: 27
+        working-directory: core
+        run: |
+          set -uo pipefail
+          rc=0
+          [ -f ~/sunbiz/cordata.zip ] || { echo "sunbiz-cor skipped: no quarterly zip"; exit 1; }
+          cor_date="$(date -u -r ~/sunbiz/cordata.zip +%F)"
+          daily=""
+          # the flag only once the script on main reads it (core PR 6139)
+          if [ "${{ steps.daily.outcome }}" = "success" ] && python3 scripts/oj-owner-from-sunbiz-cor.py --help 2>/dev/null | grep -- --daily-dir >/dev/null; then
+            daily="--daily-dir $HOME/sunbiz-daily"
+          fi
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c "exec timeout 1500 python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
+          echo "sunbiz-cor exit=$rc"
+          python3 - "$RUNNER_TEMP/sunbiz-cor.log" <<'PY'
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              print("::warning::the script printed no counts line")
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
+          PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/sunbiz-cor.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/^([A-Za-z0-9_.]*(Error|Exception)):.*/\1/; s/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
+          exit "$rc"

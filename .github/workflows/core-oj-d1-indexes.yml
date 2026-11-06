@@ -24,7 +24,7 @@ concurrency:
 
 # The log is world readable: a failure tail prints only lines shaped like an error or a count.
 env:
-  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued)'
+  SAFE_LINES: '^(Traceback|  File "|[A-Za-z0-9_.]*(Error|Exception|Exit)\b|(error|fatal|warning)\b|exit=|HTTP [0-9]|D1 statements|found=|wrote [0-9]|read [0-9]|end of the queued|usage error)'
 
 jobs:
   indexes:
@@ -57,7 +57,7 @@ jobs:
             bash -c 'exec python3 scripts/oj-d1-apply-indexes.py --apply > "$RUNNER_TEMP/indexes.log" 2>&1' || rc=$?
           echo "indexes exit=$rc"
           # index names and counts only
-          grep -E '^(missing|created|deferred|too big|indexes):' "$RUNNER_TEMP/indexes.log" || true
+          grep -E '^(missing|created|deferred|too big|indexes|D1 error|refused|usage error):' "$RUNNER_TEMP/indexes.log" || true
           case "$rc" in
             0) ;;
             1) echo "indexes reason: the vault read failed (vault-get.py)" ;;
