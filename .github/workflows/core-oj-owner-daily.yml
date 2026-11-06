@@ -18,9 +18,12 @@
 # delayed at high load (the start of every hour is the busiest), and is disabled in a public repository
 # after 60 days without repository activity
 # (docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
-# So the minute is :40, not :00. core-oj-source-daily's own runs have started between 09:34 and 12:31
-# UTC against a 05:00 cron on 2026-10-13 to 10-16, so this daily run sits at 07:40, well before the
-# 10:17 screen and 11:17 verify.
+# So the minute is :40, not :00. GitHub's delay is real here: the last scheduled run of this file on main
+# was created at 15:45 UTC on 2026-11-05 against the 07:40 cron, about 8 hours late. The owner job also
+# waits for the registries job (`needs: registries`), which took 6 minutes on dispatch run 42151602052
+# (2026-11-06, quarterly zips cached, 60 daily files fetched) and is bounded at 150. So the 10:17 screen
+# and 11:17 verify are not guaranteed to run after this job on a given day; each picks up whatever rows
+# this job has finished, and the next day's run catches the rest.
 #
 # CONCURRENCY. `group: core-oj-owner-daily` with cancel-in-progress false: at most one run and one
 # pending run per group, a newer pending run replaces an older pending one, and a running owner
@@ -31,9 +34,10 @@
 # READ BUDGET. D1's free tier allows 5,000,000 rows read a day for the whole OJ account, reset at 00:00 UTC
 # (developers.cloudflare.com/d1/platform/pricing/). On 2026-10-30 the hourly catch-up of these steps read
 # about 2.9 million of them and the account hit the limit (error 7500) at about 04:50 UTC, which stops
-# every OJ query, the sender included. This job's own read and write cost is not measured yet; it is
-# measured with scripts/oj-d1-usage.py around the first dispatch run and written here. Do not raise the
-# cadence or the batch sizes before that.
+# every OJ query, the sender included. Measured on dispatch run 42151602052 (2026-11-06 02:38 UTC), each
+# script's own d1_rows_read / d1_rows_written: FL DBPR 9,798 / 66, AZ ROC 33,707 / 0 (a full pass until
+# idx_prospects_ustate_id is built), Sunbiz fic 1,946 / 36, Sunbiz cor 2,465 / 210; about 48,000 rows
+# read in all, under 1% of the daily allowance. That run named 156 owners (105 cor, 33 DBPR, 18 fic).
 #
 # THE LOG AND THE STEP SUMMARY ARE WORLD READABLE. Both carry counts only; which businesses passed is on D1.
 name: core-oj-owner-daily
