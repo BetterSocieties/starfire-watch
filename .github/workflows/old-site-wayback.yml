@@ -3,8 +3,15 @@ name: old-site-wayback
 # starfire-core's archive (archive/old-course-site) by a merged pull request. Daily, or by hand.
 # The list is starfire-core's still-missing.txt, so a landed page is never fetched twice; once the
 # list is empty the workflow turns itself off. While the Archive refuses (429) a run ends in seconds.
+# Run by hand with probe on, it fetches nothing and lands only merge-probe.txt through the same
+# token and steps, which proves the token can still push and merge in starfire-core.
 on:
   workflow_dispatch:
+    inputs:
+      probe:
+        description: Land only a dated merge-probe.txt, to prove the token can merge in starfire-core
+        type: boolean
+        default: false
   schedule:
     - cron: '17 3 * * *'
 permissions:
@@ -38,27 +45,33 @@ jobs:
             gh workflow disable old-site-wayback.yml --repo "${{ github.repository }}"
             echo "done=1" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.left.outputs.done != '1'
+      - if: steps.left.outputs.done != '1' && !inputs.probe
         run: python3 -I tools/old-site/wayback_pages.py core/archive/old-course-site/still-missing.txt out
       - name: Land the pages in starfire-core
-        if: steps.left.outputs.done != '1' && hashFiles('out/pages/*') != ''
+        if: inputs.probe || (steps.left.outputs.done != '1' && hashFiles('out/pages/*') != '')
         working-directory: core
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
-          n=$(python3 -I archive/old-course-site/land-wayback.py archive/old-course-site ../out)
-          if [ "$n" -eq 0 ]; then echo "Pages came back but all were the parked-domain stub."; exit 0; fi
+          if [ "${{ inputs.probe }}" = "true" ]; then
+            echo "Merge probe: run ${{ github.run_id }} on $(date -u +%FT%TZ) pushed and merged this file with the workflow's token." > archive/old-course-site/merge-probe.txt
+            title="docs: old-site-wayback merge probe, run ${{ github.run_id }}"
+          else
+            n=$(python3 -I archive/old-course-site/land-wayback.py archive/old-course-site ../out)
+            if [ "$n" -eq 0 ]; then echo "Pages came back but all were the parked-domain stub."; exit 0; fi
+            title="docs: old course site archive gains $n pages from the Wayback Machine"
+          fi
           node --test scripts/tests/old-course-site-archive.test.mjs
           branch="old-site-wayback-${{ github.run_id }}"
           git config user.name "starfire-old-site-wayback"
           git config user.email "info@bettersocieties.world"
           git checkout -b "$branch"
           git add archive/old-course-site
-          git commit -m "docs: old course site archive gains $n pages from the Wayback Machine"
+          git commit -m "$title"
           git push origin "$branch"
           gh pr create --repo BetterSocieties/starfire-core --head "$branch" \
-            --title "docs: old course site archive gains $n pages from the Wayback Machine" \
+            --title "$title" \
             --body "Landed by the old-site-wayback workflow in starfire-watch, run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The archive test passed on the runner before this was opened."
           gh pr merge "$branch" --repo BetterSocieties/starfire-core --squash --delete-branch
       - if: always() && hashFiles('out/pages/*') != ''
