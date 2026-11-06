@@ -59,8 +59,10 @@ jobs:
         timeout-minutes: 8
         env:
           # the one full pass over the live view is sent with allow_scan=True inside the script (core PR
-          # 6141), so the scan guard stays on for every other statement. One pass is about 186,000 rows;
-          # this cap stops the run before a second statement past it, even when D1 usage cannot be read.
+          # 6141), so the scan guard stays on for every other statement. Before that read, the guard sizes
+          # the view by the tables it reads and refuses when they exceed what this cap leaves; it cannot
+          # stop a read already running, so a pass that reads more than the floor (about 186,000 rows
+          # measured) is caught only before the next statement, the write, which then keeps the old rows.
           OJ_D1_READS_PER_RUN: "250000"
         run: |
           set -uo pipefail
@@ -78,7 +80,12 @@ jobs:
             0:2) echo "snapshot reason: vault-get.py was called wrongly (usage error)" ;;
             0:4) echo "snapshot reason: the vault key is retired (vault-get.py)" ;;
             1:1) echo "snapshot reason: the script crashed before main (import or syntax error)" ;;
-            1:2) echo "snapshot reason: refused or D1 error (the read budget, an empty live view, or D1)" ;;
+            1:2)
+              if grep -qE '^(refused:|[A-Za-z0-9_.]*(Error|Exception):)' "$RUNNER_TEMP/snapshot.log"; then
+                echo "snapshot reason: refused or D1 error (the read budget, an empty live view, or D1)"
+              else
+                echo "snapshot reason: the script did not start (python exit 2)"
+              fi ;;
             *) echo "snapshot reason: unexpected exit $rc (vault read ok=$vault_ok)" ;;
           esac
           if [ "$rc" -ne 0 ]; then
