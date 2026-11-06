@@ -57,7 +57,7 @@ env:
 jobs:
   owner:
     needs: registries
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -129,7 +129,8 @@ jobs:
   # the step summary are world readable: counts only, never a business name.
   registries:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # every step below carries its own bound; they sum to 133 minutes, so the job bound sits above it
+    timeout-minutes: 140
     env:
       STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
       STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
@@ -144,6 +145,7 @@ jobs:
         sftp.floridados.gov ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIFRdq4ekBu4hkT7QRm+frcyLZFQZplBp63gRcEm0Kwq
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
+        timeout-minutes: 3
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
@@ -153,11 +155,13 @@ jobs:
           fetch-depth: 1
 
       - uses: actions/setup-python@v5
+        timeout-minutes: 3
         with:
           python-version: "3.12"
 
       - name: Name the owner from the Florida DBPR construction-licence extract, 200 a run
         continue-on-error: true
+        timeout-minutes: 17
         working-directory: core
         run: |
           set -uo pipefail
@@ -201,6 +205,7 @@ jobs:
 
       - name: Name the owner from the Arizona Registrar of Contractors, 200 a run
         continue-on-error: true
+        timeout-minutes: 17
         working-directory: core
         run: |
           set -uo pipefail
@@ -236,14 +241,16 @@ jobs:
           fi
           exit "$rc"
 
-      # The cache key is the hash of the state's own directory listing, so a file the state posts late in the quarter is fetched again.
       - name: Pin the state's sftp host keys
+        timeout-minutes: 1
         run: |
           mkdir -p ~/.ssh ~/sunbiz
           printf '%s\n' "$SUNBIZ_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
+      # The cache key is the hash of the state's own directory listing, so a file the state posts late in the quarter is fetched again.
       - name: Read the state's own file dates
         id: stamp
+        timeout-minutes: 3
         run: |
           set -uo pipefail
           rc=0
@@ -261,6 +268,7 @@ jobs:
 
       - name: Restore Sunbiz cache
         id: sunbiz
+        timeout-minutes: 5
         uses: actions/cache/restore@v4
         with:
           path: ~/sunbiz
@@ -279,6 +287,7 @@ jobs:
           unzip -tq ~/sunbiz/ficdata.zip && unzip -tq ~/sunbiz/cordata.zip
 
       - name: Save Sunbiz cache
+        timeout-minutes: 5
         uses: actions/cache/save@v4
         if: steps.sunbiz.outputs.cache-hit != 'true' && steps.download.outcome == 'success'
         with:
@@ -292,7 +301,7 @@ jobs:
       - name: Download the state's daily filings dated after each quarterly zip
         id: daily
         continue-on-error: true
-        timeout-minutes: 20
+        timeout-minutes: 15
         run: |
           set -uo pipefail
           mkdir -p ~/sunbiz-daily
@@ -303,7 +312,8 @@ jobs:
             names=$(curl -fsS --list-only --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/~/doc/$dir/") || exit $?
             n=0
             for f in $(printf '%s\n' "$names" | grep -E "^[0-9]{8}${suffix}\.txt$" | sort); do
-              [[ "${f:0:8}" > "$after" ]] || continue
+              # same day included (>=), as daily_paths in oj_sunbiz_zip.py: a filing posted the day the zip was cut may be missing from it
+              [[ "${f:0:8}" < "$after" ]] && continue
               curl -fsS -R --max-time 300 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz-daily/$f.part "sftp://sftp.floridados.gov/~/doc/$dir/$f" && mv ~/sunbiz-daily/$f.part ~/sunbiz-daily/$f || exit $?
               n=$((n+1))
             done
@@ -312,13 +322,18 @@ jobs:
 
       - name: Name the owner from the Florida fictitious-name register, 500 a run
         continue-on-error: true
+        timeout-minutes: 17
         working-directory: core
         run: |
           set -uo pipefail
           rc=0
+          [ -f ~/sunbiz/ficdata.zip ] || { echo "sunbiz-fic skipped: no quarterly zip"; exit 1; }
           fic_date="$(date -u -r ~/sunbiz/ficdata.zip +%F)"
           daily=""
-          [ "${{ steps.daily.outcome }}" = "success" ] && daily="--daily-dir $HOME/sunbiz-daily"
+          # the flag only once the script on main reads it (core PR 6139)
+          if [ "${{ steps.daily.outcome }}" = "success" ] && python3 scripts/oj-owner-from-sunbiz-fic.py --help 2>/dev/null | grep -- --daily-dir >/dev/null; then
+            daily="--daily-dir $HOME/sunbiz-daily"
+          fi
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             bash -c "exec timeout 900 python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
           echo "sunbiz-fic exit=$rc"
@@ -352,13 +367,18 @@ jobs:
 
       - name: Name the owner from the Florida corporations register, 500 a run
         continue-on-error: true
+        timeout-minutes: 27
         working-directory: core
         run: |
           set -uo pipefail
           rc=0
+          [ -f ~/sunbiz/cordata.zip ] || { echo "sunbiz-cor skipped: no quarterly zip"; exit 1; }
           cor_date="$(date -u -r ~/sunbiz/cordata.zip +%F)"
           daily=""
-          [ "${{ steps.daily.outcome }}" = "success" ] && daily="--daily-dir $HOME/sunbiz-daily"
+          # the flag only once the script on main reads it (core PR 6139)
+          if [ "${{ steps.daily.outcome }}" = "success" ] && python3 scripts/oj-owner-from-sunbiz-cor.py --help 2>/dev/null | grep -- --daily-dir >/dev/null; then
+            daily="--daily-dir $HOME/sunbiz-daily"
+          fi
           python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
             bash -c "exec timeout 1500 python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date $daily --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
           echo "sunbiz-cor exit=$rc"
