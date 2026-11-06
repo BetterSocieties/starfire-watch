@@ -7,11 +7,11 @@ os.makedirs(f'{OUT}/pages', exist_ok=True)
 
 
 def fetch(url):
-    for attempt in range(4):
+    for attempt in range(4):  # 20241101: nearest capture to Nov 2024, later ones are the parked page
         time.sleep(6)
         try:
             r = urllib.request.urlopen(urllib.request.Request(
-                f'https://web.archive.org/web/2026id_/{url}', headers={'User-Agent': 'Mozilla/5.0'}), timeout=60)
+                f'https://web.archive.org/web/20241101id_/{url}', headers={'User-Agent': 'Mozilla/5.0'}), timeout=60)
             ts = re.search(r'/web/(\d{14})', r.geturl())
             return r.read(), ts.group(1) if ts else ''
         except urllib.error.HTTPError as e:
@@ -40,6 +40,8 @@ for line in urls:
     path = urllib.parse.urlparse('https://' + u).path.strip('/') or 'index'
     fn = path.replace('/', '__')[:180] + '.html'
     body, ts = fetch('https://' + u)
+    if body and (len(body) < 1024 or b'/lander' in body):  # the parked-domain redirect, not a page
+        body, ts = None, 'parked stub'
     if body:
         open(f'{OUT}/pages/{fn}', 'wb').write(body)
     index[u] = {'file': fn if body else None, 'capture': ts}
