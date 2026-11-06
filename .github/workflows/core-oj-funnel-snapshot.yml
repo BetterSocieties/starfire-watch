@@ -4,8 +4,8 @@
 # view. starfire-core already has the fix: ventures/opsjuice/d1-migration/d1-funnel-snapshot.sql makes
 # oj_funnel_summary a view over oj_funnel_summary_snapshot, and scripts/oj-funnel-snapshot-refresh.py
 # recomputes into that snapshot (one live-view pass, measured at about 186,000 rows). The script exits 0 on success and 2 when it refuses or D1 errors. It
-# refuses an empty live view and a read past the daily budget. Nothing else runs it. The manager applies
-# the migration by hand after the 00:00 UTC read reset. This job runs the refresh every 6 hours at minute 23,
+# refuses an empty live view and a read past the daily budget. Nothing else runs it. The migration was
+# applied to live D1 on 2026-11-06 at 02:04 UTC, and a first refresh stored 72 rows. This job runs the refresh every 6 hours at minute 23,
 # off the top-of-hour rush: 4 passes a day is about 744,000 rows (15% of the allowance), where hourly
 # would be about 4,460,000 (89%) and starve every other job.
 # Exits 1 and 4 come from vault-get.py: the vault read failed, or its key is retired.
@@ -55,6 +55,11 @@ jobs:
 
       - name: Refresh the stored funnel snapshot
         working-directory: core
+        timeout-minutes: 8
+        env:
+          # the recompute is one reviewed full pass over the live view; scripts/oj_d1.py refuses any read
+          # that walks a big table unless this is set, and tests/test_oj_d1_guard_sweep.py lists it as reviewed
+          OJ_D1_ALLOW_SCAN: "1"
         run: |
           set -uo pipefail
           rc=0
