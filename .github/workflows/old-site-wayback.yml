@@ -1,7 +1,10 @@
 name: old-site-wayback
-# One-off: fetch the old course site pages the Wayback Machine still holds, from a runner address
-# the Archive has not rate limited. Started by hand; the result is a run artifact.
-on: workflow_dispatch
+# Fetch the old course site pages the Wayback Machine still holds, from a runner address
+# the Archive has not rate limited. Daily, or by hand; the result is a run artifact.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'  # daily until the Archive stops refusing; the run ends in seconds while it does
 permissions:
   contents: read
 jobs:
@@ -14,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -I tools/old-site/wayback_pages.py tools/old-site/missing.txt out
-      - if: always()
+      - if: always() && hashFiles('out/pages/*') != ''
         uses: actions/upload-artifact@v4
         with:
           name: old-site-pages

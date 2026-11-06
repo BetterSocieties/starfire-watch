@@ -24,8 +24,16 @@ def fetch(url):
     return None, 'gave up after retries'
 
 
+urls = [l.strip() for l in open(LIST) if l.strip()]
+try:  # one probe first: while the Archive refuses this address, stop instead of spending hours
+    urllib.request.urlopen(urllib.request.Request(f'https://web.archive.org/web/2026id_/https://{urls[0]}',
+                                                  headers={'User-Agent': 'Mozilla/5.0'}), timeout=60)
+except urllib.error.HTTPError as e:
+    if e.code in (429, 503):
+        print('Archive still refusing:', e.code)
+        sys.exit(0)
 index = {}
-for line in open(LIST):
+for line in urls:
     u = line.strip()
     if not u:
         continue
