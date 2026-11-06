@@ -249,7 +249,7 @@ jobs:
           rc=0
           listing=""
           for d in fic cor; do
-            body=$(curl -fsS --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/doc/quarterly/$d/") || { rc=$?; break; }
+            body=$(curl -fsS --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/~/doc/quarterly/$d/") || { rc=$?; break; }
             listing="$listing$body"$'\n'
           done
           if [ "$rc" -ne 0 ]; then
@@ -274,8 +274,8 @@ jobs:
         run: |
           set -uo pipefail
           rm -f ~/sunbiz/*.part
-          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/ficdata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/fic/ficdata.zip" && mv ~/sunbiz/ficdata.zip.part ~/sunbiz/ficdata.zip
-          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/cordata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/cor/cordata.zip" && mv ~/sunbiz/cordata.zip.part ~/sunbiz/cordata.zip
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/ficdata.zip.part "sftp://sftp.floridados.gov/~/doc/quarterly/fic/ficdata.zip" && mv ~/sunbiz/ficdata.zip.part ~/sunbiz/ficdata.zip
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/cordata.zip.part "sftp://sftp.floridados.gov/~/doc/quarterly/cor/cordata.zip" && mv ~/sunbiz/cordata.zip.part ~/sunbiz/cordata.zip
           unzip -tq ~/sunbiz/ficdata.zip && unzip -tq ~/sunbiz/cordata.zip
 
       - name: Save Sunbiz cache
