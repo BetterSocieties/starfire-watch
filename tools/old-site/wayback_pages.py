@@ -36,5 +36,6 @@ for line in open(LIST):
         open(f'{OUT}/pages/{fn}', 'wb').write(body)
     index[u] = {'file': fn if body else None, 'capture': ts}
     print(len(index), ts, fn, flush=True)
+    json.dump(index, open(f'{OUT}/index.json', 'w'), indent=1)  # kept current so a timeout keeps the index
 json.dump(index, open(f'{OUT}/index.json', 'w'), indent=1)
 print('pages', sum(1 for v in index.values() if v['file']), 'of', len(index))
