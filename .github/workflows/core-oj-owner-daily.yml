@@ -137,7 +137,11 @@ jobs:
       SUNBIZ_SFTP_USER: Public
       SUNBIZ_SFTP_PASS: "PubAccess1845!"
       # the state's sftp host keys, pinned; a change fails the download instead of trusting it.
-      SUNBIZ_KNOWN_HOSTS: "PINNED_KEYS_GO_HERE"
+      # read with ssh-keyscan on 2026-11-06 (ECDSA, RSA, ED25519; SHA256 TPtpEBn4, Uv7WZDtG, xTpc6X81)
+      SUNBIZ_KNOWN_HOSTS: |
+        sftp.floridados.gov ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEoTyT4Kp6MNXcKhRwwN5Je/j7HAwtWvhXKT41h0x8l0SWEuPnh0QfhMHXMMhxvAItK5y/CoUZBTeO8aVmGJ/TE=
+        sftp.floridados.gov ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCcqcmLnzD8ophR/Ox+GUXEeg/UbNw5ghGtUxKgXz9vLY9z8KFn5e9HtjOeCF9UldrcMn1uece49dYGRqOI2Xo7pDH7B3vTqH9l1QPes8rM7WK4+mpAeV5Isct+VpL6bSJyHd5wOCKWVtszeTTQUdXzDlPR6sJweHWu/4e7z1UiCJtjEYac1nK4H7dX3ZZCJ10SzvMwA/DbHOojEhKTJIwk0RdD/umSM2fa+WSw0Oi+CD9g/lKuFGzEn0OLYj5x7IQrVfcDLIYpBUuBEoDxvpnMx8Cf+SSgOsyZvgSx/70AZO8lzs+PqC2xzn2lKyiFnCYtUuQFb78U8gM7d/UaOe5x
+        sftp.floridados.gov ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIFRdq4ekBu4hkT7QRm+frcyLZFQZplBp63gRcEm0Kwq
     steps:
       - name: Checkout starfire-core (the repository the scripts live in)
         uses: actions/checkout@v4
@@ -201,44 +205,85 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          timeout 1200 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c 'exec python3 scripts/oj-owner-from-az-roc.py --limit 200 --apply --cache "$RUNNER_TEMP/az-roc-cache.json" > "$RUNNER_TEMP/az-roc.log" 2>&1' || rc=$?
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c 'exec timeout 900 python3 scripts/oj-owner-from-az-roc.py --limit 200 --apply --cache "$RUNNER_TEMP/az-roc-cache.json" > "$RUNNER_TEMP/az-roc.log" 2>&1' || rc=$?
           echo "az-roc exit=$rc"
           python3 - "$RUNNER_TEMP/az-roc.log" <<'PY'
-          import json, re, sys
-          m = list(re.finditer(r"\{[^{}]*\}", open(sys.argv[1]).read(), re.S))
-          d = json.loads(m[-1].group(0)) if m else {}
-          print(json.dumps({k: v for k, v in d.items() if isinstance(v, (int, float))}))
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
           PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/az-roc.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
           exit "$rc"
 
-      # The state regenerates the Sunbiz extracts each January, April, July and October, so the
-      # cache is keyed to the UTC quarter. A new quarter downloads once and is reused after that.
-      - name: Set the Sunbiz quarter key from the current UTC date
-        run: echo "QUARTER=$(date -u +%Y)-q$(( ($(date -u +%-m) + 2) / 3 ))" >> "$GITHUB_ENV"
-
-      - name: Cache the Sunbiz quarterly extract
-        uses: actions/cache@v4
-        id: sunbiz
-        with:
-          path: ~/sunbiz
-          key: sunbiz-${{ env.QUARTER }}
-
-      # The Florida Division of Corporations publishes this public guest login at
-      # https://dos.fl.gov/sunbiz/other-services/data-downloads/ : host sftp.floridados.gov,
-      # username Public, password PubAccess1845! (public values, not secrets).
-      - name: Download the Sunbiz quarterly extract when the cache misses
-        if: steps.sunbiz.outputs.cache-hit != 'true'
-        continue-on-error: true
-        env:
-          SUNBIZ_SFTP_USER: Public
-          SUNBIZ_SFTP_PASS: "PubAccess1845!"
+      # The cache key is the hash of the state's own directory listing, so a file the state posts late in the quarter is fetched again.
+      - name: Pin the state's sftp host keys
         run: |
           mkdir -p ~/.ssh ~/sunbiz
-          ssh-keyscan sftp.floridados.gov >> ~/.ssh/known_hosts
-          # -R keeps the state's own file date (the extract date); .part then mv, so a cut-off download is never cached
-          curl -fsS -R --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/ficdata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/fic/ficdata.zip" && mv ~/sunbiz/ficdata.zip.part ~/sunbiz/ficdata.zip
-          curl -fsS -R --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/cordata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/cor/cordata.zip" && mv ~/sunbiz/cordata.zip.part ~/sunbiz/cordata.zip
+          printf '%s\n' "$SUNBIZ_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Read the state's own file dates
+        id: stamp
+        run: |
+          set -uo pipefail
+          rc=0
+          listing=""
+          for d in fic cor; do
+            body=$(curl -fsS --max-time 60 --connect-timeout 20 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" "sftp://sftp.floridados.gov/doc/quarterly/$d/") || { rc=$?; break; }
+            listing="$listing$body"$'\n'
+          done
+          if [ "$rc" -ne 0 ]; then
+            echo "key=sunbiz-unlisted-$(date -u +%F)" >> "$GITHUB_OUTPUT"
+          else
+            hash=$(printf '%s' "$listing" | grep -E 'ficdata\.zip|cordata\.zip' | sha256sum | cut -c1-16)
+            echo "key=sunbiz-$hash" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore Sunbiz cache
+        id: sunbiz
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/sunbiz
+          key: ${{ steps.stamp.outputs.key }}
+
+      - name: Download the Sunbiz quarterly extract when the cache misses
+        id: download
+        if: steps.sunbiz.outputs.cache-hit != 'true'
+        continue-on-error: true
+        timeout-minutes: 20
+        run: |
+          set -uo pipefail
+          rm -f ~/sunbiz/*.part
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/ficdata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/fic/ficdata.zip" && mv ~/sunbiz/ficdata.zip.part ~/sunbiz/ficdata.zip
+          curl -fsS -R --max-time 1080 --connect-timeout 20 --retry 3 -u "$SUNBIZ_SFTP_USER:$SUNBIZ_SFTP_PASS" -o ~/sunbiz/cordata.zip.part "sftp://sftp.floridados.gov/doc/quarterly/cor/cordata.zip" && mv ~/sunbiz/cordata.zip.part ~/sunbiz/cordata.zip
+          unzip -tq ~/sunbiz/ficdata.zip && unzip -tq ~/sunbiz/cordata.zip
+
+      - name: Save Sunbiz cache
+        uses: actions/cache/save@v4
+        if: steps.sunbiz.outputs.cache-hit != 'true' && steps.download.outcome == 'success'
+        with:
+          path: ~/sunbiz
+          key: ${{ steps.stamp.outputs.key }}
 
       - name: Name the owner from the Florida fictitious-name register, 500 a run
         continue-on-error: true
@@ -247,15 +292,35 @@ jobs:
           set -uo pipefail
           rc=0
           fic_date="$(date -u -r ~/sunbiz/ficdata.zip +%F)"
-          timeout 1500 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c "exec python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c "exec timeout 900 python3 scripts/oj-owner-from-sunbiz-fic.py --fic-zip ~/sunbiz/ficdata.zip --extract-date $fic_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-fic.log\" 2>&1" || rc=$?
           echo "sunbiz-fic exit=$rc"
           python3 - "$RUNNER_TEMP/sunbiz-fic.log" <<'PY'
-          import json, re, sys
-          m = list(re.finditer(r"\{[^{}]*\}", open(sys.argv[1]).read(), re.S))
-          d = json.loads(m[-1].group(0)) if m else {}
-          print(json.dumps({k: v for k, v in d.items() if isinstance(v, (int, float))}))
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
           PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/sunbiz-fic.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
           exit "$rc"
 
       - name: Name the owner from the Florida corporations register, 500 a run
@@ -265,13 +330,33 @@ jobs:
           set -uo pipefail
           rc=0
           cor_date="$(date -u -r ~/sunbiz/cordata.zip +%F)"
-          timeout 2400 python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
-            bash -c "exec python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
+          python3 scripts/vault-get.py CLOUDFLARE_CODEMODE_MCP_TOKEN --into CLOUDFLARE_API_TOKEN -- \
+            bash -c "exec timeout 1500 python3 scripts/oj-owner-from-sunbiz-cor.py --cor-zip ~/sunbiz/cordata.zip --extract-date $cor_date --limit 500 --apply > \"$RUNNER_TEMP/sunbiz-cor.log\" 2>&1" || rc=$?
           echo "sunbiz-cor exit=$rc"
           python3 - "$RUNNER_TEMP/sunbiz-cor.log" <<'PY'
-          import json, re, sys
-          m = list(re.finditer(r"\{[^{}]*\}", open(sys.argv[1]).read(), re.S))
-          d = json.loads(m[-1].group(0)) if m else {}
-          print(json.dumps({k: v for k, v in d.items() if isinstance(v, (int, float))}))
+          import json, sys
+          line = ""
+          for raw in open(sys.argv[1]):
+              if raw.startswith("{"):
+                  line = raw
+          try:
+              d = json.loads(line)
+          except Exception:
+              print(json.dumps({"unparsed": 1}))
+              sys.exit(0)
+          out = {}
+          for k, v in d.items():
+              if isinstance(v, bool):
+                  continue
+              if isinstance(v, (int, float)):
+                  out[k] = v
+              elif k == "by_confidence" and isinstance(v, dict) and all(isinstance(sv, int) and not isinstance(sv, bool) for sv in v.values()):
+                  for sk, sv in v.items():
+                      out[f"{k}_{sk}"] = sv
+          print(json.dumps(out))
           PY
+          if [ "$rc" -ne 0 ]; then
+            tail -n 3 "$RUNNER_TEMP/sunbiz-cor.log" | { grep -E "$SAFE_LINES" || true; } | sed -E 's/[[:alnum:]._+-]+@[[:alnum:].-]+/[address]/g'
+            exit "$rc"
+          fi
           exit "$rc"
