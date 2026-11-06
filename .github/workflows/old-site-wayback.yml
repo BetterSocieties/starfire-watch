@@ -1,10 +1,12 @@
 name: old-site-wayback
-# Fetch the old course site pages the Wayback Machine still holds, from a runner address
-# the Archive has not rate limited. Daily, or by hand; the result is a run artifact.
+# Fetch the old course site pages that only the Wayback Machine still holds and land them in
+# starfire-core's archive (archive/old-course-site) by a merged pull request. Daily, or by hand.
+# The list is starfire-core's still-missing.txt, so a landed page is never fetched twice; once the
+# list is empty the workflow turns itself off. While the Archive refuses (429) a run ends in seconds.
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 3 * * *'  # daily until the Archive stops refusing; the run ends in seconds while it does
+    - cron: '17 3 * * *'
 permissions:
   contents: read
 jobs:
@@ -13,13 +15,55 @@ jobs:
     timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          ref: main
+          token: ${{ secrets.GH_PAT }}
+          path: core
+          sparse-checkout: |
+            archive/old-course-site
+            scripts/tests/old-course-site-archive.test.mjs
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python3 -I tools/old-site/wayback_pages.py tools/old-site/missing.txt out
+      - name: Turn the workflow off once nothing is missing
+        id: left
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ ! -s core/archive/old-course-site/still-missing.txt ]; then
+            echo "Every page is in the archive; turning this workflow off."
+            gh workflow disable old-site-wayback.yml --repo "${{ github.repository }}"
+            echo "done=1" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.left.outputs.done != '1'
+        run: python3 -I tools/old-site/wayback_pages.py core/archive/old-course-site/still-missing.txt out
+      - name: Land the pages in starfire-core
+        if: steps.left.outputs.done != '1' && hashFiles('out/pages/*') != ''
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          n=$(python3 -I archive/old-course-site/land-wayback.py archive/old-course-site ../out)
+          if [ "$n" -eq 0 ]; then echo "Pages came back but all were the parked-domain stub."; exit 0; fi
+          node --test scripts/tests/old-course-site-archive.test.mjs
+          branch="old-site-wayback-${{ github.run_id }}"
+          git config user.name "starfire-old-site-wayback"
+          git config user.email "info@bettersocieties.world"
+          git checkout -b "$branch"
+          git add archive/old-course-site
+          git commit -m "docs: old course site archive gains $n pages from the Wayback Machine"
+          git push origin "$branch"
+          gh pr create --repo BetterSocieties/starfire-core --head "$branch" \
+            --title "docs: old course site archive gains $n pages from the Wayback Machine" \
+            --body "Landed by the old-site-wayback workflow in starfire-watch, run ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. The archive test passed on the runner before this was opened."
+          gh pr merge "$branch" --repo BetterSocieties/starfire-core --squash --delete-branch
       - if: always() && hashFiles('out/pages/*') != ''
         uses: actions/upload-artifact@v4
         with:
           name: old-site-pages
           path: out
-          retention-days: 30
+          retention-days: 90
