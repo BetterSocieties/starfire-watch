@@ -1,0 +1,30 @@
+name: sgtl-clock-watch
+# Watches the SGTL welcome sender's own hourly clock (a Durable Object alarm). If the last tick is
+# older than 2.5 hours, re-arms it with POST /start and checks again; a still-stale clock fails the job,
+# which actions-failure-report turns into an alert. Free: public repo, one curl, no Claude tokens.
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE: https://sgtl-welcome-sender.dark-wildflower-46d6.workers.dev
+      TOKEN: ${{ secrets.SGTL_WELCOME_RUN_TOKEN }}
+    steps:
+      - name: Check the clock, re-arm if stale
+        run: |
+          set -euo pipefail
+          age() { curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" "$BASE/status" | jq -r '(now - ((.lastRun.at // 0) / 1000)) | floor'; }
+          a=$(age)
+          echo "last tick $a seconds ago"
+          if [ "$a" -gt 9000 ]; then
+            echo "stale, re-arming"
+            curl -fsS -m 20 -X POST -H "Authorization: Bearer $TOKEN" "$BASE/start"
+            sleep 30
+            curl -fsS -m 60 -X POST -H "Authorization: Bearer $TOKEN" "$BASE/run" || true
+            curl -fsS -m 20 -H "Authorization: Bearer $TOKEN" "$BASE/status" | jq -e '.nextAlarm != null' >/dev/null
+            echo "re-armed"
+          fi
