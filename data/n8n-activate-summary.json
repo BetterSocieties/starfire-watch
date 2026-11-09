@@ -1,20 +1,20 @@
 {
-  "run_id": "42538513728",
+  "run_id": "42578175276",
   "run_attempt": "1",
-  "generated_at": "2026-11-09T00:08:36Z",
-  "status": "success",
+  "generated_at": "2026-11-09T07:16:06Z",
+  "status": "failure",
   "enumeration_complete": true,
   "total": 1295,
   "newly_activated": 0,
-  "already_active": 146,
-  "failed": 0,
+  "already_active": 145,
+  "failed": 1,
   "skipped": 0,
   "never_activate_policy": 1,
   "archived": 1148,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
-    "no_trigger": 0,
+    "no_trigger": 1,
     "other": 0
   },
   "never_activate_guard": {
