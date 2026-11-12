@@ -1,0 +1,56 @@
+# Mirrors GitHub issues labelled plan:20k to OpenProject. Sends nothing. Counts only in the log.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-plan-mirror.yml (the repo that gets scheduled runners).
+# Off-peak minutes, never :00 (GitHub delays or drops top-of-hour schedules; see core-oj-reconcile-daily.yml).
+name: core-plan-mirror
+on:
+  schedule:
+    - cron: "23,53 * * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-plan-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          twin=core/ops/watch-twin/core-plan-mirror.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref ${{ inputs.core_ref || 'main' }}: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-plan-mirror.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Mirror the plan to OpenProject
+        working-directory: core
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          rc=0
+          python3 scripts/vault-get.py OPENPROJECT_LOCAL_API_KEY --into OPK -- sh -c 'python3 scripts/openproject-mirror/mirror.py > "$RUNNER_TEMP/mirror.log" 2>&1' || rc=$?
+          if [ -f "$RUNNER_TEMP/mirror.log" ]; then tail -n 2 "$RUNNER_TEMP/mirror.log" | grep -v add-mask || true; fi
+          if [ $rc -eq 0 ]; then echo "plan mirror: ok"; else echo "plan mirror: failed (exit $rc)"; fi
+          exit $rc
