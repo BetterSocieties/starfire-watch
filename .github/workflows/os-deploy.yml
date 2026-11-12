@@ -47,11 +47,14 @@ jobs:
           # RETELL_API_KEY_API_KEY straight from the vault at run time; this is
           # only the bearer that lets it sign in, never a secret value itself.
           STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+          # gen-plan-20k-json.py reads the plan issues of starfire-core with gh; without
+          # a token it wrote nothing and the Road to $20k view showed a stale copy.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           for g in gen-northstar-json gen-funnel-live-json gen-roadmap-json \
                    gen-attention-json gen-tasks-board-json gen-expenses-json \
                    gen-os-progress gen-os-loops gen-gates-json gen-library-json \
-                   gen-oj-funnel-json; do
+                   gen-oj-funnel-json gen-plan-20k-json; do
             python3 "scripts/$g.py" || echo "WARN $g failed, keeping committed feed"
           done
 
