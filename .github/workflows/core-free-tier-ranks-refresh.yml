@@ -1,0 +1,84 @@
+# Reads the Artificial Analysis model leaderboard every third day and writes the refreshed
+# STATE/free-tier-ranks.json back to starfire-core, so the free builder router
+# (scripts/omniroute_curate_pool.py, MAX_RANK_AGE_DAYS = 7) never runs on a stale ranking.
+# The script went 60 days without a refresh; the router trusts the file for 7 days.
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-free-tier-ranks-refresh.yml
+# (the repo that gets scheduled runners). This repository's Actions logs are public; the
+# script prints only model names and public scores on stderr, nothing private.
+name: core-free-tier-ranks-refresh
+on:
+  schedule:
+    - cron: "37 19 */3 * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from; scheduled runs use main"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: free-tier-ranks-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 0
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # the same check starfire-core runs from its side (scripts/check-oj-resend-watch-twin.py); a twin that is not on the ref is a failure, because
+          # a scheduler copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-free-tier-ranks-refresh.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref ${{ inputs.core_ref || 'main' }}: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-free-tier-ranks-refresh.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Refresh free tier ranks
+        working-directory: core
+        run: |
+          set +e -uo pipefail
+          python3 scripts/free-tier-ranks.py 2>&1 | tee "$RUNNER_TEMP/ranks.txt"
+          rc=${PIPESTATUS[0]}
+          echo "exit=$rc" >> "$RUNNER_TEMP/ranks.txt"
+          exit $rc
+      - name: Push refreshed ranking back to starfire-core
+        if: success()
+        working-directory: core
+        run: |
+          if git diff --quiet STATE/free-tier-ranks.json; then
+            echo "no change to STATE/free-tier-ranks.json, nothing to push"
+            echo "pushed=no" >> "$RUNNER_TEMP/ranks.txt"
+            exit 0
+          fi
+          git config user.name "starfire-free-tier-ranks-refresh"
+          git config user.email "info@bettersocieties.world"
+          git add STATE/free-tier-ranks.json
+          git commit -m "chore: free model ranking refresh from public runner ${{ github.run_id }}"
+          bash scripts/push-to-main.sh
+          echo "pushed=yes" >> "$RUNNER_TEMP/ranks.txt"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            exit_code=$(grep '^exit=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2 || true)
+            pushed_val=$(grep '^pushed=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2 || true)
+            echo "| free-tier-ranks.py | ${exit_code:-not run} |"
+            echo "| pushed to starfire-core | ${pushed_val:-no} |"
+          } >> "$GITHUB_STEP_SUMMARY"
