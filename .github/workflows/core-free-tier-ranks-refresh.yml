@@ -51,7 +51,7 @@ jobs:
       - name: Refresh free tier ranks
         working-directory: core
         run: |
-          set -uo pipefail
+          set +e -uo pipefail
           python3 scripts/free-tier-ranks.py 2>&1 | tee "$RUNNER_TEMP/ranks.txt"
           rc=${PIPESTATUS[0]}
           echo "exit=$rc" >> "$RUNNER_TEMP/ranks.txt"
@@ -77,6 +77,8 @@ jobs:
           {
             echo "| step | result |"
             echo "|---|---|"
-            echo "| free-tier-ranks.py | $(grep '^exit=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2) |"
-            echo "| pushed to starfire-core | $(grep '^pushed=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2) |"
+            exit_code=$(grep '^exit=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2 || true)
+            pushed_val=$(grep '^pushed=' "$RUNNER_TEMP/ranks.txt" | cut -d= -f2 || true)
+            echo "| free-tier-ranks.py | ${exit_code:-not run} |"
+            echo "| pushed to starfire-core | ${pushed_val:-no} |"
           } >> "$GITHUB_STEP_SUMMARY"
