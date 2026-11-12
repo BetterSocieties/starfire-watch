@@ -1,0 +1,109 @@
+# Sends the OpsJuice contact form messages the owner has approved (send_hold rows in state approved), one headless browser per message, with no Mac involved.
+# A row is sent only when its text still hashes to the value recorded at approval; a changed text is counted and never sent. The dry run is the default input,
+# so a real send needs dry_run set to false by hand. The log shows numbers only: no business name, web address or message text reaches this public log.
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-hold-send.yml (the repo that runs private-repo jobs in the cloud).
+name: core-oj-hold-send
+on:
+  workflow_dispatch:
+    inputs:
+      max:
+        description: "how many approved messages to send at most (1 to 10)"
+        type: choice
+        options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+        default: "10"
+      confirm_count:
+        description: "confirm the number of approved rows; real send only when equal"
+        type: string
+        default: ""
+      dry_run:
+        description: "true reads and reports counts only; set false to really send"
+        type: boolean
+        default: true
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oj-hold-send
+  cancel-in-progress: false
+
+jobs:
+  hold-send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      TWIN_REF: ${{ inputs.core_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # a twin that is not on the ref is a failure, because a copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-oj-hold-send.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-hold-send.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the browser
+        working-directory: core
+        run: |
+          set -eo pipefail
+          if [ -f package-lock.json ]; then npm ci >/dev/null 2>&1; fi
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Self-test
+        working-directory: core
+        run: |
+          set -o pipefail
+          python3 scripts/oj-hold-send.py --self-test 2>&1 | tail -n 1
+      - name: Send
+        working-directory: core
+        env:
+          MAX: ${{ inputs.max }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM_COUNT: ${{ inputs.confirm_count }}
+          OJ_SENDER_NAME: Adrien
+          OJ_SENDER_EMAIL: info@opsjuice.com
+        run: |
+          set -uo pipefail
+          out="$RUNNER_TEMP/hold-send.out"
+          case "$MAX" in [1-9]|10) ;; *) echo "::error::max must be a whole number from 1 to 10"; exit 1;; esac
+          # fail safe: a real send only on the exact word false; anything else, an empty value included, is a dry run
+          if [ "$DRY_RUN" = "false" ]; then
+            # a real send needs the confirmed approved count, digits only; no count means nothing is sent
+            case "$CONFIRM_COUNT" in ''|*[!0-9]*) echo "::error::a real send needs confirm_count, digits only"; exit 1;; esac
+            if [ "${#CONFIRM_COUNT}" -gt 6 ]; then echo "::error::confirm_count is too long"; exit 1; fi
+            python3 scripts/oj-hold-send.py --max "$MAX" --confirm-count "$CONFIRM_COUNT" >"$out" 2>&1
+          else
+            python3 scripts/oj-hold-send.py --max "$MAX" --dry-run >"$out" 2>&1
+          fi
+          rc=$?
+          # numbers only: the output holds business names and message text, so it is counted and never shown
+          echo "dry_run=$DRY_RUN exit_code=$rc"
+          echo "output_lines=$(wc -l <"$out" | tr -d ' ')"
+          echo "sent=$(grep -cE ': sent( |$)' "$out")"
+          echo "would_send=$(grep -cE ': would_send( |$)' "$out")"
+          echo "skipped=$(grep -cE ': skipped( |$)' "$out")"
+          echo "failed=$(grep -ci 'failed' "$out")"
+          echo "text_changed_after_approval=$(grep -ci 'text changed after approval' "$out")"
+          echo "db_error=$(grep -c '^Database error' "$out")"
+          echo "count_mismatch=$(grep -c '^count mismatch' "$out" || true)"
+          echo "stopped_on_drift=$(grep -c '^count changed mid-run' "$out" || true)"
+          exit $rc
