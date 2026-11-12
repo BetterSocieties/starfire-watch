@@ -1,0 +1,98 @@
+# Deploys the OpsJuice owner review page (oj-review Worker) and verifies it is live. The page
+# lists outbound messages before they are sent, protected by OJ_REVIEW_TOKEN.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-review-deploy.yml (the repo that gets scheduled runners).
+name: core-oj-review-deploy
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-review-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        env:
+          TWIN_REF: ${{ inputs.core_ref || 'main' }}
+        run: |
+          twin=core/ops/watch-twin/core-oj-review-deploy.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-review-deploy.yml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests
+        working-directory: core
+        run: |
+          rc=0
+          node --test workers/oj-review/test/worker.test.js > "$RUNNER_TEMP/tests.log" 2>&1 || rc=$?
+          grep -E '^ℹ (tests|pass|fail)' "$RUNNER_TEMP/tests.log" || true
+          exit $rc
+      - name: Deploy
+        working-directory: core
+        run: |
+          rc=0
+          bash scripts/with-vault-env.sh CLOUDFLARE_WORKERS_TOKEN OJ_REVIEW_TOKEN -- bash -c '
+            set -e
+            export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_WORKERS_TOKEN"
+            cd workers/oj-review
+            npx --yes wrangler@4.160.1 deploy >> "$RUNNER_TEMP/deploy.log" 2>&1
+            printf "%s" "$OJ_REVIEW_TOKEN" | npx --yes wrangler@4.160.1 secret put OJ_REVIEW_TOKEN >> "$RUNNER_TEMP/deploy.log" 2>&1
+          ' || rc=$?
+          if [ $rc -eq 0 ]; then
+            echo "deploy: ok"
+          else
+            echo "deploy: failed"
+            grep -m 5 -E '\[ERROR\]|^✘' "$RUNNER_TEMP/deploy.log" | cut -c1-200 || true
+          fi
+          exit $rc
+      - name: Secret is bound
+        working-directory: core
+        run: |
+          rc=0
+          bash scripts/with-vault-env.sh CLOUDFLARE_WORKERS_TOKEN -- bash -c '
+            export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_WORKERS_TOKEN"
+            python3 scripts/check-worker-secrets-bound.py oj-review > "$RUNNER_TEMP/secret-check.log" 2>&1
+          ' || rc=$?
+          if [ $rc -eq 0 ]; then
+            echo "secret bound: yes"
+          else
+            echo "secret bound: no"
+          fi
+          exit $rc
+      - name: Live check
+        working-directory: core
+        run: |
+          # Without token must be 404
+          code_no_token=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://oj-review.dark-wildflower-46d6.workers.dev/list" || true)
+          echo "live without token: $code_no_token"
+          # With token must be 200
+          bash scripts/with-vault-env.sh OJ_REVIEW_TOKEN -- bash -c '
+            code_with_token=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --get --data-urlencode "t=$OJ_REVIEW_TOKEN" "https://oj-review.dark-wildflower-46d6.workers.dev/list" || true)
+            echo "live with token: $code_with_token"
+            [ "$code_with_token" = "200" ] || exit 1
+          '
+          [ "$code_no_token" = "404" ] || exit 1
