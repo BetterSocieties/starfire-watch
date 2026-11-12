@@ -1,6 +1,7 @@
 # Runs the free judge benchmark weekly and writes the refreshed STATE/free-judge-benchmark.json back
 # to starfire-core, so scripts/token-efficiency-tests.py test T7 (limit 14 days) never reads a stale
 # benchmark. The benchmark went 61 days without a refresh and failed T7.
+# An INSUFFICIENT reading (too few cases scored, for example when no model answered) fails the job and is not pushed.
 #
 # Twin for BetterSocieties/starfire-watch/.github/workflows/core-free-judge-benchmark-refresh.yml
 # (the repo that gets scheduled runners). This repository's Actions logs are public; the script
@@ -67,6 +68,10 @@ jobs:
           fi
           verdict=$(python3 -c "import json, sys; print(json.load(open('STATE/free-judge-benchmark.json')).get('verdict', 'unknown'))")
           echo "verdict=$verdict" >> "$RUNNER_TEMP/bench.txt"
+          if [ "$verdict" != "PASS" ] && [ "$verdict" != "FAIL" ]; then
+            echo "::error::benchmark verdict is $verdict, not a real reading (too few cases were scored); nothing is pushed"
+            exit 1
+          fi
           if [ "$rc" -eq 0 ] || [ "$rc" -eq 1 ]; then
             exit 0
           fi
