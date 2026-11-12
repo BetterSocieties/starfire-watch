@@ -1,0 +1,213 @@
+# Cloud free builder. Runs one free-agent task on a GitHub runner instead of the Mac and
+# pushes the result to the branch builder/<slug> of the private repo.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-free-builder.yml
+#
+# This job's log is PUBLIC, and the builder is a free model that runs shell commands, so the
+# job is split into two zones:
+#   - Trusted zone (the runner's own user): checks the inputs, checks out the code, and at
+#     the end pushes the result. It alone holds the repo token.
+#   - Untrusted zone (the Linux user sfbuild, no sudo): installs the tools, starts the local
+#     gateway and runs the builder on its own copy of the tree. It gets two free tier vendor
+#     keys and nothing else: no repo token, no vault token, no access to the runner's files,
+#     its processes, its log or the job's command files. The job stops if that is not so.
+# Each step prints fixed words plus values that are validated first. Debug detail goes to the
+# PRIVATE result branch, with long tokens masked.
+# The brief must be committed at ops/builder-briefs/<slug>.md on the ref being built on.
+name: core-free-builder
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "starfire-core branch to build on"
+        type: string
+        default: main
+      slug:
+        description: "Builder slug: names the brief, the receipt folder and the result branch"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-free-builder-${{ github.event.inputs.slug }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      SLUG: ${{ inputs.slug }}
+      BRANCH: ${{ inputs.branch }}
+    steps:
+      - name: Validate inputs
+        id: validate
+        run: |
+          set -euo pipefail
+          if ! [[ "$SLUG" =~ ^[a-z0-9][a-z0-9-]{0,59}$ ]]; then
+            echo "::error::slug must match ^[a-z0-9][a-z0-9-]{0,59}$"; exit 1
+          fi
+          if ! [[ "$BRANCH" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || [[ "$BRANCH" == *..* ]] || [[ "$BRANCH" == -* ]]; then
+            echo "::error::branch must match ^[A-Za-z0-9._/-]{1,100}$, with no .. and no leading dash"; exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.branch }}
+          path: core
+          fetch-depth: 1
+          persist-credentials: false
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          twin=core/ops/watch-twin/core-free-builder.yml
+          if [ ! -f "$twin" ]; then echo "::error::the twin is missing at that starfire-core ref: merge the pull request that carries it first"; exit 1; fi
+          if ! cmp -s "$twin" .github/workflows/core-free-builder.yml; then echo "::error::this job file differs from its twin in starfire-core"; exit 1; fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Make the builder user, give it its own copy of the tree, and prove it is shut out
+        run: |
+          set -uo pipefail
+          base_sha=$(git -C core rev-parse HEAD 2>/dev/null || true)
+          if ! [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::could not read the base commit"; exit 1; fi
+          echo "$base_sha" >"$RUNNER_TEMP/base_sha.txt"
+          if ! sudo useradd -m -s /bin/bash sfbuild >/dev/null 2>&1; then echo "::error::could not make the builder user"; exit 1; fi
+          if ! { sudo cp -a core /home/sfbuild/core && sudo chown -R sfbuild:sfbuild /home/sfbuild/core; } >/dev/null 2>&1; then
+            echo "::error::could not copy the tree for the builder user"; exit 1
+          fi
+          chmod 700 "$HOME"
+          # Fail closed: the builder user must not see or write anything of the runner's.
+          for p in "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP" "$GITHUB_WORKSPACE" "$HOME"; do
+            if sudo -u sfbuild test -e "$p" >/dev/null 2>&1 || sudo -u sfbuild test -w "$(dirname "$p")" >/dev/null 2>&1; then
+              echo "::error::isolation check failed: the builder user can reach a runner path"; exit 1
+            fi
+          done
+          # Nor may it write where the runner's own commands live.
+          for d in "$(dirname "$(command -v node)")" "$(dirname "$(command -v python3)")" "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}" /usr/bin /usr/local/bin /usr/sbin /bin; do
+            if sudo -u sfbuild test -w "$d" >/dev/null 2>&1; then
+              echo "::error::isolation check failed: the builder user can write a folder the runner runs commands from"; exit 1
+            fi
+          done
+          if sudo -u sfbuild sudo -n true >/dev/null 2>&1; then echo "::error::isolation check failed: the builder user has sudo"; exit 1; fi
+          if sudo -u sfbuild test -w /var/run/docker.sock >/dev/null 2>&1; then echo "::error::isolation check failed: the builder user can reach docker"; exit 1; fi
+          echo "isolation=ok"
+      - name: Run the free builder as the builder user
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -uo pipefail
+          node_bin=$(dirname "$(command -v node)")
+          py_bin=$(dirname "$(command -v python3)")
+          deadline=$(( $(date +%s) + 2400 ))
+          sudo -u sfbuild env -i HOME=/home/sfbuild USER=sfbuild LOGNAME=sfbuild LANG=C.UTF-8 \
+            PATH="/home/sfbuild/.npm-global/bin:$node_bin:$py_bin:/usr/local/bin:/usr/bin:/bin" \
+            GROQ_API_KEY="$GROQ_API_KEY" GEMINI_API_KEY="$GEMINI_API_KEY" SLUG="$SLUG" \
+            FREE_AGENT_NO_APPLY=1 FREE_AGENT_TIMEOUT=1800 FREE_AGENT_SLOTS=1 FREE_AGENT_DEADLINE="$deadline" \
+            bash /home/sfbuild/core/ops/cloud-builder/run-as-builder.sh </dev/null >"$RUNNER_TEMP/run.log" 2>&1
+          rc=$?
+          sudo pkill -KILL -u sfbuild >/dev/null 2>&1 || true
+          echo "builder_exit=$rc"
+          exit $rc
+      - name: Push the result to the private branch builder/<slug>
+        if: always() && steps.validate.outcome == 'success'
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          set -uo pipefail
+          export PATH=/usr/bin:/bin
+          # Stop the builder user for good: no scheduled jobs, no new logins, no processes left.
+          sudo crontab -r -u sfbuild >/dev/null 2>&1 || true
+          sudo usermod -L -s /usr/sbin/nologin sfbuild >/dev/null 2>&1 || true
+          stopped=no
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            sudo pkill -KILL -u sfbuild >/dev/null 2>&1 || true
+            if ! pgrep -u sfbuild >/dev/null 2>&1; then stopped=yes; break; fi
+            sleep 1
+          done
+          if [ "$stopped" != yes ]; then echo "::error::the builder user still has running processes"; exit 1; fi
+          # Take only three named receipt files from the builder's tree. They are read with the
+          # builder user's own rights, never as root or as the runner, so nothing the builder
+          # could not already read can end up in the result. A receipt whose real path is not
+          # the expected one (a symlink on the way) is left behind. Capped in size and time.
+          src="/home/sfbuild/core/evidence/free-agent/$SLUG"
+          stage="$RUNNER_TEMP/stage"
+          rm -rf "$stage"; mkdir -p "$stage"
+          for f in meta.txt diff.patch transcript.txt; do
+            real=$(sudo -u sfbuild timeout 20 realpath -e -- "$src/$f" 2>/dev/null || true)
+            if [ "$real" = "$src/$f" ]; then
+              sudo -u sfbuild timeout 20 head -c 20000000 -- "$src/$f" >"$stage/$f" 2>/dev/null || rm -f "$stage/$f"
+            fi
+          done
+          # Debug detail for the private branch only. Any run of 24 or more key-like characters is masked.
+          if [ -f "$RUNNER_TEMP/run.log" ]; then
+            tail -n 300 "$RUNNER_TEMP/run.log" | sed -E 's/[A-Za-z0-9_+=-]{24,}/<masked>/g' >"$stage/cloud-run-tail.txt"
+          fi
+          end_condition=$(grep '^end_condition=' "$stage/meta.txt" 2>/dev/null | head -1 | cut -d= -f2- || true)
+          if ! [[ "$end_condition" =~ ^[a-z_]{1,40}$ ]]; then end_condition=unknown; fi
+          files_changed=$(grep -c '^+++ b/' "$stage/diff.patch" 2>/dev/null || true)
+          if ! [[ "$files_changed" =~ ^[0-9]+$ ]]; then files_changed=0; fi
+          echo "end_condition=$end_condition" >"$RUNNER_TEMP/result.txt"
+          echo "files_changed=$files_changed" >>"$RUNNER_TEMP/result.txt"
+          base_sha=$(head -c 40 "$RUNNER_TEMP/base_sha.txt" 2>/dev/null || true)
+          if ! [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::no base commit was recorded"; exit 1; fi
+          # A fresh repo with no global or system git config and no hooks. The token travels in
+          # a request header set through the environment: never in a URL, a file or a command line.
+          export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0
+          export GIT_CONFIG_COUNT=2
+          export GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null
+          export GIT_CONFIG_KEY_1=http.https://github.com/.extraheader
+          GIT_CONFIG_VALUE_1="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
+          export GIT_CONFIG_VALUE_1
+          url=https://github.com/BetterSocieties/starfire-core.git
+          repo="$RUNNER_TEMP/push"
+          rm -rf "$repo"
+          if ! git init -q "$repo" >/dev/null 2>&1 || ! cd "$repo"; then echo "::error::could not make the push repo"; exit 1; fi
+          if ! git fetch -q --depth 1 "$url" "$base_sha" >/dev/null 2>&1; then echo "::error::could not fetch the base commit"; exit 1; fi
+          if ! git checkout -q -B "builder/$SLUG" FETCH_HEAD >/dev/null 2>&1; then echo "::error::could not make the result branch"; exit 1; fi
+          applied=no
+          if [ -s "$stage/diff.patch" ] && git apply --index "$stage/diff.patch" >/dev/null 2>&1; then applied=yes; fi
+          # A builder never changes what runs in GitHub Actions: such a patch is not applied.
+          if [ "$applied" = yes ] && git diff --cached --name-only -- .github 2>/dev/null | grep -q .; then
+            git reset -q --hard >/dev/null 2>&1; git clean -q -fd >/dev/null 2>&1; applied=refused
+          fi
+          out="evidence/free-agent/$SLUG"
+          # The patch is untrusted: it may have made part of this path a symlink. Check before writing.
+          if [ "$(realpath -m "$out" 2>/dev/null || true)" != "$(realpath -e . 2>/dev/null)/$out" ]; then
+            echo "::error::the receipt folder is not a plain folder inside the push repo"; exit 1
+          fi
+          mkdir -p "$out" >/dev/null 2>&1
+          cp "$stage"/* "$out"/ >/dev/null 2>&1 || true
+          git add -f -- "$out" >/dev/null 2>&1
+          if git diff --cached --quiet >/dev/null 2>&1; then echo "pushed=no applied=$applied"; exit 0; fi
+          if ! git -c user.name="starfire-free-builder" -c user.email="starfire-free-builder@users.noreply.github.com" \
+            commit -q -m "free-agent: $SLUG" >/dev/null 2>&1; then echo "::error::could not commit the result"; exit 1; fi
+          if git push -q --force "$url" "HEAD:refs/heads/builder/$SLUG" >/dev/null 2>&1; then
+            echo "pushed=yes applied=$applied"
+          else
+            echo "::error::could not push the result branch"; exit 1
+          fi
+      - name: Summary
+        if: always() && steps.validate.outcome == 'success'
+        run: |
+          export PATH=/usr/bin:/bin
+          end_condition=$(grep '^end_condition=' "$RUNNER_TEMP/result.txt" 2>/dev/null | cut -d= -f2- || true)
+          files_changed=$(grep '^files_changed=' "$RUNNER_TEMP/result.txt" 2>/dev/null | cut -d= -f2- || true)
+          if ! [[ "$end_condition" =~ ^[a-z_]{1,40}$ ]]; then end_condition=unknown; fi
+          if ! [[ "$files_changed" =~ ^[0-9]+$ ]]; then files_changed=0; fi
+          {
+            echo "| step | result |"
+            echo "|---|---|"
+            echo "| free builder run | $end_condition |"
+            echo "| files changed | $files_changed |"
+            echo "| result branch | builder/$SLUG |"
+          } >> "$GITHUB_STEP_SUMMARY"
