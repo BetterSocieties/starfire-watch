@@ -1,26 +1,26 @@
 {
-  "run_id": "43385536872",
+  "run_id": "43466277398",
   "run_attempt": "1",
-  "generated_at": "2026-11-13T07:24:41Z",
+  "generated_at": "2026-11-13T16:48:17Z",
   "status": "failure",
-  "enumeration_complete": false,
-  "total": 0,
+  "enumeration_complete": true,
+  "total": 1295,
   "newly_activated": 0,
-  "already_active": 0,
-  "failed": 0,
+  "already_active": 145,
+  "failed": 1,
   "skipped": 0,
-  "never_activate_policy": 0,
-  "archived": 0,
+  "never_activate_policy": 1,
+  "archived": 1148,
   "buckets": {
     "missing_cred": 0,
     "webhook_collision": 0,
-    "no_trigger": 0,
+    "no_trigger": 1,
     "other": 0
   },
   "never_activate_guard": {
     "checked": 2,
     "corrected": 0,
-    "failed": 2,
-    "absent": 0
+    "failed": 0,
+    "absent": 1
   }
 }
