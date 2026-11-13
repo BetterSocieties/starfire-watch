@@ -105,6 +105,9 @@ jobs:
           echo "failed=$(grep -ci 'failed' "$out")"
           echo "text_changed_after_approval=$(grep -ci 'text changed after approval' "$out")"
           echo "db_error=$(grep -c '^Database error' "$out")"
+          # schema names only (table.column), never a value: enough to name the fault without opening the output
+          echo "db_error_kind=$(grep -oE '(NOT NULL|UNIQUE|CHECK|FOREIGN KEY) constraint failed: [a-z_.]+|refused: this read scans [a-z_]+|no such (table|column): [a-z_.]+' "$out" | head -n 1)"
+          grep -oE '^recovered_unclaimed=[0-9]+ stuck_claimed=[0-9]+$' "$out" || echo "recovered_unclaimed=unknown"
           echo "count_mismatch=$(grep -c '^count mismatch' "$out" || true)"
           echo "stopped_on_drift=$(grep -c '^count changed mid-run' "$out" || true)"
           exit $rc
