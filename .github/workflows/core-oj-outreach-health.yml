@@ -51,7 +51,10 @@ jobs:
           python-version: "3.12"
       - name: Fixture tests
         working-directory: core
-        run: python3 scripts/tests/test-oj-outreach-health-workflow.py
+        env:
+          OJ_D1_OFFLINE: "1"
+        # The script's own self-test: standard library only, in-memory database, no network.
+        run: python3 scripts/oj-outreach-health.py --self-test
       - name: Health check
         working-directory: core
         env:
