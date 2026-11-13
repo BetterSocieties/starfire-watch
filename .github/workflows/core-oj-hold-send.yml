@@ -81,6 +81,11 @@ jobs:
           CONFIRM_COUNT: ${{ inputs.confirm_count }}
           OJ_SENDER_NAME: Adrien
           OJ_SENDER_EMAIL: info@opsjuice.com
+          # OpsJuice's own line, read from Retell's number list on 2026-11-13. 3 of the first 5 forms required a phone.
+          OJ_SENDER_PHONE: "602-600-0351"
+          # Used only when a form has a required last-name or company field; never a personal surname.
+          OJ_SENDER_LAST_NAME: OpsJuice
+          OJ_SENDER_COMPANY: OpsJuice
         run: |
           # the runner starts bash with -e; turn it off so a failed run still prints its counts before exit $rc
           set +e -uo pipefail
