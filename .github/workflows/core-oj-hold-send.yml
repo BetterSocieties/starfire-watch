@@ -82,7 +82,8 @@ jobs:
           OJ_SENDER_NAME: Adrien
           OJ_SENDER_EMAIL: info@opsjuice.com
         run: |
-          set -uo pipefail
+          # the runner starts bash with -e; turn it off so a failed run still prints its counts before exit $rc
+          set +e -uo pipefail
           out="$RUNNER_TEMP/hold-send.out"
           case "$MAX" in [1-9]|10) ;; *) echo "::error::max must be a whole number from 1 to 10"; exit 1;; esac
           # fail safe: a real send only on the exact word false; anything else, an empty value included, is a dry run
