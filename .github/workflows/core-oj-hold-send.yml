@@ -113,6 +113,7 @@ jobs:
           # schema names only (table.column), never a value: enough to name the fault without opening the output
           echo "db_error_kind=$(grep -oE '(NOT NULL|UNIQUE|CHECK|FOREIGN KEY) constraint failed: [a-z_.]+|refused: this read scans [a-z_]+|no such (table|column): [a-z_.]+' "$out" | head -n 1)"
           grep -oE '^recovered_unclaimed=[0-9]+ stuck_claimed=[0-9]+$' "$out" || echo "recovered_unclaimed=unknown"
+          grep -oE '^corrected_refused=[0-9]+$' "$out" || echo "corrected_refused=unknown"
           grep -oE '^requeued=[0-9]+ needs_other_channel=[0-9]+ retry_exhausted=[0-9]+$' "$out" || echo "requeued=unknown"
           echo "count_mismatch=$(grep -c '^count mismatch' "$out" || true)"
           echo "stopped_on_drift=$(grep -c '^count changed mid-run' "$out" || true)"
