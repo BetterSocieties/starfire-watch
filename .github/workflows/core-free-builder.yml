@@ -86,17 +86,23 @@ jobs:
           fi
           chmod 700 "$HOME"
           # Fail closed: the builder user must not see or write anything of the runner's.
-          for p in "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP" "$GITHUB_WORKSPACE" "$HOME"; do
+          for p in "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT" "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP" "$GITHUB_WORKSPACE"; do
             if sudo -u sfbuild test -e "$p" >/dev/null 2>&1 || sudo -u sfbuild test -w "$(dirname "$p")" >/dev/null 2>&1; then
               echo "::error::isolation check failed: the builder user can reach a runner path"; exit 1
             fi
           done
-          # Nor may it write where the runner's own commands live.
-          for d in "$(dirname "$(command -v node)")" "$(dirname "$(command -v python3)")" "${RUNNER_TOOL_CACHE:-/opt/hostedtoolcache}" /usr/bin /usr/local/bin /usr/sbin /bin; do
-            if sudo -u sfbuild test -w "$d" >/dev/null 2>&1; then
-              echo "::error::isolation check failed: the builder user can write a folder the runner runs commands from"; exit 1
-            fi
-          done
+          # The home folder itself is visible by name to every user, so the proof is that it cannot be opened.
+          if sudo -u sfbuild test -r "$HOME" >/dev/null 2>&1 || sudo -u sfbuild test -x "$HOME" >/dev/null 2>&1 || sudo -u sfbuild test -w "$HOME" >/dev/null 2>&1; then
+            echo "::error::isolation check failed: the builder user can open the runner home"; exit 1
+          fi
+          if sudo -u sfbuild test -w /home >/dev/null 2>&1; then echo "::error::isolation check failed: the builder user can write /home"; exit 1; fi
+          # The runner image leaves /opt, /usr/share and more writable by every user, so user
+          # separation alone is not enough. The builder runs inside bubblewrap (next step).
+          if ! command -v bwrap >/dev/null 2>&1; then
+            sudo apt-get update -qq >/dev/null 2>&1 || true
+            sudo apt-get install -y -qq bubblewrap >/dev/null 2>&1 || true
+          fi
+          if ! [ -x /usr/bin/bwrap ]; then echo "::error::the sandbox tools are missing"; exit 1; fi
           if sudo -u sfbuild sudo -n true >/dev/null 2>&1; then echo "::error::isolation check failed: the builder user has sudo"; exit 1; fi
           if sudo -u sfbuild test -w /var/run/docker.sock >/dev/null 2>&1; then echo "::error::isolation check failed: the builder user can reach docker"; exit 1; fi
           echo "isolation=ok"
@@ -104,14 +110,45 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
         run: |
           set -uo pipefail
           node_bin=$(dirname "$(command -v node)")
           py_bin=$(dirname "$(command -v python3)")
           deadline=$(( $(date +%s) + 2400 ))
-          sudo -u sfbuild env -i HOME=/home/sfbuild USER=sfbuild LOGNAME=sfbuild LANG=C.UTF-8 \
+          # Inside the sandbox the whole machine is read-only. Writable: the builder's own home and
+          # private empty /tmp, /var/tmp and /dev. Other processes are out of sight. bubblewrap is
+          # started as sfbuild itself, with no root involved, and it never lets its child gain rights.
+          sandbox=(sudo -u sfbuild /usr/bin/bwrap --ro-bind / / --bind /home/sfbuild /home/sfbuild
+            --perms 1777 --tmpfs /tmp --perms 1777 --tmpfs /var/tmp --dev /dev --proc /proc
+            --unshare-pid --unshare-ipc --die-with-parent --new-session --chdir /home/sfbuild --)
+          # Fail closed: search the whole machine, from inside, for anything the builder could write.
+          # find ends non-zero whenever it meets a folder it may not read, so the proof is the end
+          # marker with nothing before it. No output at all means the sandbox did not start.
+          found=$("${sandbox[@]}" /bin/sh -c '/usr/bin/find / \( -path /proc -o -path /sys -o -path /home/sfbuild -o -path /tmp -o -path /var/tmp -o -path /dev \) -prune -o \( -type d -o -type f \) -writable -print -quit 2>/dev/null; echo sandbox-end' 2>/dev/null </dev/null || true)
+          if [ -z "$found" ]; then
+            # Nothing of the builder's has run yet, so the tool's own first error line is safe to show.
+            why=$("${sandbox[@]}" /bin/true 2>&1 </dev/null | head -1 | tr -cd 'A-Za-z0-9 ._:/=-' | cut -c1-200 || true)
+            echo "::error::sandbox check failed: the sandbox did not start ($why)"; exit 1
+          fi
+          if [ "$found" != "sandbox-end" ]; then
+            where=$(printf '%s' "$found" | head -1)
+            if ! [[ "$where" =~ ^/[A-Za-z0-9._/-]{1,200}$ ]]; then where=unreadable; fi
+            echo "::error::sandbox check failed: the builder could write outside its home ($where)"; exit 1
+          fi
+          echo "sandbox=ok"
+          # The vendor keys go over in a file only the builder user can read, never as command
+          # arguments: sudo writes a command's arguments to the system log. printf is the
+          # shell's own, so the values are in no process's argument list either.
+          if ! printf 'GROQ_API_KEY=%s\nGEMINI_API_KEY=%s\nNVIDIA_API_KEY=%s\nCEREBRAS_API_KEY=%s\n' \
+            "$GROQ_API_KEY" "$GEMINI_API_KEY" "$NVIDIA_API_KEY" "$CEREBRAS_API_KEY" \
+            | sudo -u sfbuild /bin/sh -c 'umask 077; cat >/home/sfbuild/.vendor-keys' >/dev/null 2>&1; then
+            echo "::error::could not hand the vendor keys to the builder user"; exit 1
+          fi
+          "${sandbox[@]}" /usr/bin/env -i HOME=/home/sfbuild USER=sfbuild LOGNAME=sfbuild LANG=C.UTF-8 \
             PATH="/home/sfbuild/.npm-global/bin:$node_bin:$py_bin:/usr/local/bin:/usr/bin:/bin" \
-            GROQ_API_KEY="$GROQ_API_KEY" GEMINI_API_KEY="$GEMINI_API_KEY" SLUG="$SLUG" \
+            SLUG="$SLUG" \
             FREE_AGENT_NO_APPLY=1 FREE_AGENT_TIMEOUT=1800 FREE_AGENT_SLOTS=1 FREE_AGENT_DEADLINE="$deadline" \
             bash /home/sfbuild/core/ops/cloud-builder/run-as-builder.sh </dev/null >"$RUNNER_TEMP/run.log" 2>&1
           rc=$?
@@ -177,7 +214,7 @@ jobs:
           applied=no
           if [ -s "$stage/diff.patch" ] && git apply --index "$stage/diff.patch" >/dev/null 2>&1; then applied=yes; fi
           # A builder never changes what runs in GitHub Actions: such a patch is not applied.
-          if [ "$applied" = yes ] && git diff --cached --name-only -- .github 2>/dev/null | grep -q .; then
+          if [ "$applied" = yes ] && git diff --cached --no-renames --name-only 2>/dev/null | grep -qi '^\.github/'; then
             git reset -q --hard >/dev/null 2>&1; git clean -q -fd >/dev/null 2>&1; applied=refused
           fi
           out="evidence/free-agent/$SLUG"
