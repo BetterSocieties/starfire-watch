@@ -1,0 +1,70 @@
+# Runs the OpsJuice outreach health check hourly, applying stop rules and writing pause rows.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-outreach-health.yml (the repo that gets scheduled runners).
+name: core-oj-outreach-health
+"on":
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+      dry_run:
+        description: "Run in dry-run mode (reads only, prints would_pause lines)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-outreach-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        env:
+          TWIN_REF: ${{ inputs.core_ref || 'main' }}
+        run: |
+          twin=core/ops/watch-twin/core-oj-outreach-health.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-outreach-health.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fixture tests
+        working-directory: core
+        run: python3 scripts/tests/test-oj-outreach-health-workflow.py
+      - name: Health check
+        working-directory: core
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
+        run: |
+          set -uo pipefail
+          DRY_RUN="${{ inputs.dry_run }}"
+          if [ "$DRY_RUN" = "true" ]; then
+            python3 scripts/oj-outreach-health.py --dry-run | tee "$RUNNER_TEMP/health.txt"
+          else
+            python3 scripts/oj-outreach-health.py | tee "$RUNNER_TEMP/health.txt"
+          fi
+          rc=${PIPESTATUS[0]}
+          { echo '### Outreach Health Check'; echo '```'; cat "$RUNNER_TEMP/health.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
