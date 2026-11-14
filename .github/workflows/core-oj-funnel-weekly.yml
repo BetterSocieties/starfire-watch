@@ -1,0 +1,80 @@
+# Stores the weekly OpsJuice funnel digest and, on Monday morning in New York, sends it to Slack: python3 scripts/oj-funnel.py weekly.
+# The schedule runs in the mode the repository variable OJ_FUNNEL_SCHEDULE_MODE names (live or dry; unset means dry); a manual run is a
+# dry run unless mode is live. The digest is sent only when the repository variable OJ_FUNNEL_ALERTS is exactly on. The log shows
+# counts only: the output goes to a file that is never uploaded, and only its lines that start with "funnel:" are printed
+# (a line holding an at sign is counted, not shown). The digest text is stored in the database, never printed.
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-funnel-weekly.yml (the repo that runs private-repo jobs in the cloud).
+name: core-oj-funnel-weekly
+"on":
+  schedule:
+    # 13:17 UTC is 8:17 in New York in winter and 9:17 in summer, both inside the 6 to 12 Monday morning the digest is sent in
+    - cron: "17 13 * * 1"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry reads and reports only; live stores the digest and sends it when it is Monday morning in New York"
+        type: choice
+        options: ["dry", "live"]
+        default: "dry"
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-weekly
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      TWIN_REF: ${{ inputs.core_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # a twin that is not on the ref is a failure, because a copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-oj-funnel-weekly.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-funnel-weekly.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Weekly digest
+        working-directory: core
+        env:
+          OJ_FUNNEL_ALERTS: ${{ vars.OJ_FUNNEL_ALERTS == 'on' && 'on' || 'off' }}
+          MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
+        run: |
+          # the runner starts bash with -e; turn it off so a failed run still prints its counts before exit $rc
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/funnel-weekly.out"
+          if [ "$MODE" = "live" ]; then
+            python3 scripts/oj-funnel.py weekly --live >"$out" 2>&1
+          else
+            python3 scripts/oj-funnel.py weekly >"$out" 2>&1
+          fi
+          rc=$?
+          # counts only: a line with an at sign is counted, not shown
+          echo "mode=$MODE exit_code=$rc"
+          echo "funnel_lines=$(grep -c '^funnel:' "$out")"
+          echo "funnel_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
+          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          rm -f "${out:?}"
+          exit $rc
