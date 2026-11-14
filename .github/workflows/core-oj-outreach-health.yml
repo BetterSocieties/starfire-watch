@@ -55,8 +55,9 @@ jobs:
           OJ_D1_OFFLINE: "1"
         # The script's own self-test: standard library only, in-memory database, no network.
         run: |
-          set -o pipefail
-          python3 scripts/oj-outreach-health.py --self-test 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+          rc=0; python3 scripts/oj-outreach-health.py --self-test > "$RUNNER_TEMP/selftest.txt" 2>&1 || rc=$?
+          python3 scripts/public-log-filter.py --selftest-line outreach_health --rc "$rc" < "$RUNNER_TEMP/selftest.txt"
+          [ "$rc" -eq 0 ] || exit 1
       - name: Health check
         working-directory: core
         env:
