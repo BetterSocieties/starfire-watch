@@ -74,6 +74,6 @@ jobs:
           echo "output_lines=$(wc -l <"$out" | tr -d ' ')"
           echo "funnel_lines=$(grep -c '^funnel:' "$out")"
           echo "funnel_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
-          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          grep '^funnel:' "$out" | python3 scripts/public-log-filter.py --safe-lines --counts
           rm -f "${out:?}"
           exit $rc
