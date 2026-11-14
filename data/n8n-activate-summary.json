@@ -1,12 +1,12 @@
 {
-  "run_id": "43617244150",
+  "run_id": "43640286511",
   "run_attempt": "1",
-  "generated_at": "2026-11-14T16:45:12Z",
+  "generated_at": "2026-11-14T20:59:00Z",
   "status": "failure",
   "enumeration_complete": true,
   "total": 1295,
-  "newly_activated": 1,
-  "already_active": 141,
+  "newly_activated": 2,
+  "already_active": 140,
   "failed": 1,
   "skipped": 0,
   "never_activate_policy": 4,
@@ -19,8 +19,8 @@
   },
   "never_activate_guard": {
     "checked": 5,
-    "corrected": 2,
-    "failed": 1,
+    "corrected": 0,
+    "failed": 0,
     "absent": 1
   }
 }
