@@ -84,7 +84,7 @@ jobs:
           python3 scripts/oj-funnel.py backfill --live --max-advances "$ADVANCES" >"$out" 2>&1
           rc=$?
           echo "backfill exit_code=$rc"
-          grep '^\[backfill\]' "$out" | grep -v '@' | grep -v 'failed:' | cut -c1-160
+          grep '^\[backfill\]' "$out" | grep -v 'failed:' | sed 's/^\[backfill\] //' | python3 scripts/public-log-filter.py --safe-lines --counts
           echo "backfill_failed_lines=$(grep -c 'failed:' "$out")"
           rm -f "${out:?}"
           exit $rc
@@ -100,7 +100,7 @@ jobs:
           python3 scripts/oj-funnel.py classifier-check >"$out" 2>&1
           rc=$?
           echo "exit_code=$rc"
-          grep '^funnel: classifier' "$out" | cut -c1-160
+          grep '^funnel: classifier' "$out" | python3 scripts/public-log-filter.py --safe-lines --counts
           rm -f "${out:?}"
           exit $rc
       - name: Tick
@@ -137,7 +137,7 @@ jobs:
           echo "output_lines=$(wc -l <"$out" | tr -d ' ')"
           echo "funnel_lines=$(grep -c '^funnel:' "$out")"
           echo "funnel_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
-          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          grep '^funnel:' "$out" | python3 scripts/public-log-filter.py --safe-lines --counts
           rm -f "$out"
           exit $rc
       - name: Reply speed guard
@@ -164,7 +164,7 @@ jobs:
           echo "mode=$MODE guard_exit_code=$rc"
           echo "guard_lines=$lines"
           echo "guard_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
-          grep '^funnel:' "$out" | grep -v '@' | cut -c1-400
+          grep '^funnel:' "$out" | python3 scripts/public-log-filter.py --safe-lines --counts
           rm -f "${out:?}"
           if [ "$rc" -eq 0 ] && [ "$lines" -eq 0 ]; then
             echo "::error::reply speed guard printed nothing, so nothing was judged"
@@ -194,6 +194,6 @@ jobs:
           fi
           rc=$?
           echo "mode=$MODE exit_code=$rc"
-          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          grep '^funnel:' "$out" | python3 scripts/public-log-filter.py --safe-lines --counts
           rm -f "${out:?}"
           exit $rc
