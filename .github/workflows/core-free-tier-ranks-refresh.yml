@@ -52,7 +52,7 @@ jobs:
         working-directory: core
         run: |
           set +e -uo pipefail
-          python3 scripts/free-tier-ranks.py 2>&1 | tee "$RUNNER_TEMP/ranks.txt"
+          python3 scripts/free-tier-ranks.py 2>&1 | tee "$RUNNER_TEMP/ranks.txt" | python3 scripts/public-log-filter.py --safe-lines
           rc=${PIPESTATUS[0]}
           echo "exit=$rc" >> "$RUNNER_TEMP/ranks.txt"
           exit $rc
