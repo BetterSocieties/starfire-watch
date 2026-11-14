@@ -115,6 +115,9 @@ jobs:
           # the free classifier chain (a key that is empty is skipped); no model key or answer text is ever printed
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # owner alerts (a reply waiting for a person, a channel paused, a first 5 chase that ended): sent to Slack only when the
+          # repository variable OJ_FUNNEL_ALERTS is exactly on; the Slack token is read from the vault by the sender itself
+          OJ_FUNNEL_ALERTS: ${{ vars.OJ_FUNNEL_ALERTS == 'on' && 'on' || 'off' }}
           # the schedule has no inputs: its mode is the repository variable (unset means dry); a manual run is live only
           # when mode is exactly live
           MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
