@@ -63,7 +63,7 @@ jobs:
         working-directory: core
         run: |
           set -o pipefail
-          python3 scripts/test-oj-reply-unsubscribe-sweep.py 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+          python3 scripts/test-oj-reply-unsubscribe-sweep.py 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
       - name: Claude CLI (only when the token exists)
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         run: npm install -g @anthropic-ai/claude-code@2.1.302 >/dev/null 2>&1 && claude --version
@@ -78,9 +78,9 @@ jobs:
           ARGS="--apply"; [ "$DRY_RUN" = "true" ] && ARGS=""
           scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- \
             python3 scripts/vault-get.py OJ_REST_KEY --into OJ_REST_KEY -- \
-            python3 scripts/oj-reply-unsubscribe-sweep.py $ARGS 2>&1 | tee "$RUNNER_TEMP/sweep.txt" | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-reply-unsubscribe-sweep.py $ARGS 2>&1 | tee "$RUNNER_TEMP/sweep.txt" | python3 scripts/public-log-filter.py --safe-lines --counts
           rc=${PIPESTATUS[0]}
-          { echo '### Reply unsubscribe sweep'; echo '```'; python3 scripts/public-log-filter.py --safe-lines < "$RUNNER_TEMP/sweep.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Reply unsubscribe sweep'; echo '```'; python3 scripts/public-log-filter.py --safe-lines --counts < "$RUNNER_TEMP/sweep.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
       - name: Page Slack if the run failed
         if: failure()
@@ -89,4 +89,4 @@ jobs:
           # if the vault or the ledger is down the second form still posts, because silence is worse than a duplicate
           set -o pipefail
           { scripts/with-vault-env.sh OJ_REST_KEY -- python3 scripts/oj-reply-unsubscribe-sweep.py --page-failure || \
-            python3 scripts/oj-reply-unsubscribe-sweep.py --page-failure; } 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-reply-unsubscribe-sweep.py --page-failure; } 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
