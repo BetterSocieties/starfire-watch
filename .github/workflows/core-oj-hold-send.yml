@@ -72,7 +72,7 @@ jobs:
         working-directory: core
         run: |
           set -o pipefail
-          python3 scripts/oj-hold-send.py --self-test 2>&1 | tail -n 1 | python3 scripts/public-log-filter.py --safe-lines
+          python3 scripts/oj-hold-send.py --self-test 2>&1 | tail -n 1 | python3 scripts/public-log-filter.py --safe-lines --counts
       - name: Send
         working-directory: core
         env:
