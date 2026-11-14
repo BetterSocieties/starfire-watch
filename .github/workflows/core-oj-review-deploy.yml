@@ -61,7 +61,7 @@ jobs:
             cd workers/oj-review
             npx --yes wrangler@4.160.1 deploy >> "$RUNNER_TEMP/deploy.log" 2>&1
             printf "%s" "$OJ_REVIEW_TOKEN" | npx --yes wrangler@4.160.1 secret put OJ_REVIEW_TOKEN >> "$RUNNER_TEMP/deploy.log" 2>&1
-          ' || rc=$?
+          ' 2>&1 | python3 scripts/public-log-filter.py --safe-lines; rc=${PIPESTATUS[0]}
           if [ $rc -eq 0 ]; then
             echo "deploy: ok"
           else
@@ -76,7 +76,7 @@ jobs:
           bash scripts/with-vault-env.sh CLOUDFLARE_WORKERS_TOKEN -- bash -c '
             export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_WORKERS_TOKEN"
             python3 scripts/check-worker-secrets-bound.py oj-review > "$RUNNER_TEMP/secret-check.log" 2>&1
-          ' || rc=$?
+          ' 2>&1 | python3 scripts/public-log-filter.py --safe-lines; rc=${PIPESTATUS[0]}
           if [ $rc -eq 0 ]; then
             echo "secret bound: yes"
           else
@@ -94,5 +94,6 @@ jobs:
             code_with_token=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --get --data-urlencode "t=$OJ_REVIEW_TOKEN" "https://oj-review.dark-wildflower-46d6.workers.dev/list" || true)
             echo "live with token: $code_with_token"
             [ "$code_with_token" = "200" ] || exit 1
-          '
+          ' 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+          [ "${PIPESTATUS[0]}" = "0" ] || exit 1
           [ "$code_no_token" = "404" ] || exit 1
