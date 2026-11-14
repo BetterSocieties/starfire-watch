@@ -60,11 +60,11 @@ jobs:
             exit 1
           fi
           if ! python3 scripts/free-judge-benchmark.py --self-test > "$RUNNER_TEMP/selftest.txt" 2>&1; then
-            tail -5 "$RUNNER_TEMP/selftest.txt"
+            tail -5 "$RUNNER_TEMP/selftest.txt" | python3 scripts/public-log-filter.py --safe-lines
             echo "::error::free-judge-benchmark.py self-test failed; the benchmark is not run"
             exit 1
           fi
-          python3 scripts/free-judge-benchmark.py 2>&1 | tee "$RUNNER_TEMP/bench.txt"
+          python3 scripts/free-judge-benchmark.py 2>&1 | tee "$RUNNER_TEMP/bench.txt" | python3 scripts/public-log-filter.py --safe-lines
           rc=${PIPESTATUS[0]}
           echo "exit=$rc" >> "$RUNNER_TEMP/bench.txt"
           if git diff --quiet STATE/free-judge-benchmark.json; then
