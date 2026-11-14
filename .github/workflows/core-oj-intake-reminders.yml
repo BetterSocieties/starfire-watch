@@ -1,21 +1,21 @@
-# Remind paying OpsJuice buyers to fill in https://opsjuice.com/intake, on day 2, 4 and 7
-# after the assessment payment, until their intake row exists. Code: scripts/oj-intake-reminders.py
-# in starfire-core.
-#
-# THE SEND FLAG IS OFF. Nothing is mailed unless the repository variable
-# OJ_INTAKE_REMINDERS_SEND is set to "on" (Settings, Secrets and variables, Actions, Variables).
-# Until then every run is a dry run that prints how many buyers it would remind, with the
-# addresses masked. Mail leaves only through the oj-events Worker send door as transactional
-# mail; this job holds no mail key.
-#
-# WHY IT IS IN THIS REPOSITORY AND NOT IN starfire-core. GitHub meters Actions minutes on
-# PRIVATE repositories only, and starfire-core is private. This one is PUBLIC, so the log is
-# world readable: the job prints counts and masked addresses, never a key.
+# Reminds OpsJuice buyers who paid for an assessment and have not filled in the intake form (day 2, 4 and 7), once a day at 14:10 UTC.
+# The script reads the ledger in Cloudflare D1 and mails through the oj-events send door; the log shows counts only
+# (`intake: reminders due=N sent=N skipped=N failed=N dry=N status=...`). Nothing is mailed until the repository variable OJ_INTAKE_REMINDERS_LIVE is on (and OJ_INTAKE_REMINDERS_START holds the first day it may mail); with the variable unset every run is a dry run. A manual run is also a dry run unless dry_run is unticked.
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-intake-reminders.yml (the repo that gets scheduled runners).
 name: core-oj-intake-reminders
-on:
+"on":
   schedule:
-    - cron: "11 15 * * *"
-  workflow_dispatch: {}
+    - cron: "10 14 * * *"
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+      dry_run:
+        description: "Dry run: read and count only, send nothing"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -28,28 +28,58 @@ jobs:
   remind:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      TWIN_REF: ${{ inputs.core_ref || 'main' }}
     steps:
-      - name: Checkout starfire-core (the repository the job lives in)
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
-          ref: main
           token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
           path: core
           fetch-depth: 1
-
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          twin=core/ops/watch-twin/core-oj-intake-reminders.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-intake-reminders.yml
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Remind buyers whose intake form is still open
+      - name: Intake reminders
         working-directory: core
         env:
-          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
-          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
-          OJ_INTAKE_REMINDERS_SEND: ${{ vars.OJ_INTAKE_REMINDERS_SEND }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
         run: |
-          set -eo pipefail
-          scripts/with-vault-env.sh OJ_SUPABASE_URL OJ_SUPABASE_SERVICE_ROLE OJ_WORKER_SEND_TOKEN -- \
-            python3 scripts/oj-intake-reminders.py | tee "$RUNNER_TEMP/intake.txt"
-          { echo '### Intake reminders'; echo '```'; cat "$RUNNER_TEMP/intake.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          set -uo pipefail
+          DRY_RUN="${{ inputs.dry_run }}"
+          LIVE_VAR="${{ vars.OJ_INTAKE_REMINDERS_LIVE }}"
+          START="${{ vars.OJ_INTAKE_REMINDERS_START }}"
+          DETAIL="$RUNNER_TEMP/intake-reminders-detail.txt"
+          # Mail goes out only when the repository variable OJ_INTAKE_REMINDERS_LIVE is exactly on AND the run is not a dry run (a scheduled run has
+          # no dry_run input, so it is live only with the variable). With the variable unset every run, scheduled or manual, is a dry run.
+          # A live run also needs OJ_INTAKE_REMINDERS_START (YYYY-MM-DD, the first day it may mail): the script refuses to send without it.
+          # The by-reason detail goes to a file on the runner, never to the log.
+          # the script's exit code (0 done, 1 a send failed, 2 the ledger could not be read) decides the step, not the filter's
+          if [ "$DRY_RUN" = "true" ] || [ "$LIVE_VAR" != "on" ]; then
+            python3 scripts/oj-intake-reminders.py --dry-run --detail-file "$DETAIL" ${START:+--not-before "$START"} 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+            rc=${PIPESTATUS[0]}
+          else
+            OJ_INTAKE_REMINDERS_SEND=on scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- python3 scripts/oj-intake-reminders.py --not-before "$START" --detail-file "$DETAIL" 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+            rc=${PIPESTATUS[0]}
+          fi
+          echo "exit_code=$rc"
+          exit $rc
+      - name: Page Slack if a live run failed
+        # never on a dry run: only a run that was allowed to mail (variable on, not a dry_run dispatch) can leave a buyer unreminded
+        if: failure() && inputs.dry_run != true && vars.OJ_INTAKE_REMINDERS_LIVE == 'on'
+        working-directory: core
+        run: |
+          set -uo pipefail
+          python3 scripts/oj-intake-reminders.py --page-failure 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+          exit ${PIPESTATUS[0]}
