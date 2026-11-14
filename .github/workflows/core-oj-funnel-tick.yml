@@ -1,5 +1,6 @@
 # Runs one tick of the OpsJuice outreach funnel every 15 minutes with no Mac involved: python3 scripts/oj-funnel.py tick.
-# The schedule runs live; a manual run is a dry run unless mode is set to live. The log shows counts only: the tick's full output goes to a file
+# The schedule runs in the mode the repository variable OJ_FUNNEL_SCHEDULE_MODE names (live or dry; unset means dry);
+# a manual run is a dry run unless mode is set to live. The log shows counts only: the tick's full output goes to a file
 # that is never uploaded, and only its lines that start with "funnel:" are printed (a line holding an at sign is counted, not shown).
 #
 # Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-funnel-tick.yml (the repo that runs private-repo jobs in the cloud).
@@ -92,8 +93,9 @@ jobs:
           OJ_SENDER_PHONE: "602-600-0351"
           OJ_SENDER_LAST_NAME: OpsJuice
           OJ_SENDER_COMPANY: OpsJuice
-          # the schedule has no inputs, so it runs live; a manual run is live only when mode is exactly live
-          MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
+          # the schedule has no inputs: its mode is the repository variable (unset means dry); a manual run is live only
+          # when mode is exactly live
+          MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
         run: |
           # the runner starts bash with -e; turn it off so a failed tick still prints its counts before exit $rc
           set +e -uo pipefail
@@ -117,7 +119,7 @@ jobs:
         working-directory: core
         timeout-minutes: 9
         env:
-          MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
+          MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
         run: |
           # finds the first name and the contact form address for the next batch of prospects (one segment, one city)
           set +e -uo pipefail
