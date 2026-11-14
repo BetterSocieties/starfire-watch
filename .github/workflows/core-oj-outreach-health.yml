@@ -56,7 +56,7 @@ jobs:
         # The script's own self-test: standard library only, in-memory database, no network.
         run: |
           set -o pipefail
-          python3 scripts/oj-outreach-health.py --self-test 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+          python3 scripts/oj-outreach-health.py --self-test 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
       - name: Health check
         working-directory: core
         env:
@@ -66,10 +66,10 @@ jobs:
           set -uo pipefail
           DRY_RUN="${{ inputs.dry_run }}"
           if [ "$DRY_RUN" = "true" ]; then
-            python3 scripts/oj-outreach-health.py --dry-run 2>&1 | tee "$RUNNER_TEMP/health.txt" | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-outreach-health.py --dry-run 2>&1 | tee "$RUNNER_TEMP/health.txt" | python3 scripts/public-log-filter.py --safe-lines --counts
           else
-            python3 scripts/oj-outreach-health.py 2>&1 | tee "$RUNNER_TEMP/health.txt" | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-outreach-health.py 2>&1 | tee "$RUNNER_TEMP/health.txt" | python3 scripts/public-log-filter.py --safe-lines --counts
           fi
           rc=${PIPESTATUS[0]}
-          { echo '### Outreach Health Check'; echo '```'; python3 scripts/public-log-filter.py --safe-lines < "$RUNNER_TEMP/health.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Outreach Health Check'; echo '```'; python3 scripts/public-log-filter.py --safe-lines --counts < "$RUNNER_TEMP/health.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
