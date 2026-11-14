@@ -50,7 +50,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           rc=0
-          python3 scripts/vault-get.py OPENPROJECT_LOCAL_API_KEY --into OPK -- sh -c 'python3 scripts/openproject-mirror/mirror.py > "$RUNNER_TEMP/mirror.log" 2>&1' || rc=$?
-          if [ -f "$RUNNER_TEMP/mirror.log" ]; then tail -n 2 "$RUNNER_TEMP/mirror.log" | grep -v add-mask || true; fi
+          python3 scripts/vault-get.py OPENPROJECT_LOCAL_API_KEY --into OPK -- sh -c 'python3 scripts/openproject-mirror/mirror.py > "$RUNNER_TEMP/mirror.log" 2>&1' 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+          rc=${PIPESTATUS[0]}
+          if [ -f "$RUNNER_TEMP/mirror.log" ]; then tail -n 2 "$RUNNER_TEMP/mirror.log" | python3 scripts/public-log-filter.py --safe-lines || true; fi
           if [ $rc -eq 0 ]; then echo "plan mirror: ok"; else echo "plan mirror: failed (exit $rc)"; fi
           exit $rc
