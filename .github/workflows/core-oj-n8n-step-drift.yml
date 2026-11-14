@@ -1,29 +1,38 @@
-# Deadman for OpsJuice n8n step drift: every scheduled run checks that every live n8n step
-# still matches its source file. The script scripts/check-live-step-matches-its-source.py in
-# starfire-core finds any drift; this workflow runs it in the cloud and alerts Slack if drift
-# is detected. The code lives in starfire-core and is checked out with GH_PAT.
-
+# Checks once a day that every live OpsJuice automation step still matches the source file it was shipped from.
+# The public log shows one line (status and counts only); step names appear only in the alert sent to the private chat.
+# Exit codes of the script: 0 pass, 1 drift, 2 platform unreachable, 3 unreadable steps, 4 uncovered deploy script;
+# no RESULT line at all means the vault wrapper failed or the script crashed before it finished.
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-n8n-step-drift.yml (the repo that runs private-repo jobs in the cloud).
 name: core-oj-n8n-step-drift
-
-on:
+"on":
   schedule:
     - cron: "25 0 * * *"
   workflow_dispatch:
     inputs:
       core_ref:
-        description: "starfire-core ref the script is checked out from; scheduled runs use main"
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
         type: string
         default: main
 
 permissions:
   contents: read
 
+concurrency:
+  group: core-oj-n8n-step-drift
+  cancel-in-progress: false
+
 jobs:
   drift:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      N8N_URL: https://n8n.opsjuice.com
     steps:
-      - name: Checkout starfire-core (the repository the script lives in)
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
         uses: actions/checkout@v4
         with:
           repository: BetterSocieties/starfire-core
@@ -31,38 +40,65 @@ jobs:
           ref: ${{ inputs.core_ref || 'main' }}
           path: core
           fetch-depth: 1
-
+      - name: This copy is byte-identical to its twin in starfire-core
+        env:
+          TWIN_REF: ${{ inputs.core_ref || 'main' }}
+        run: |
+          twin=core/ops/watch-twin/core-oj-n8n-step-drift.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-n8n-step-drift.yml
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Does every live step match its source
+      - name: Drift check
         working-directory: core
-        env:
-          STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
-          STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
-          N8N_URL: https://n8n.opsjuice.com
         run: |
-          set -uo pipefail
+          # GitHub starts this shell with -e, which ended the step at the first failing command before its code
+          # could be read, so the reason never reached the log. Turn it off and decide by the code and the RESULT line.
+          set +e
+          out="$RUNNER_TEMP/drift.txt"
           scripts/with-vault-env.sh N8N_POD_API_KEY -- \
-            bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py' > "$RUNNER_TEMP/drift.txt" 2>&1
+            bash -c 'N8N_API_KEY="$N8N_POD_API_KEY" python3 scripts/check-live-step-matches-its-source.py' > "$out" 2>&1
           rc=$?
-          grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" | head -20
-          tail -3 "$RUNNER_TEMP/drift.txt"
-          if grep -q '^DRIFT' "$RUNNER_TEMP/drift.txt"; then exit 1; fi
-          if [ "$rc" -eq 2 ]; then echo "platform unreachable"; exit 1; fi
-          exit 0
-
-      - name: Tell Slack which steps drifted
-        if: failure()
-        run: |
-          drift_lines=$(grep -E '^DRIFT' "$RUNNER_TEMP/drift.txt" | head -5)
-          if [ -n "$drift_lines" ]; then
-            text=$(printf 'OpsJuice n8n step drift detected:\n%s\nThe next deploy of that step would overwrite the live version; write the live code back into its source file first.' "$drift_lines")
+          steps=$(grep -cE '^(OK  |DRIFT)' "$out" 2>/dev/null)
+          drifted=$(grep -c '^DRIFT' "$out" 2>/dev/null)
+          unread=$(grep -c '^UNREADABLE' "$out" 2>/dev/null)
+          if grep -q '^RESULT ' "$out" 2>/dev/null; then
+            case "$rc" in
+              0) status=pass ;;
+              1) status=drift ;;
+              2) status=unreachable ;;
+              3) status=unreadable ;;
+              4) status=uncovered ;;
+              *) status=vault_failed ;;
+            esac
+          elif grep -q '^Traceback' "$out" 2>/dev/null; then
+            status=crashed
           else
-            text='OpsJuice n8n step drift check: the automation platform could not be read'
+            status=vault_failed
           fi
-          text=$(printf '%s\n%s/%s/actions/runs/%s' "$text" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
-          jq -n --arg text "$text" '{channel: "C0BLV397CH4", text: $text, repeat_ok: false}' |
-            curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json; charset=utf-8' \
-              --data @- https://n8n.opsjuice.com/webhook/starfire-alert-relay
+          line="drift: check status=$status steps=${steps:-0} drifted=${drifted:-0} unreadable=${unread:-0} exit=$rc"
+          echo "$line"
+          echo "$line" > "$RUNNER_TEMP/drift-status.txt"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "$line" >> "$GITHUB_STEP_SUMMARY"; fi
+          [ "$status" = "pass" ] || exit 1
+      - name: Alert the private chat if the check failed
+        if: failure()
+        working-directory: core
+        run: |
+          # The chat is private, so this is the only place step names may appear.
+          msg="$RUNNER_TEMP/drift-msg.txt"
+          {
+            echo "OpsJuice n8n step drift check failed."
+            cat "$RUNNER_TEMP/drift-status.txt" 2>/dev/null
+            grep -E '^(DRIFT|UNREADABLE)' "$RUNNER_TEMP/drift.txt" 2>/dev/null | head -5
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > "$msg"
+          jq -n --arg channel C0BLV397CH4 --rawfile text "$msg" '{channel: $channel, text: $text}' > "$RUNNER_TEMP/drift-payload.json"
+          if curl -fsS --max-time 30 -o /dev/null -H 'Content-Type: application/json' \
+            --data @"$RUNNER_TEMP/drift-payload.json" \
+            https://n8n.opsjuice.com/webhook/starfire-alert-relay 2>/dev/null; then
+            echo "drift: alert status=sent"
+          else
+            echo "drift: alert status=failed"
+          fi
