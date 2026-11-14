@@ -71,8 +71,9 @@ jobs:
       - name: Self-test
         working-directory: core
         run: |
-          set -o pipefail
-          python3 scripts/oj-hold-send.py --self-test 2>&1 | tail -n 1 | python3 scripts/public-log-filter.py --safe-lines --counts
+          rc=0; python3 scripts/oj-hold-send.py --self-test > "$RUNNER_TEMP/selftest.txt" 2>&1 || rc=$?
+          python3 scripts/public-log-filter.py --selftest-line hold_send --rc "$rc" < "$RUNNER_TEMP/selftest.txt"
+          [ "$rc" -eq 0 ] || exit 1
       - name: Send
         working-directory: core
         env:
