@@ -1,0 +1,76 @@
+# Answers waiting OpsJuice replies now: python3 scripts/oj-funnel.py reply. It is woken by the opsjuice-email-receiver Worker
+# (a workflow dispatch right after a reply is recorded) and has no schedule; the 15 minute tick is the safety net for a missed wake.
+# Mode is the repository variable OJ_REPLY_LANE_MODE: exactly live sends and writes, anything else (or unset) is a dry run.
+# The log shows counts only: the full output goes to a file that is never uploaded, and only its lines that start with
+# "funnel:" are printed (a line holding an at sign is counted, not shown).
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-funnel-reply.yml (the repo that runs private-repo jobs in the cloud).
+name: core-oj-funnel-reply
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-reply
+  cancel-in-progress: false
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: main
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # a twin that is not on main is a failure, because a copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-oj-funnel-reply.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref main: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-funnel-reply.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reply
+        working-directory: core
+        env:
+          OJ_SENDER_NAME: Adrien
+          OJ_SENDER_EMAIL: info@opsjuice.com
+          OJ_SENDER_PHONE: "602-600-0351"
+          OJ_SENDER_LAST_NAME: OpsJuice
+          OJ_SENDER_COMPANY: OpsJuice
+          # the free classifier chain (a key that is empty is skipped); no model key or answer text is ever printed
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # live only when the repository variable is exactly live
+          MODE: ${{ vars.OJ_REPLY_LANE_MODE == 'live' && 'live' || 'dry' }}
+        run: |
+          # the runner starts bash with -e; turn it off so a failed run still prints its counts before exit $rc
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/funnel-reply.out"
+          if [ "$MODE" = "live" ]; then
+            # the answer door token is read from the vault into this one command's environment, as in the tick job
+            scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- python3 scripts/oj-funnel.py reply --live >"$out" 2>&1
+          else
+            python3 scripts/oj-funnel.py reply >"$out" 2>&1
+          fi
+          rc=$?
+          # counts only: the output can hold prospect names, addresses and message text, so it is filtered and never shown whole
+          echo "mode=$MODE exit_code=$rc"
+          echo "output_lines=$(wc -l <"$out" | tr -d ' ')"
+          echo "funnel_lines=$(grep -c '^funnel:' "$out")"
+          echo "funnel_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
+          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          rm -f "${out:?}"
+          exit $rc
