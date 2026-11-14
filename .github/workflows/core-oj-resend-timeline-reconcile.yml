@@ -52,12 +52,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # The mutants script (scripts/mutants-oj-resend-timeline-reconcile.py) is not run here: its baseline needs the
+      # Worker's node_modules and each mutant rebuilds a tree and runs node tests, too heavy and fragile for a twice-daily
+      # job. It belongs in starfire-core's own test workflow.
       - name: Fixture tests
         working-directory: core
         run: |
           set -o pipefail
-          python3 scripts/test-oj-resend-timeline-reconcile.py 2>&1 | python3 scripts/public-log-filter.py --safe-lines
-          python3 scripts/mutants-oj-resend-timeline-reconcile.py 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+          python3 scripts/test-oj-resend-timeline-reconcile.py 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
       - name: Reconcile
         working-directory: core
         env:
@@ -68,9 +70,9 @@ jobs:
           set -uo pipefail
           ARGS=""; [ "$DRY_RUN" = "true" ] && ARGS="--dry-run"
           scripts/with-vault-env.sh RESEND_API_KEY OJ_WORKER_SEND_TOKEN OJ_REST_KEY -- \
-            python3 scripts/oj-resend-timeline-reconcile.py $ARGS 2>&1 | tee "$RUNNER_TEMP/rtl.txt" | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-resend-timeline-reconcile.py $ARGS 2>&1 | tee "$RUNNER_TEMP/rtl.txt" | python3 scripts/public-log-filter.py --safe-lines --counts
           rc=${PIPESTATUS[0]}
-          { echo '### Resend timeline reconcile'; echo '```'; python3 scripts/public-log-filter.py --safe-lines < "$RUNNER_TEMP/rtl.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### Resend timeline reconcile'; echo '```'; python3 scripts/public-log-filter.py --safe-lines --counts < "$RUNNER_TEMP/rtl.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $rc
       - name: Page Slack if the run failed
         if: failure()
@@ -83,4 +85,4 @@ jobs:
           set -o pipefail
           { scripts/with-vault-env.sh OJ_REST_KEY -- \
             python3 scripts/oj-resend-timeline-reconcile.py --page-failure "$RUNNER_TEMP/rtl.txt" || \
-            python3 scripts/oj-resend-timeline-reconcile.py --page-failure "$RUNNER_TEMP/rtl.txt"; } 2>&1 | python3 scripts/public-log-filter.py --safe-lines
+            python3 scripts/oj-resend-timeline-reconcile.py --page-failure "$RUNNER_TEMP/rtl.txt"; } 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
