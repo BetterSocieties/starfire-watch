@@ -61,16 +61,18 @@ jobs:
           LIVE_VAR="${{ vars.OJ_INTAKE_REMINDERS_LIVE }}"
           START="${{ vars.OJ_INTAKE_REMINDERS_START }}"
           DETAIL="$RUNNER_TEMP/intake-reminders-detail.txt"
+          # the start date goes in by environment, not by flag: it may stay unchanged for ever (the payment age window bounds who is due)
+          export OJ_INTAKE_REMINDERS_START="$START"
           # Mail goes out only when the repository variable OJ_INTAKE_REMINDERS_LIVE is exactly on AND the run is not a dry run (a scheduled run has
           # no dry_run input, so it is live only with the variable). With the variable unset every run, scheduled or manual, is a dry run.
           # A live run also needs OJ_INTAKE_REMINDERS_START (YYYY-MM-DD, the first day it may mail): the script refuses to send without it.
           # The by-reason detail goes to a file on the runner, never to the log.
           # the script's exit code (0 done, 1 a send failed, 2 the ledger could not be read) decides the step, not the filter's
           if [ "$DRY_RUN" = "true" ] || [ "$LIVE_VAR" != "on" ]; then
-            python3 scripts/oj-intake-reminders.py --dry-run --detail-file "$DETAIL" ${START:+--not-before "$START"} 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+            python3 scripts/oj-intake-reminders.py --dry-run --detail-file "$DETAIL" 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
             rc=${PIPESTATUS[0]}
           else
-            OJ_INTAKE_REMINDERS_SEND=on scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- python3 scripts/oj-intake-reminders.py --not-before "$START" --detail-file "$DETAIL" 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
+            OJ_INTAKE_REMINDERS_SEND=on scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- python3 scripts/oj-intake-reminders.py --detail-file "$DETAIL" 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
             rc=${PIPESTATUS[0]}
           fi
           echo "exit_code=$rc"
