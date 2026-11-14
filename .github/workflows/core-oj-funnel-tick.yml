@@ -1,0 +1,134 @@
+# Runs one tick of the OpsJuice outreach funnel every 15 minutes with no Mac involved: python3 scripts/oj-funnel.py tick.
+# The schedule runs live; a manual run is a dry run unless mode is set to live. The log shows counts only: the tick's full output goes to a file
+# that is never uploaded, and only its lines that start with "funnel:" are printed (a line holding an at sign is counted, not shown).
+#
+# Twin for BetterSocieties/starfire-watch/.github/workflows/core-oj-funnel-tick.yml (the repo that runs private-repo jobs in the cloud).
+name: core-oj-funnel-tick
+"on":
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry reads and reports only; live really sends and writes"
+        type: choice
+        options: ["dry", "live"]
+        default: "dry"
+      core_ref:
+        description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
+        type: string
+        default: main
+      backfill_advances:
+        description: "one-off: map this many stage moves of prospects with history before the tick (0 = none)"
+        type: string
+        default: "0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-oj-funnel-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      STARFIRE_VAULT_URL: https://starfire-vault.dark-wildflower-46d6.workers.dev
+      STARFIRE_VAULT_BEARER: ${{ secrets.VAULT_BEARER }}
+      TWIN_REF: ${{ inputs.core_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout starfire-core
+        uses: actions/checkout@v4
+        with:
+          repository: BetterSocieties/starfire-core
+          token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.core_ref || 'main' }}
+          path: core
+          fetch-depth: 1
+      - name: This copy is byte-identical to its twin in starfire-core
+        run: |
+          # a twin that is not on the ref is a failure, because a copy nobody compares against could drift unseen
+          twin=core/ops/watch-twin/core-oj-funnel-tick.yml
+          if [ ! -f "$twin" ]; then echo "::error::no $twin at starfire-core ref $TWIN_REF: merge the starfire-core PR that carries the twin first"; exit 1; fi
+          diff -u "$twin" .github/workflows/core-oj-funnel-tick.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the browser the contact form step uses
+        working-directory: core
+        run: |
+          set -eo pipefail
+          if [ -f package-lock.json ]; then npm ci >/dev/null 2>&1; fi
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Backfill history (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.backfill_advances != '0' && inputs.backfill_advances != ''
+        working-directory: core
+        env:
+          ADVANCES: ${{ inputs.backfill_advances }}
+        run: |
+          # counts only: the backfill's lines name no prospect, but they are filtered the same way as the tick's
+          set +e -uo pipefail
+          case "$ADVANCES" in ''|*[!0-9]*) echo "::error::backfill_advances must be a whole number"; exit 1;; esac
+          out="$RUNNER_TEMP/funnel-backfill.out"
+          python3 scripts/oj-funnel.py backfill --live --max-advances "$ADVANCES" >"$out" 2>&1
+          rc=$?
+          echo "backfill exit_code=$rc"
+          grep '^\[backfill\]' "$out" | grep -v '@' | grep -v 'failed:' | cut -c1-160
+          echo "backfill_failed_lines=$(grep -c 'failed:' "$out")"
+          rm -f "${out:?}"
+          exit $rc
+      - name: Tick
+        working-directory: core
+        env:
+          # the database token is minted through the vault (STARFIRE_VAULT_BEARER above), as in core-oj-hold-send
+          OJ_SENDER_NAME: Adrien
+          OJ_SENDER_EMAIL: info@opsjuice.com
+          OJ_SENDER_PHONE: "602-600-0351"
+          OJ_SENDER_LAST_NAME: OpsJuice
+          OJ_SENDER_COMPANY: OpsJuice
+          # the schedule has no inputs, so it runs live; a manual run is live only when mode is exactly live
+          MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
+        run: |
+          # the runner starts bash with -e; turn it off so a failed tick still prints its counts before exit $rc
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/funnel-tick.out"
+          if [ "$MODE" = "live" ]; then
+            python3 scripts/oj-funnel.py tick --live >"$out" 2>&1
+          else
+            python3 scripts/oj-funnel.py tick >"$out" 2>&1
+          fi
+          rc=$?
+          # counts only: the output can hold prospect names, addresses and message text, so it is filtered and never shown whole
+          echo "mode=$MODE exit_code=$rc"
+          echo "output_lines=$(wc -l <"$out" | tr -d ' ')"
+          echo "funnel_lines=$(grep -c '^funnel:' "$out")"
+          echo "funnel_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
+          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          rm -f "$out"
+          exit $rc
+      - name: Enrich
+        if: always()
+        working-directory: core
+        timeout-minutes: 9
+        env:
+          MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.mode }}
+        run: |
+          # finds the first name and the contact form address for the next batch of prospects (one segment, one city)
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/funnel-enrich.out"
+          if [ "$MODE" = "live" ]; then
+            python3 scripts/oj_funnel_enrich.py --live >"$out" 2>&1
+          else
+            python3 scripts/oj_funnel_enrich.py --live --dry-run >"$out" 2>&1
+          fi
+          rc=$?
+          echo "mode=$MODE exit_code=$rc"
+          grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
+          rm -f "${out:?}"
+          exit $rc
