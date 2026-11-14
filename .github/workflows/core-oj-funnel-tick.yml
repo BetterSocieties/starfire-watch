@@ -19,6 +19,10 @@ name: core-oj-funnel-tick
         description: "starfire-core ref (branch, tag or SHA) the scripts are checked out from"
         type: string
         default: main
+      classifier_check:
+        description: "first try each free model alone on one made-up reply and print one line each (never on the schedule)"
+        type: boolean
+        default: false
       backfill_advances:
         description: "one-off: map this many stage moves of prospects with history before the tick (0 = none)"
         type: string
@@ -84,6 +88,22 @@ jobs:
           echo "backfill_failed_lines=$(grep -c 'failed:' "$out")"
           rm -f "${out:?}"
           exit $rc
+      - name: Classifier check (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.classifier_check
+        working-directory: core
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set +e -uo pipefail
+          out="$RUNNER_TEMP/classifier-check.out"
+          python3 scripts/oj-funnel.py classifier-check >"$out" 2>&1
+          rc=$?
+          echo "exit_code=$rc"
+          grep '^funnel: classifier' "$out" | cut -c1-160
+          rm -f "${out:?}"
+          exit $rc
       - name: Tick
         working-directory: core
         env:
@@ -93,6 +113,10 @@ jobs:
           OJ_SENDER_PHONE: "602-600-0351"
           OJ_SENDER_LAST_NAME: OpsJuice
           OJ_SENDER_COMPANY: OpsJuice
+          # the free classifier chain (a key that is empty is skipped); no model key or answer text is ever printed
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # the schedule has no inputs: its mode is the repository variable (unset means dry); a manual run is live only
           # when mode is exactly live
           MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
@@ -101,7 +125,8 @@ jobs:
           set +e -uo pipefail
           out="$RUNNER_TEMP/funnel-tick.out"
           if [ "$MODE" = "live" ]; then
-            python3 scripts/oj-funnel.py tick --live >"$out" 2>&1
+            # the answer door token is read from the vault into this one command's environment, as in core-oj-reply-unsub-sweep
+            scripts/with-vault-env.sh OJ_WORKER_SEND_TOKEN -- python3 scripts/oj-funnel.py tick --live >"$out" 2>&1
           else
             python3 scripts/oj-funnel.py tick >"$out" 2>&1
           fi
