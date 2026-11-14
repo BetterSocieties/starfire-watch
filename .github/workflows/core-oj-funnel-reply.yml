@@ -53,6 +53,9 @@ jobs:
           # the free classifier chain (a key that is empty is skipped); no model key or answer text is ever printed
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # owner alerts (a reply waiting for a person, a channel paused, a first 5 chase that ended): sent to Slack only when the
+          # repository variable OJ_FUNNEL_ALERTS is exactly on; the Slack token is read from the vault by the sender itself
+          OJ_FUNNEL_ALERTS: ${{ vars.OJ_FUNNEL_ALERTS == 'on' && 'on' || 'off' }}
           # live only when the repository variable is exactly live
           MODE: ${{ vars.OJ_REPLY_LANE_MODE == 'live' && 'live' || 'dry' }}
         run: |
