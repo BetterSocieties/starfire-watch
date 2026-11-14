@@ -137,6 +137,43 @@ jobs:
           grep '^funnel:' "$out" | grep -v '@' | cut -c1-160
           rm -f "$out"
           exit $rc
+      - name: Reply speed guard
+        if: always()
+        working-directory: core
+        timeout-minutes: 3
+        env:
+          MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
+        run: |
+          # read only, so it runs in both modes and even after a failed tick (a failed tick is when replies wait); the database
+          # token is minted through the vault as in the Tick step. On the schedule it runs once an hour (the run that starts
+          # in the first quarter hour), because one run reads a few thousand rows and 96 runs a day would spend the daily allowance.
+          set +e -uo pipefail
+          minute=$(date -u +%M)
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "$((10#$minute))" -ge 15 ]; then
+            echo "guard skipped: scheduled run outside the hourly slot (minute $minute)"
+            exit 0
+          fi
+          out="$RUNNER_TEMP/funnel-guard.out"
+          python3 scripts/oj_funnel_latency_guard.py >"$out" 2>&1
+          rc=$?
+          # counts only: a line with an at sign is counted, not shown
+          lines=$(grep -c '^funnel:' "$out")
+          echo "mode=$MODE guard_exit_code=$rc"
+          echo "guard_lines=$lines"
+          echo "guard_lines_hidden=$(grep '^funnel:' "$out" | grep -c '@')"
+          grep '^funnel:' "$out" | grep -v '@' | cut -c1-400
+          rm -f "${out:?}"
+          if [ "$rc" -eq 0 ] && [ "$lines" -eq 0 ]; then
+            echo "::error::reply speed guard printed nothing, so nothing was judged"
+            exit 2
+          fi
+          if [ "$rc" -eq 0 ]; then exit 0; fi
+          if [ "$rc" -eq 1 ]; then
+            echo "::error::reply speed breach: replies are seen or answered too slowly, or a positive reply is unanswered past its limit"
+            exit 1
+          fi
+          echo "::error::reply speed guard could not read the database (exit $rc), so replies were not judged"
+          exit 2
       - name: Enrich
         if: always()
         working-directory: core
