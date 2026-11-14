@@ -59,12 +59,13 @@ jobs:
             echo "STARFIRE_VAULT_BEARER secret is missing"
             exit 1
           fi
-          if ! python3 scripts/free-judge-benchmark.py --self-test > "$RUNNER_TEMP/selftest.txt" 2>&1; then
-            tail -5 "$RUNNER_TEMP/selftest.txt" | python3 scripts/public-log-filter.py --safe-lines
+          strc=0; python3 scripts/free-judge-benchmark.py --self-test > "$RUNNER_TEMP/selftest.txt" 2>&1 || strc=$?
+          python3 scripts/public-log-filter.py --selftest-line free_judge --rc "$strc" < "$RUNNER_TEMP/selftest.txt"
+          if [ "$strc" -ne 0 ]; then
             echo "::error::free-judge-benchmark.py self-test failed; the benchmark is not run"
             exit 1
           fi
-          python3 scripts/free-judge-benchmark.py 2>&1 | tee "$RUNNER_TEMP/bench.txt" | python3 scripts/public-log-filter.py --safe-lines
+          python3 scripts/free-judge-benchmark.py 2>&1 | tee "$RUNNER_TEMP/bench.txt" | python3 scripts/public-log-filter.py --safe-lines --counts
           rc=${PIPESTATUS[0]}
           echo "exit=$rc" >> "$RUNNER_TEMP/bench.txt"
           if git diff --quiet STATE/free-judge-benchmark.json; then
@@ -86,11 +87,12 @@ jobs:
         if: success()
         working-directory: core
         run: |
+          set -o pipefail
           git config user.name "starfire-free-judge-benchmark-refresh"
           git config user.email "info@bettersocieties.world"
           git add STATE/free-judge-benchmark.json
           git commit -m "chore: free judge benchmark refresh from public runner ${{ github.run_id }}"
-          bash scripts/push-to-main.sh
+          bash scripts/push-to-main.sh 2>&1 | python3 scripts/public-log-filter.py --safe-lines --counts
           echo "pushed=yes" >> "$RUNNER_TEMP/bench.txt"
       - name: Summary
         if: always()
@@ -101,6 +103,10 @@ jobs:
             exit_code=$(grep '^exit=' "$RUNNER_TEMP/bench.txt" | cut -d= -f2 || true)
             verdict_val=$(grep '^verdict=' "$RUNNER_TEMP/bench.txt" | cut -d= -f2 || true)
             pushed_val=$(grep '^pushed=' "$RUNNER_TEMP/bench.txt" | cut -d= -f2 || true)
+            # the file also holds the script's own output, so each value is checked before it is shown
+            [[ "$exit_code" =~ ^[0-9]{1,3}$ ]] || exit_code=""
+            [[ "$verdict_val" =~ ^[a-z_]{1,40}$ ]] || verdict_val=""
+            [[ "$pushed_val" =~ ^(yes|no)$ ]] || pushed_val=""
             echo "| free-judge-benchmark.py | ${exit_code:-not run} |"
             echo "| verdict | ${verdict_val:-unknown} |"
             echo "| pushed to starfire-core | ${pushed_val:-no} |"
