@@ -94,7 +94,6 @@ jobs:
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set +e -uo pipefail
           out="$RUNNER_TEMP/classifier-check.out"
@@ -116,7 +115,6 @@ jobs:
           # the free classifier chain (a key that is empty is skipped); no model key or answer text is ever printed
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           # the schedule has no inputs: its mode is the repository variable (unset means dry); a manual run is live only
           # when mode is exactly live
           MODE: ${{ github.event_name == 'schedule' && (vars.OJ_FUNNEL_SCHEDULE_MODE || 'dry') || inputs.mode }}
