@@ -1,0 +1,67 @@
+# Gate for scripts-only pull requests in starfire-core, which has no Actions minutes and so reports "no checks".
+# Every 20 minutes: for each open starfire-core pull request that changes scripts/** or tests/** and whose head commit has no
+# `scripts-tests` status yet, run scripts/run-python-suites.py on that head and post the result as a commit status.
+# The tests run with an empty environment: the token is used only to list, fetch and post, never while the pull request's code runs.
+# This file lives in starfire-core/ops/starfire-watch/ (like core-oj-d1-usage-alert.yml) and is meant to be copied into
+# starfire-watch/.github/workflows/, the public repo that gets runners. It prints only pull request numbers and one summary line.
+name: core-scripts-tests
+on:
+  schedule:
+    - cron: "11,31,51 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "one pull request number to test now (default: every open one that needs it)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: core-scripts-tests
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      REPO: BetterSocieties/starfire-core
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet pytest pyyaml
+      - name: Test each pull request head that has no scripts-tests status
+        env:
+          WANT_PR: ${{ inputs.pr }}
+        run: |
+          set -uo pipefail
+          prs=$(gh pr list -R "$REPO" --state open --limit 30 --json number,headRefOid,files \
+            --jq '.[] | select([.files[].path | select(startswith("scripts/") or startswith("tests/"))] | length > 0) | "\(.number) \(.headRefOid)"')
+          done_count=0
+          while read -r num sha; do
+            [ -n "${num:-}" ] || continue
+            [ -z "$WANT_PR" ] || [ "$WANT_PR" = "$num" ] || continue
+            have=$(gh api "repos/$REPO/commits/$sha/statuses" --jq '[.[] | select(.context=="scripts-tests")] | length')
+            [ "$have" = "0" ] || [ -n "$WANT_PR" ] || continue
+            [ "$done_count" -lt 3 ] || break
+            done_count=$((done_count + 1))
+            dir="$RUNNER_TEMP/core-$num"
+            git init -q "$dir"
+            git -C "$dir" -c "http.extraheader=AUTHORIZATION: bearer $GH_TOKEN" fetch -q --depth 50 "https://github.com/$REPO" "$sha" || { echo "fetch of $sha failed"; continue; }
+            git -C "$dir" checkout -q FETCH_HEAD
+            gh api "repos/$REPO/statuses/$sha" -f state=pending -f context=scripts-tests -f description="running" >/dev/null
+            if (cd "$dir" && timeout 270 env -i PATH="$PATH" HOME="$RUNNER_TEMP" python3 scripts/run-python-suites.py > "$RUNNER_TEMP/out-$num.txt" 2>&1); then
+              state=success
+            else
+              state=failure
+            fi
+            summary=$(tail -n 1 "$RUNNER_TEMP/out-$num.txt" | cut -c1-140)
+            echo "PR $num $sha $state: $summary"
+            gh api "repos/$REPO/statuses/$sha" -f state="$state" -f context=scripts-tests -f description="$summary" \
+              -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
+          done <<< "$prs"
