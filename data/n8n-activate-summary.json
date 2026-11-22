@@ -1,7 +1,7 @@
 {
-  "run_id": "44967918676",
+  "run_id": "44998690759",
   "run_attempt": "1",
-  "generated_at": "2026-11-22T00:42:59Z",
+  "generated_at": "2026-11-22T07:33:09Z",
   "status": "failure",
   "enumeration_complete": true,
   "total": 1295,
@@ -19,7 +19,7 @@
   },
   "never_activate_guard": {
     "checked": 12,
-    "corrected": 6,
+    "corrected": 0,
     "failed": 0,
     "absent": 1
   }
